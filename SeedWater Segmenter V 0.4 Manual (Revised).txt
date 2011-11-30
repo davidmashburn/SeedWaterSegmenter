@@ -1,0 +1,85 @@
+Probably easiest to follow if I explain the main point of it and general workflow, then the mouse modes, and then moving from frame to frame...
+
+The point:
+------------------
+Basically, as the user, you are creating a map of seed points with different values.
+These are fed to the watershed algorithm and fill out as regions.
+I decided to enable this large amount of manual intervention because most of the problems we encounter would not be well-solved by any automatic segmenter (fuzzy edges, missing sections, the wound boundary, the vitelline scar, etc...)
+
+Main workflow:
+---------------------------
+* When you initiate the program, pick a tiff stack (or a file out of a tiff sequence).
+
+* Next, it will ask you if you want to load seed points.  If you are running it for the first time on that sequence, just hit cancel
+
+* Now, to get started, hit g (or Ctrl-G) to create run the gaussian filter on Figure 1...
+  this will automatically then run the minima finder to create seed points and run watershed as well.
+  -  If you are (generally) happy with the seeds, put aside Figure 1 and look at Figures 2 and 3.
+  -  If not, you can use "g" to add more blur (if you had too many points) or use "r" to reset the figure back to the start and try again with a new radius (hit "g" again)
+  -  This doesn't have to be perfect, it's just to minimize the manual intervention on the first frame...
+
+* Looking at Figure 2, this is where all the action takes place.
+First and foremost, "w" is the command to re-run watershed... it now takes less than a second and happends automatically (used to take 4-6 seconds and had to be manually invoked)
+"w" is still useful in updating figure 3 (the "Map Plot") and reverting from y mode (dummy watershed).
+
+The Mouse Modes:
+----------------------------------
+The mouse modes all use left and right click (and these actions are also now explained below the control once you select one):
+
+Move mode:
+ * No special mouse actions (lets you use pan and zoom freely without messing with seeds)
+
+Add/Delete Mode:
+ * Add is left click, Delete is right click
+ * Add always creates a unique new seed value (run watershed to get the idea)
+ * The other way of creating seeds is "Extra mode" (see below)
+ * Delete deletes by region, so any seed within the outline of where you click will get deleted
+
+Lasso mode:
+ * Left click (or click and drag) to draw a lasso around seeds
+ * Close the lasso with right click
+ * When the seeds turn magenta, they are selected.
+   -  Move them with +"[] keys (up down left right)
+   -  Delete them with delete or backspace
+   -  Delete ALL surrounding seeds with shift+delete or shift+backspace (useful to get rid of unwanted seeds at the boundary)
+   -  Join to be the same seed value (combining their regions) with "j" key
+    (FYI, the seeds I generate are multiple pixels (9 by default) and it is quite possible to lasso some but not all of the points in a singe seed)
+
+Extra mode:
+ * Used to fill out a region more completely by creating seeds of the SAME VALUE as the selected region
+ * Select with left click, add extra seeds with right click
+ * Run watershed to see what has changed!
+
+Switch mode:
+ * Useful for tracking cells if cells have switched places
+
+Draw Mode:
+ * Basically like extra mode but with line segments instead...
+ * Select with left click, add extra seeds with right click
+ * Draw mode automatically fills in seeds to connect to the previous point...
+ * Disconnect the next point by right-clicking (or switching to and from another mode)
+
+Center Mode:
+ * Left click on the image to define the wound center for that frame
+ * This will be used in the calculations
+ * Right click to set the center for this and ALL subsequent frames...
+
+By the way, actions in all these modes (except for switch) can be undone (just one though, so be careful) with "u"
+
+Frame switching:
+-----------------------------
+ * The next step is to go to the next frame with "n"
+   - This uses centroid information of each region to create a new seed in the next frame for each region..
+   - It also runs watershed automatically once it has generated the seeds
+
+ * Once you have visited a frame at least once (and thus run watershed automatically) you can flip back and forth freely using "p" (previous) and "n" (next).  You can also move frames using the numerical control on the main window
+   - There is a caveat that you are only allowed to move to one frame past where you have already been...this is because you have to go one frame at a time...
+        (If you *really* need to skip a frame, you can use the "do nothing watershed"(y key)
+         which simply uses the seeds AS the watershed -- now, when you go to the next frame, the seeds are the same as the frame 2 previous...)
+   - You can now see the number of last frame in the series and the last intialized frame (last active)
+
+ * The basic idea is that you should finish each frame (at least to a rough approximation) before going on to the next so that the centroids will end up in approximately the right places.
+   -  If you ever want to regenerate these centroids, go to the bad frame and hit "f" (Force regenerate seeds).  You would only use this if:
+        - You hit "n" twice by accident and the second frame you generated was really off
+        - You accidentally deleted a bunch of seeds and can't undo)
+

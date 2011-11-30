@@ -1,0 +1,8 @@
+This is a simple source-only repository.
+See the Google Code page for the binary releases (http://code.google.com/p/seedwater/) that should work on 32-bit Windows or 64-bit Linux.
+
+This requires manual compilation of the C extension with Cpyx.py (a hack-ish Cython/gcc compiler).
+I realize there are better ways to do this, but this one always works.
+
+For more details, see Python Install Instructions *.txt
+You may also want to read the manual: SeedWater Segmenter V x.x Manual.txt
