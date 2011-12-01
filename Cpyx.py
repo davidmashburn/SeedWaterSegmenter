@@ -1,7 +1,7 @@
 # Author: David Mashburn
 # Created July 2006
-# Last Modified August 2010
-# License: ??? (Apache 2) -- whatever is compatible with cython...
+# Last Modified December 2011
+# License: (Apache 2, BSD, ???) -- whatever is most compatible with Cython...
 
 # This module is for the automatic compilation (and also inlining) of
 # Pyrex / Cython code...
@@ -10,7 +10,7 @@
 # It has been tested on Windows, Mac, and Ubuntu Linux
 
 # That said, I make no guarantees that it will work as expected!
-# Numpy support is automatically enabled for the non-distutils version...
+# Numpy support is automatically enabled
 
 # Unless the printCmds option is set to False, the script will output every action taken
 # and command run
@@ -19,33 +19,23 @@
 # on their system, and give them a starting point so they can tweak what they want...
 
 # My other goal is to automate the Cython compile process so I can do everything in
-# one step after getting it set up :)
-
-# I really like the inline feature a lot for testing!
-# And try it with PySlices, the latest incarnation of the wxPython shell, PyCrust! (Shameless plug...)
-
-# Issue with windows 7... to get windows version, type "import platform" "platform.win32_ver()"
-# to get one of:
-# XP, Vista, post2008Server (Windows 7)
+# one step after getting it set up.  I really like the inline feature a lot for testing!
+# And try it with PySlices, the latest incarnation of the wxPython shell, PyCrust! (Shameless plug ;) )
 
 import os
 import sys
 import glob
 import random
 import numpy
-import SetEnvironVars
 
-# Making this work in Vista...
-# Download the latest mingw (5.x.x):
-# add C:\MinGW\bin to the PATH environment variable
-
-# Should work with latest MingW on Windows 7...
+# Making this work in Vista and Windows 7...
+# Download the latest mingw and add "C:\MinGW\bin" to the PATH environment variable
 
 # Making this work on Mac...
 # Download Xcode from the apple developer site (create a login) and install it:
 # http://connect.apple.com
 
-# Sample output for Cpyx on Windows:
+# Sample output for Cpyx on Windows w/Python2.5:
 # Pieces:
 # gcc -c -IC:/Python25/include PyrexExample.c -o PyrexExample.o
 # gcc -shared PyrexExample.o -LC:/Python25/libs -lpython25 -o PyrexExample.pyd
@@ -54,13 +44,12 @@ import SetEnvironVars
 # All-in-one with linking dll...
 # gcc -shared numpyTest.c -IC:/Python25/include -LC:/Python25/libs -LC:/Users/mashbudn/Programming/Python/Pyx -lpython25 -lnumpyTestC -o numpyTest.pyd
 
-myPythonDir=os.environ['MYPYTHON']
-myPyrexDir=os.environ['MYPYREX']
-globalUseCython=True
+globalUseCython = True
+globalUseDistutils = False
 
-prefix = sys.prefix
-verStr='.'.join([str(i) for i in sys.version_info[:2]]) # recently, 2.5 or 2.6
-verStr2=''.join([str(i) for i in sys.version_info[:2]]) # recently, 25 or 26
+pythonName=sys.executable
+verStr='.'.join([str(i) for i in sys.version_info[:2]]) # recently, 2.6 or 2.7
+verStr2=''.join([str(i) for i in sys.version_info[:2]]) # recently, 26 or 27
 
 if sys.platform=='win32':
     pyrexcName='"' + os.path.join(sys.prefix,'Scripts','pyrexc.py') + '"' # Full path to the Pyrex compiler script
@@ -68,42 +57,50 @@ if sys.platform=='win32':
     #cythonName='"' + os.path.join(sys.prefix,'Scripts','cython-script.py') + '"' # Full path to the Cython compiler script
     cythonName='"' + os.path.join(sys.prefix,'Lib','site-packages','cython.py') + '"' # Full path to the Cython compiler script
     pythonName=os.path.join(sys.prefix,'python.exe') # Full path to python.exe
-    sitePackages=os.path.join(sys.prefix,'Lib','site-packages')
     pythonInclude=os.path.join(sys.prefix,'include')
     pythonLibs=os.path.join(sys.prefix,'libs')
+    #sitePackages=os.path.join(sys.prefix,'Lib','site-packages')
 elif sys.platform=='darwin':
     pyrexcName='"' + os.path.join(sys.prefix,'bin','pyrexc') + '"' # Full path to the Pyrex compiler script
     cythonName='"' + os.path.join(sys.prefix,'bin','cython') + '"' # Full path to the Cython compiler script
     pythonName=os.path.join(sys.prefix,'bin','python') # Full path to python.exe
-    sitePackages=os.path.join(sys.prefix,'lib','python'+verStr,'site-packages')
     pythonInclude=os.path.join(sys.prefix,'include')
     pythonLibs=os.path.join(sys.prefix,'lib','python'+verStr,'config/') # contains libpython2.5.so
+    #sitePackages=os.path.join(sys.prefix,'lib','python'+verStr,'site-packages')
 elif sys.platform=='linux2':
     pyrexcName='"' + os.path.join(sys.prefix,'bin','pyrexc') + '"' # Full path to the Pyrex compiler script
     cythonName='"' + os.path.join(sys.prefix,'bin','cython') + '"' # Full path to the Cython compiler script
     pythonName=os.path.join(sys.prefix,'bin','python'+verStr) # Full path to python.exe
-    
-    #Debian / Ubuntu now put most everything in dist-packages...
-    #Luckily, these variables are not actually used in this script
-    sitePackages=os.path.join(sys.prefix,'lib','python'+verStr,'site-packages')
-    distPackages=os.path.join(sys.prefix,'lib','python'+verStr,'dist-packages')
-    
     pythonInclude=os.path.join(sys.prefix,'include','python'+verStr)
     pythonLibs=os.path.join(sys.prefix,'lib') # contains libpython2.5.so
+    #Debian / Ubuntu now put most everything in dist-packages...
+    #Luckily, these variables are not actually used in this script
+    #sitePackages=os.path.join(sys.prefix,'lib','python'+verStr,'site-packages')
+    #distPackages=os.path.join(sys.prefix,'lib','python'+verStr,'dist-packages')
 else:
     print 'Platform "' + sys.platform + '" not supported yet'
 
-# New way to find numpy's arrayobject.h to include
+# Find numpy's arrayobject.h to include
 arrayobjecthPath = os.path.join(numpy.get_include(),'numpy','arrayobject.h')
 arrayObjectDir = numpy.get_include()
 
+def ResolvePath(pth):
+    '''Return the path if it is not an empty
+    Otherwise try to use os.environ['MYPYREX']
+    And fall back on the current directory'''
+    if pth!='':
+        return pth
+    elif 'MYPYREX' in os.environ:
+        return os.environ['MYPYREX']
+    else:
+        return os.getcwd()
+
 def Cdll(cNameIn='',printCmds=True,gccOptions=''):
+    '''Use gcc to compile a shared library (.dll on Windows, .so on *nix)'''
     cwd=os.getcwd()
     
     (cPath,cName)=os.path.split(cNameIn) # input path and input file name
-    if cPath=='':
-        cPath=myPyrexDir # directory used for all Pyrex stuff
-    dllPath=cPath
+    dllPath=cPath=ResolvePath(cPath)
     
     stripName=(os.path.splitext(cName))[0] # input file name without extension
     
@@ -130,16 +127,13 @@ def Cdll(cNameIn='',printCmds=True,gccOptions=''):
     
     os.chdir(cwd)
 
-def Cpyx(pyxNameIn='PyrexExample.pyx',useDistutils=False,useCython=globalUseCython,gccOptions='',printCmds=True):
+def Cpyx(pyxNameIn='CythonExample.pyx',useDistutils=globalUseDistutils,useCython=globalUseCython,gccOptions='',printCmds=True):
+    '''Run Cython (or Pyrex) and then GCC to generate a Python extension module'''
     cwd=os.getcwd()
     
     (pyxPath,pyxName)=os.path.split(pyxNameIn) # input path and input file name
     
-    if pyxPath=='':
-        pydPath=mainDir=myPyrexDir # directory used for all Pyrex stuff
-    else:
-        pydPath=mainDir=pyxPath
-    
+    pydPath=mainDir=ResolvePath(pyxPath)
     pyxStrip=(os.path.splitext(pyxName))[0] # input file name without extension
     
     extName='"' + pyxStrip + '"'
@@ -149,27 +143,19 @@ def Cpyx(pyxNameIn='PyrexExample.pyx',useDistutils=False,useCython=globalUseCyth
     soName='"' + os.path.join(pydPath,pyxStrip+'.so') + '"' # Full path to the lib*.so file to be created
     setupName='"' + os.path.join(pydPath,'setup.py') + '"' # Full path of the Setup File to be created
     
-    # run the main pyrex command to make the C file
-    pyxCompiler = cythonName if useCython else pyrexcName
-    cmd=' '.join([pythonName,pyxCompiler,pyxName,'-o',pyx2cName])
-    if printCmds:
-        print '\n', cmd
-    os.system(cmd)
-    
     if useDistutils:
-        
         #write setup.py which will make a PYD file that can be imported
         setupText="""### This file is setup.py ###
 from distutils.core import setup 
 from distutils.extension import Extension 
-from Pyrex.Distutils import build_ext 
+from """ + ('Cython' if useCython else 'Pyrex') + """.Distutils import build_ext 
 
 setup( 
   name = 'Lock module', 
   ext_modules=[ 
     Extension(""" + extName + ', [' + pyxName.replace('\\','\\\\') + ']' + """),
   ], 
-  cmdclass = {'build_ext': build_ext} 
+  cmdclass = {'build_ext': build_ext}
 )"""
         
         if printCmds:
@@ -188,6 +174,13 @@ setup(
         else:                            print 'Platform "' + sys.platform + '" not supported yet'
     
     else:
+        # run the main pyrex command to make the C file
+        pyxCompiler = cythonName if useCython else pyrexcName
+        cmd=' '.join([pythonName,pyxCompiler,pyxName,'-o',pyx2cName])
+        if printCmds:
+            print '\n', cmd
+        os.system(cmd)        
+        
         if sys.platform=='win32':        cmd=' '.join(['gcc',gccOptions,'-fPIC','-shared',pyx2cName,'-I'+pythonInclude,'-I'+arrayObjectDir,'-L'+pythonLibs,'-lpython'+verStr2,'-o',pydName])
         elif sys.platform=='darwin':     cmd=' '.join(['gcc',gccOptions,'-fno-strict-aliasing','-Wno-long-double','-no-cpp-precomp','-mno-fused-madd','-fno-common',
                                                        '-dynamic','-DNDEBUG','-g','-O3','-bundle','-undefined dynamic_lookup','-I'+pythonInclude,
@@ -201,19 +194,16 @@ setup(
     
     os.chdir(cwd)
 
-def CpyxLib(pyxNameIn='PyrexExample.pyx',cNameIn='CTestC.c',recompile=True,useDistutils=False,useCython=globalUseCython,gccOptions='',printCmds=True):
+def CpyxLib(pyxNameIn='CythonExample.pyx',cNameIn='CTestC.c',recompile=True,useDistutils=globalUseDistutils,useCython=globalUseCython,gccOptions='',printCmds=True):
+    '''Compile a C source and then run Cython/GCC on a pyx file, linking the C source
+    Alternatively, use Cython.Distutils to do the same thing'''
     cwd=os.getcwd()
     
     (pyxPath,pyxName)=os.path.split(pyxNameIn) # input path and input file name
     (cPath,cName)=os.path.split(cNameIn) # input path and input file name
     
-    if cPath=='':
-        dllPath=cPath=myPyrexDir # directory used for all Pyrex stuff
-    
-    if pyxPath=='':
-        pydPath=mainDir=myPyrexDir # directory used for all Pyrex stuff
-    else:
-        pydPath=mainDir=pyxPath
+    pydPath=mainDir=ResolvePath(pyxPath)
+    dllPath=cPath=ResolvePath(cPath)
     
     pyxStrip=(os.path.splitext(pyxName))[0] # input file name without extension
     cStrip=(os.path.splitext(cName))[0] # input file name without extension
@@ -251,23 +241,12 @@ def CpyxLib(pyxNameIn='PyrexExample.pyx',cNameIn='CTestC.c',recompile=True,useDi
     pydName='"' + os.path.join(pydPath,pyxStrip+'.pyd') + '"' # Full path to the PYD file to be created
     soName='"' + os.path.join(pydPath,pyxStrip+'.so') + '"' # Full path to the lib*.so file to be created
     
-    # compile the DLL needed for the link to the C file
-    if recompile:
-        Cdll(cName[1:-1],printCmds=printCmds,gccOptions=gccOptions) # [1:-1] to remove the quotes
-    
-    # run the main pyrex command to make the C file
-    pyxCompiler = cythonName if useCython else pyrexcName
-    cmd=' '.join([pythonName,pyxCompiler,pyxName,'-o',pyx2cName])
-    if printCmds:
-        print '\n', cmd
-    os.system(cmd)
-    
     if useDistutils:
         #write setup.py which will make a PYD file that can be imported
         setupText="""### This file is setup.py ###
 from distutils.core import setup 
 from distutils.extension import Extension 
-from Pyrex.Distutils import build_ext 
+from """+('Cython' if useCython else 'Pyrex')+""".Distutils import build_ext 
 
 setup( 
   name = 'Lock module', 
@@ -291,6 +270,17 @@ setup(
         elif sys.platform=='linux2':     cmd=' '.join([pythonName,setupName,'build_ext','--inplace'])
         else:                            print 'Platform "' + sys.platform + '" not supported yet'
     else:
+        # compile the DLL needed for the link to the C file
+        if recompile:
+            Cdll(cName[1:-1],printCmds=printCmds,gccOptions=gccOptions) # [1:-1] to remove the quotes
+        
+        # run the main pyrex command to make the C file
+        pyxCompiler = cythonName if useCython else pyrexcName
+        cmd=' '.join([pythonName,pyxCompiler,pyxName,'-o',pyx2cName])
+        if printCmds:
+            print '\n', cmd
+        os.system(cmd)        
+        
         if sys.platform=='win32':        cmd=' '.join(['gcc',gccOptions,'-fPIC','-shared',pyx2cName,'-I'+pythonInclude,'-L'+pythonLibs,'-L'+cPath,'-Wl,-R'+cPath,'-lpython'+verStr2,'-l'+cStrip,'-o',pydName])
         elif sys.platform=='darwin':     cmd=' '.join(['gcc',gccOptions,'-fno-strict-aliasing','-Wno-long-double','-no-cpp-precomp','-mno-fused-madd','-fno-common',
                                                        '-dynamic','-DNDEBUG','-g','-O3','-bundle','-undefined dynamic_lookup','-I'+pythonInclude,
@@ -305,6 +295,7 @@ setup(
     
     os.chdir(cwd)
 
+# Currently unused...
 def InlineTableCreate():
     tmpDir = os.path.expanduser('~/.Cpyx_tmp')
     tabFile = os.path.join(tmpDir,'InlineTable.txt')
@@ -316,6 +307,7 @@ def InlineTableCreate():
                   '# It has entries like: module_name (w/o .pyx),num_lines,num_characters,md5sum\n')
         fid.close()
 
+# Currently unused...
 def InlineTableFind(codeIn):
     import hashlib
     code = codeIn.replace(os.linesep,'\n')
@@ -343,6 +335,7 @@ def InlineTableFind(codeIn):
     else:
         return None
 
+# Currently unused...
 def InlineTableAddEntry(codeIn):
     val=InlineTableFind(codeIn)
     if val==None:
@@ -365,12 +358,12 @@ def InlineTableAddEntry(codeIn):
     else:
         return None
 
-
-#Shamelessly steal the idea used by scipy.weave.inline but for Pyrex/Cython instead...
-# In order to be able to import *, have to use exec in the calling module...
-def PyrexInline(code,cleanUp=False,useDistutils=False,useCython=False,gccOptions='',printCmds=True,usePyxImport=False):
-    '''PyrexInline returns a string that is an import statement to the temporary cython module'''+ \
-    '''Use this like: exec(PyrexInline(r"""<somecode>""",<options>))'''
+# Shamelessly steal the idea used by scipy.weave.inline but for Pyrex/Cython instead...
+# In order to be able to import *, you have to use exec in the calling module...
+def CythonInline(code,cleanUp=False,useDistutils=globalUseDistutils,useCython=True,gccOptions='',printCmds=True):
+    '''Use Cpyx to compile Cython code inline
+    CythonInline returns a string that is an import statement to the temporary Cython module
+    Use this like: exec(CythonInline(r"""<somecode>""",<options>))'''
     
     testCode=r"""
 cdef extern from "stdio.h":
@@ -380,11 +373,11 @@ cdef extern from "stdio.h":
     int printf(char *format,...)
     int fflush( FILE *stream )
 
-def PyrexPrint(mystring):
+def CythonPrint(mystring):
     printf(mystring)
     fflush(stdout)
 
-PyrexPrint('HelloWorld!')
+CythonPrint('HelloWorld!')
 """
     tmpPath=os.path.expanduser('~/.Cpyx_tmp')
     if not os.path.isdir(tmpPath):
@@ -398,21 +391,14 @@ PyrexPrint('HelloWorld!')
     # This means there is no reason to "reload"
     # Also means memory gets majorly eaten up!
     # Can't have everything!
-    moduleName='Pyrex'+str(random.randint(0,1e18))
+    moduleName='Cython'+str(random.randint(0,1e18))
     file=os.path.join(tmpPath,moduleName+'.pyx')
     
     fid=open(file,'w')
     fid.write(code)
     fid.close()
     
-    # WOW this is great... It might become my preferred way of dealing with Cython...
-    if usePyxImport:
-        import pyximport
-        pyximport.install()
-        print 'install pyximport'
-        #print 'pyximport.load_module',file
-    else:
-        Cpyx(file,useDistutils=useDistutils,useCython=useCython,gccOptions=gccOptions,printCmds=printCmds)
+    Cpyx(file,useDistutils=useDistutils,useCython=useCython,gccOptions=gccOptions,printCmds=printCmds)
     
     #cmd="""import """+moduleName+""" as LoadPyrexInline"""
     cmd="""from """+moduleName+""" import *"""
@@ -420,11 +406,13 @@ PyrexPrint('HelloWorld!')
         print cmd
     return cmd
 
-# Create a dummy function that defaults to using Cython instead for clarity...
-def CythonInline(code,cleanUp=False,useDistutils=False,useCython=True,gccOptions='',printCmds=True,usePyxImport=False):
-    return PyrexInline(code,cleanUp=cleanUp,useDistutils=useDistutils,useCython=useCython,gccOptions=gccOptions,printCmds=printCmds,usePyxImport=usePyxImport)
+# Create a dummy function that defaults to using Pyrex instead for clarity...
+def PyrexInline(code,cleanUp=False,useDistutils=globalUseDistutils,useCython=False,gccOptions='',printCmds=True):
+    return CythonInline(code,cleanUp=cleanUp,useDistutils=useDistutils,useCython=useCython,gccOptions=gccOptions,printCmds=printCmds)
+PyrexInline.__doc__ = CythonInline.__doc__.replace('Cython','Pyrex')
 
 def CleanTmp():
+    '''Remove temp files and built modules from '~/.Cpyx_tmp' '''
     tmpPath=os.path.expanduser('~/.Cpyx_tmp')
     for i in glob.glob(os.path.join(tmpPath,'*')):
         os.remove(i)
