@@ -1,5 +1,5 @@
 import Cpyx
 
 Cpyx.Cpyx('SeedWaterImports')
-from Pyx import SeedWaterImports
+import SeedWaterImports
 #print PyrexExample.primes(10)
