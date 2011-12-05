@@ -23,6 +23,7 @@ __author__ = "David N. Mashburn <david.n.mashburn@gmail.com>"
 import os,sys
 from copy import copy,deepcopy
 from time import time, sleep
+import imp
 
 import numpy as np
 from numpy import nonzero
@@ -474,8 +475,20 @@ class WatershedData:
             arrayIn=arrayIn.reshape([1,arrayIn.shape[0],arrayIn.shape[1]])
         self.length=arrayIn.shape[0] # number of frames
         
-        self.origData = GTL.DivideConvertType(arrayIn,bits=16,maxVal=2**15-1,
-                                             zeroMode='stretch',maxMode='stretch') # 1 full copy
+        # I AM CHANGING THE DEFAULT BEHAVIOR!!!!!!!!!
+        # I don't really think this will change the watersheds, but it
+        #  really might change the brightness of the image...
+        if arrayIn.dtype==np.uint16:
+            self.origData = arrayIn
+            self.origData *= int( (2**16-1)/arrayIn.max() )
+        elif arrayIn.dtype==np.uint8:
+            self.origData = np.array(arrayIn,dtype=np.uint16)
+            self.origData *= int( (2**16-1)/arrayIn.max() )
+        #    self.origData *= 2**8
+        else:
+            self.origData = GTL.DivideConvertType(arrayIn,bits=16,maxVal=2**15-1,
+                                                  zeroMode='stretch',maxMode='stretch')
+        # 1 full copy...
         
         #bg=gaussian_filter(arrayIn,64)
         #self.origData = arrayIn+bg.max()-bg
@@ -500,7 +513,7 @@ class WatershedData:
         self.woundCenters = [None]*self.length
         
         self.background = True # Set to True for better results...
-        self.watershed=np.zeros(self.origData.shape,dtype=np.int)  # 3 full copy
+        self.watershed=np.zeros(self.origData.shape,dtype=np.int16)  # 3 full copy
         self.seedArray = np.zeros(self.origData[0].shape,dtype=np.int)
         self.woutline=np.zeros(self.origData[0].shape,dtype=np.int)
         self.index=0
@@ -735,29 +748,43 @@ class WatershedData:
         print self.watershed.shape
         print self.watershed[0].max()
         
-        fid = open(seedPointsFile)
-        try:
-            exec(fid.read().replace('\r','')) # Loads seedList and seedVals from the file...
-        except SyntaxError:
-            print 'Invalid Syntax in Seeds.py'
-            
+        #fid = open(seedPointsFile)
+        #try:
+        #    exec(fid.read().replace('\r','')) # Loads seedList and seedVals from the file...
+        #except SyntaxError:
+        #    print 'Invalid Syntax in Seeds.py'
+        #fid.close()
+        #Seeds.seedList = seedList
+        #Seeds.seedVals = seedVals
+        
+        
+        # use python's load_module function to get the data instead...
+        fid=open(seedPointsFile,'U')
+        Seeds = imp.load_module('Seeds',fid,'Seeds.py',('.py','U',1))
         fid.close()
-        if len(seedList)==self.length:
-            self.seedList = seedList
-            self.seedVals = seedVals
+        
+        # A clunkier way to do it...
+        #oldPath=sys.path
+        #sys.path = [os.path.split(seedPointsFile)[0]]
+        #imp.reload(Seeds)
+        #sys.path=oldPath
+        
+        if len(Seeds.seedList)==self.length:
+            self.seedList = Seeds.seedList
+            self.seedVals = Seeds.seedVals
             
             try: # Since walgorithm is not part of early versions, allow it to be optional
-                walgorithm
+                Seeds.walgorithm
             except:
-                walgorithm=['PyMorph']*self.length
+                Seeds.walgorithm=['PyMorph']*self.length
             
             try: # Since woundCenters was not part of version 0.2 and earlier, allow it to be optional
-                woundCenters
+                Seeds.woundCenters
             except:
-                woundCenters=[None]*self.length
+                Seeds.woundCenters=[None]*self.length
             
-            self.walgorithm = walgorithm
-            self.woundCenters = woundCenters
+            self.walgorithm = Seeds.walgorithm
+            self.woundCenters = Seeds.woundCenters
             
             print 'Loading seeds for '+str(len(self.seedList))+' frames:'
             for i,s in enumerate(self.seedList):
@@ -768,10 +795,10 @@ class WatershedData:
                 else:
                     print i,'initialized'
             
-            self.seedSelections = [None]*len(seedList)
-            for i in range(len(seedList)):
-                if seedList[i]!=None:
-                    self.seedSelections[i] = [0]*len(seedList[i])
+            self.seedSelections = [None]*len(self.seedList)
+            for i in range(len(self.seedList)):
+                if self.seedList[i]!=None:
+                    self.seedSelections[i] = [0]*len(self.seedList[i])
             
             # This is technically unnecessary because it only gets called
             # on new WatershedData's anyway and those are always initialized to frame 0
@@ -792,6 +819,7 @@ class WatershedData:
             self.MapPlot()
         else:
             print 'These seeds do not match the images open!'
+            print 'Images length:',self.length,'  Seeds length:',len(Seeds.seedList)
         
         self.framesVisited=[False]*self.length
         self.framesVisited[self.index]=True
@@ -1228,15 +1256,14 @@ class WatershedData:
         f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
         f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
         f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
+        
+        wi = np.array(self.watershed[self.index],dtype=np.int)
+        
         if self.rgbM==None:
-            self.rgbM = np.array([f1(self.watershed[self.index]),
-                                 f2(self.watershed[self.index]),
-                                 f3(self.watershed[self.index])]).transpose(1,2,0)
+            self.rgbM = np.array([f1(wi),f2(wi),f3(wi)]).transpose(1,2,0)
         else:
             convToRandColors(self.mapPlotRandomArray,self.rgbM,
-                               self.watershed[self.index],
-                               self.watershed[self.index].shape[0],
-                               self.watershed[self.index].shape[1])
+                             wi,wi.shape[0],wi.shape[1])
             # This step is still really slow...
             #self.rgbM[:,:,0] = f1(self.watershed[self.index])
             #self.rgbM[:,:,1] = f2(self.watershed[self.index])
@@ -1249,7 +1276,7 @@ class WatershedData:
             
             for i in self.seedVals[self.index]:
                 if i>0:
-                    cm = center_of_mass((self.watershed[self.index]==i).astype(np.float))
+                    cm = center_of_mass((wi==i).astype(np.float))
                     if math.isnan(cm[0]) or math.isnan(cm[0]):
                         print 'CM is NAN'
                         print 'val',i
@@ -1325,7 +1352,7 @@ class WatershedData:
             self.rgba[:,:,1]=255*seed
             self.rgba[:,:,2]=255*outl
             self.rgba[:,:,3]=self.overlayVisible*255*seedORoutl
-        
+        # 0.18s
         if self.colorplot!=None and self.bgPlot!=None:
             self.bgPlot.set_data(im)
             self.colorplot.set_data(self.rgba)
@@ -1336,7 +1363,6 @@ class WatershedData:
             pylab.ylim(self.watershed[0].shape[0],0)
         
         dprint(['wc',self.woundCenters[self.index],self.showWoundCenters])
-        
         # Need to force this to plot so that axes will flip, just set to invisible...
         if self.redDot==None:
             self.redDot=pylab.plot([0],[0],'ro')
@@ -1349,11 +1375,12 @@ class WatershedData:
             self.redDot[0].set_visible(True) # Turn On Visible
         else:
             self.redDot[0].set_visible(False) # Turn Off Visible
-        
         #pylab.xlim(0,self.watershed[0].shape[1])
         #pylab.ylim(self.watershed[0].shape[0],0)
         # AAARRRGGG!!!
         # NEED TO FORCE COORDINATES TO STAY IMAGE-STYLE!
+        
+        # This is by FAR the slowest step, about 0.25s
         self.HighlightRegion()
         # pylab.draw() # Highlight Region also calls draw, so this doesn't need to!
     def UpdateSelection(self,point=None,append=False):
@@ -1482,10 +1509,10 @@ class WatershedData:
         for self.index in range(self.length): # For each frame
             if self.seedList[self.index]!=None:
                 newWVal = 1e6 # I don't think anyone will ever create a million cells...
-                arr = np.array(self.watershed[self.index])
+                wi = np.array(self.watershed[self.index],dtype=np.int)
                 for v in woundVals:
-                    arr[np.where(arr==v)] = newWVal
-                test = (arr==newWVal)
+                    wi[np.where(wi==v)] = newWVal
+                test = (wi==newWVal)
                 if np.any(test):
                     self.woundCenters[self.index] = center_of_mass(test.astype(np.float))[::-1]
         self.index=oldIndex
@@ -1851,9 +1878,13 @@ class WatershedData:
         
         if os.path.exists(neighborsPy):
             # Load Neighbors from Neighbors.py
-            fid=open(neighborsPy,'r')
-            exec(fid.read().replace('\r',''))
-            self.neighbors = neighbors
+            #fid=open(neighborsPy,'r')
+            #exec(fid.read().replace('\r',''))
+            #self.neighbors = neighbors
+            #fid.close()
+            fid=open(neighborsPy,'U')
+            Neighbors = imp.load_module('Neighbors',fid,'Neighbors.py',('.py','U',1))
+            self.neighbors = Neighbors.neighbors
             fid.close()
     
     def PlotAreasAndPerimeters(self): # Must run CollectAllStats first!
@@ -1943,13 +1974,13 @@ class WatershedData:
         """Find the boundary lengths of the wound and it's neighboring cells"""
         # Warning! No index checking...
         newWVal = 1e6 # I don't think anyone will ever create a million cells...
-        arr = np.array(self.watershed[index])
+        wi = np.array(self.watershed[index],dtype=np.int)
         for v in woundVals:
-            arr[np.where(arr==v)] = newWVal
+            wi[np.where(wi==v)] = newWVal
         # get contour lengths and contour length values for the wound-neighbor interfaces...
-        WNv,WNl = ImageContour.GetPerimeterByNeighborVal(arr,newWVal)
+        WNv,WNl = ImageContour.GetPerimeterByNeighborVal(wi,newWVal)
         if printPerimeterCheck:
-            totalPer = ImageContour.GetIJPerimeter(arr,newWVal)
+            totalPer = ImageContour.GetIJPerimeter(wi,newWVal)
             print 'sum of contours',sumN(WNl)
             print 'total perimeter',totalPer
         
@@ -1961,7 +1992,7 @@ class WatershedData:
         NOv = []
         for val in WNv:
             # get contour lengths and contour length values for the wound's neighbor-neighbor interfaces...
-            clv,cl = ImageContour.GetPerimeterByNeighborVal(arr,val)
+            clv,cl = ImageContour.GetPerimeterByNeighborVal(wi,val)
             for i in range(len(clv)):
                 if clv[i]==newWVal:
                     NWl.append(cl[i])
@@ -2078,11 +2109,11 @@ class WatershedData:
                 break
             # get the wound perimeter the good way ;)
             newWVal = 1e6 # I don't think anyone will ever create a million cells...
-            arr = np.array(self.watershed[frame])
+            wi = np.array(self.watershed[frame],dtype=np.int)
             for v in woundVals:
-                arr[np.where(arr==v)] = newWVal
-            WP.append(ImageContour.GetIJPerimeter(arr,newWVal))
-            WPc2.append(sumN(ImageContour.GetPerimeterByNeighborVal(arr,newWVal)[1]))
+                wi[np.where(wi==v)] = newWVal
+            WP.append(ImageContour.GetIJPerimeter(wi,newWVal))
+            WPc2.append(sumN(ImageContour.GetPerimeterByNeighborVal(wi,newWVal)[1]))
             #spokes.append(sumN(NNl[frame]))
             
             # Total P of all NNs
@@ -2125,21 +2156,26 @@ class WatershedData:
             fid = open(ManualInputs,'w')
             fid.write(te.GetValue())
             fid.close()
-        fid = open(ManualInputs,'r')
-        exec(fid.read().replace('\r',''))
+        #fid = open(ManualInputs,'r')
+        #exec(fid.read().replace('\r',''))
+        #fid.close()
+        fid=open(ManualInputs,'U')
+        MI = imp.load_module('ManualInputs',fid,'ManualInputs.py',('.py','U',1))
         fid.close()
         try:
-            woundVals
-            timeIntervals
-            gapIntervals
-            numberFramesPerSeries
+            MI.woundVals
+            MI.timeIntervals
+            MI.gapIntervals
+            MI.numberFramesPerSeries
         except:
             print "All the variables (woundVals,timeIntervals,gapIntervals,numberFramesPerSeries) must be defined!"
             return
+        
+        woundVals=MI.woundVals
         if woundVals==[]:
             print 'Error! You need to define the woundVals in ManualInputs.py!'
             return
-        if timeIntervals==[] or numberFramesPerSeries==[]:
+        if MI.timeIntervals==[] or MI.numberFramesPerSeries==[]:
             print 'Error! You need to define the time information in ManualInputs.py!'
             return
         for i in range(self.length):
@@ -2164,7 +2200,7 @@ class WatershedData:
         binSize=None
         initR=None
         useNei=True
-        timeAxis = CreateTimeAxis(timeIntervals,gapIntervals,numberFramesPerSeries,len(self.centroidX))
+        timeAxis = CreateTimeAxis(MI.timeIntervals,MI.gapIntervals,MI.numberFramesPerSeries,len(self.centroidX))
         
         BinningFrame = 3
         if useNei:
@@ -2211,10 +2247,10 @@ class WatershedData:
         # Output a binned file for major and minor, too...
         majorBinned = GetBinnedValueForExcel(self.major,'Minor Axis',bins,timeAxis,woundVals)
         minorBinned = GetBinnedValueForExcel(self.minor,'Major Axis',bins,timeAxis,woundVals)
-        ExcelHelper.excelWrite(areaBinned,
+        ExcelHelper.excelWrite(majorBinned,
                                sheetnames=['Summary','Wound']+[GetPlacementName(i-1)+' Ring of Cells Around Wound' for i in range(2,len(areaBinned))],
                                filename=os.path.join(d,'BinnedMajor.xls'))
-        ExcelHelper.excelWrite(areaBinned,
+        ExcelHelper.excelWrite(minorBinned,
                                sheetnames=['Summary','Wound']+[GetPlacementName(i-1)+' Ring of Cells Around Wound' for i in range(2,len(areaBinned))],
                                filename=os.path.join(d,'BinnedMinor.xls'))
         
@@ -2313,19 +2349,19 @@ class WatershedData:
         return
                 
     def WCPlot(self,ind,woundVals,WNv,NNv):
-        arr = np.array(self.watershed[ind])
+        wi = np.array(self.watershed[ind],dtype=np.int)
         for v in woundVals:
-            arr[np.where(arr==v)]=1e6
+            wi[np.where(wi==v)]=1e6
         pylab.figure(10)
         pylab.clf()
         pylab.ylim(pylab.gca().get_ylim()[::-1])
         for v in WNv[ind]:
-            for c in ImageContour.GetBoundaryLine(arr,1e6,v):
+            for c in ImageContour.GetBoundaryLine(wi,1e6,v):
                 pylab.plot(*(np.array( c )[:,::-1].T),marker='.')
                 sleep(0.4)
                 pylab.draw()
         for v in NNv[ind]:
-            for c in ImageContour.GetBoundaryLine(arr,v[0],v[1]):
+            for c in ImageContour.GetBoundaryLine(wi,v[0],v[1]):
                 pylab.plot(*(np.array( c )[:,::-1].T))
                 sleep(0.4)
                 pylab.draw()
@@ -2342,11 +2378,11 @@ class WatershedData:
         
         # get the wound perimeter the good way ;)
         newWVal = 1e6 # I don't think anyone will ever create a million cells...
-        arr = np.array(self.watershed[frame])
+        wi = np.array(self.watershed[frame],dtype=np.int)
         for v in woundVals:
-            arr[np.where(arr==v)] = newWVal
-        WP = ImageContour.GetIJPerimeter(arr,newWVal)
-        WPc = sumN(ImageContour.GetPerimeterByNeighborVal(arr,newWVal)[1])
+            wi[np.where(wi==v)] = newWVal
+        WP = ImageContour.GetIJPerimeter(wi,newWVal)
+        WPc = sumN(ImageContour.GetPerimeterByNeighborVal(wi,newWVal)[1])
         print 'Wound Perimeter'
         print WP
         print 'Wound Perimeter by Contours'
@@ -2621,6 +2657,8 @@ Arrow Keys: Move selected seeds (after lasso)
         #    g=GTL.LoadFileSequence(os.path.split(self.filename)[0])
         #else:
         #    g=GTL.LoadMonolithic(self.filename)
+        
+        self.wd=None # Release the old data before we load the new...
         self.wd = WatershedData(g)
         self.FrameNumber.SetValue(0)
         self.FrameNumber.SetRange(0,self.wd.length)

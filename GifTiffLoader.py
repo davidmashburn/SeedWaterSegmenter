@@ -38,9 +38,9 @@ def DivideConvertType(arr,bits=16,maxVal=None,zeroMode='clip',maxMode='clip'):
         maxVal=arr.max()
     elif type(maxVal)==int:
         if maxMode=='clip':
-            arr=arr.clip(arr.min(),maxVal)
+            arr.clip(arr.min(),maxVal,out=arr) # in place
         elif maxMode=='stretch':
-            arr=arr.clip(arr.min(),arr.max()) # Now maxVal is used at the end instead...
+            # Now maxVal is used at the end instead...
             maxClip = maxVal
         else:
             print "'maxMode' must be either 'clip' or 'stretch'"
@@ -51,18 +51,21 @@ def DivideConvertType(arr,bits=16,maxVal=None,zeroMode='clip',maxMode='clip'):
     minVal=0
     
     if zeroMode=='clip':
-        arr=arr.clip(0,arr.max())
+        arr.clip(0,arr.max(),out=arr) # in place
     elif zeroMode=='abs':
-        arr=np.absolute(arr)
+        np.absolute(arr,arr) # in place
     elif zeroMode=='stretch':
         minVal=arr.min()
     else:
         print "'zeroMode' must be one of: 'clip' , 'abs' , 'stretch'"
     
-    arr=np.double(arr)-minVal
+    clipRatio = (maxClip/(maxVal-minVal))
     
-    if (maxVal-minVal)>maxClip:
-        arr=arr*maxClip/(maxVal-minVal)
+    if zeroMode=='stretch' or clipRatio<1:
+        arr = np.double(arr)
+        arr -= minVal # separate step cuts down on memory usage...
+        if clipRatio<1:
+            arr *= clipRatio
     
     return np.array(arr,dtype=type_dict[bits])
 
