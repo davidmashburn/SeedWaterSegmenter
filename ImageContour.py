@@ -194,6 +194,9 @@ def GetPerimeterByNeighborVal(arr,val,boundingRect=None,getSubContours=False):
         del(perimeterList[-1])
         del(perimeterVals[-1])
         turnsList[0] = turnsList[-1] + turnsList[0]
+        subContours[0] = subContours[-1][:-1] + subContours[0]
+        del(turnsList[-1])
+        del(subContours[-1])
     
     for i in range(len(perimeterList)):
         turnsList[i][0]=0  # Insist that the endpoints for each segment NOT be considered corners...
