@@ -1,0 +1,5 @@
+# Ignore these auto-generated files:
+*.pyc
+*.pyo
+*.c
+*~
