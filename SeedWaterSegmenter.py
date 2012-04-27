@@ -1,100 +1,3 @@
-# TODO!!
-# Put in all these functions from BrodlandReport.pyslices somewhere...
-# Convert from pylab to plt
-
-from ValueReceived import imshow_vr
-from InstantRead import read
-from openCSV import openCSV
-
-#unused
-def norm(a,framesExcludeAfter=None):
-    if framesExcludeAfter==None:
-        return a/np.mean(a)
-    else:
-        return a/np.mean(a[:framesExcludeAfter])
-
-def deletecases(l,valList):
-    if not hasattr(valList,'__iter__'):
-        valList=[valList]
-    l=copy(l) # work on a copy
-    for v in valList:
-        for i in range(l.count(v)):
-            l.remove(v)
-    return l
-# operates on the neighbor list in place
-def MergeWoundVals(neigh,wvl):
-    firstWV = wvl[0]
-
-    if neigh[firstWV-2]==None:
-        neigh[firstWV-2]=[]
-    # Merge all the wound value's neighbor lists together
-    for wv in sorted(wvl[1:])[::-1]:
-        if neigh[wv-2]!=None:
-            neigh[firstWV-2] += neigh[wv-2]
-        neigh[wv-2] = None
-    # and remove any duplicate values this created (and wound self-references)
-    neigh[firstWV-2] = list(set(deletecases(neigh[firstWV-2],wvl)))
-    # Now, go through the whole list and convert references for other wv's to firstWV, removing duplicates
-    for i in range(len(neigh)):
-        if neigh[i] != None:
-            neigh[i] = sorted(list(set([(firstWV if (j in wvl) else j) for j in neigh[i]])))
-
-def GetAllValsByFrame(neighborsPairsByFrame):
-    allValsByFrame = []
-    for neighborPairs in neighborPairsByFrame:
-        allValsByFrame.append(sorted(list(set([j for i in neighborPairs for j in i]))))
-    return allValsByFrame
-
-def GetWoundNeighborSetsByFrame(neighborPairsByFrame,wv):
-    woundNeighborsByFrame = []
-    woundNeighbors2ByFrame = []
-    secondNeighborsByFrame = []
-    woundNeighborOuterPairsByFrame = []
-    for i in range(len(neighborPairsByFrame)):
-        nPairs = np.array(neighborPairsByFrame[i])
-        wh=list(np.where(nPairs==wv))
-        woundNeighbors = nPairs[(wh[0],(wh[1]+1)%2)].tolist() # Get the wound value's friend...
-        woundNeighbors2 = []
-        for n in nPairs:
-            if (n[0] in woundNeighbors) and (n[1] in woundNeighbors):
-                woundNeighbors2.append(tuple(sorted(n)))
-        secondNeighbors = [] # Anything touching a wound neighbor
-        woundNeighborOuterPairs = [] # This essentially constitutes everything that would make up the perimeter around the 1st ring of wound neighbors
-        for n in nPairs:
-            if (n[0] in woundNeighbors) and not (n[1] in (woundNeighbors+[wv])):
-                secondNeighbors.append(n[1])
-                woundNeighborOuterPairs.append(tuple(sorted(n)))
-            elif (n[1] in woundNeighbors) and not (n[0] in (woundNeighbors+[wv])):
-                secondNeighbors.append(n[0])
-                woundNeighborOuterPairs.append(tuple(sorted(n)))
-        secondNeighbors = sorted(list(set(secondNeighbors)))
-        
-        woundNeighborsByFrame.append(woundNeighbors)
-        woundNeighbors2ByFrame.append(woundNeighbors2)
-        secondNeighborsByFrame.append(secondNeighbors)
-        woundNeighborOuterPairsByFrame.append(woundNeighborOuterPairs)
-    return woundNeighborsByFrame,woundNeighbors2ByFrame,secondNeighborsByFrame,woundNeighborOuterPairsByFrame
-
-def ContourPlotFromImage(im,neighborPairs):
-    _=imshow_vr(im,interpolation='nearest',cmap=cm.gray)
-    for i,nPair in enumerate(neighborPairs):
-        whX = np.where(  ((im[:-1,:]==nPair[0]) & (im[1:,:]==nPair[1])) |
-                         ((im[:-1,:]==nPair[1]) & (im[1:,:]==nPair[0]))  )
-        whY = np.where(  ((im[:,:-1]==nPair[0]) & (im[:,1:]==nPair[1])) |
-                         ((im[:,:-1]==nPair[1]) & (im[:,1:]==nPair[0]))  )
-        for j in range(len(whX[0])):
-            x,y = whX[1][j]-0.5 , whX[0][j]+0.5
-            _=plt.plot([x,x+1],[y,y],colors[i],linewidth=2)
-        for j in range(len(whY[0])):
-            x,y = whY[1][j]+0.5 , whY[0][j]-0.5
-            _=plt.plot([x,x],[y,y+1],colors[i],linewidth=2)
-
-def CountourPlotFromCVLS(cVLS,neighborPairs):
-    for cvls in cVLSByFrame[0]:
-        contour = np.array(cvls[2])
-        plt.plot(contour[:,0],contour[:,1])
-
-
 #!/usr/bin/env python
 """SeedWater Segmenter is a watershed segmentation / registration
 program for image stacks developed at Vanderbilt University using
@@ -343,6 +246,15 @@ txtHeader=["# SeedWater notes file version 1",
 txtsepA="# ---------------- Frame "
 txtsepB=" ----------------"
 
+def deletecases(l,valList):
+    if not hasattr(valList,'__iter__'):
+        valList=[valList]
+    l=copy(l) # work on a copy
+    for v in valList:
+        for i in range(l.count(v)):
+            l.remove(v)
+    return l
+
 def GetPointsAtRadius(arr_shape,x,y,r):
     """Create a binary image of a circle radius r"""
     w,h=arr_shape
@@ -540,6 +452,31 @@ def GetBinnedValueForExcel(value,name,bins,timeAxis,woundVals):
     #                inds.append(wd.valList.index(v))
     #        areaBinned[-1].append( [area[i] for i in inds] )
     #wd.index=oldIndex
+
+# operates on the neighbor list in place
+def MergeWoundVals(neigh,wvl):
+    firstWV = wvl[0]
+
+    if neigh[firstWV-2]==None:
+        neigh[firstWV-2]=[]
+    # Merge all the wound value's neighbor lists together
+    for wv in sorted(wvl[1:])[::-1]:
+        if neigh[wv-2]!=None:
+            neigh[firstWV-2] += neigh[wv-2]
+        neigh[wv-2] = None
+    # and remove any duplicate values this created (and wound self-references)
+    neigh[firstWV-2] = list(set(deletecases(neigh[firstWV-2],wvl)))
+    # Now, go through the whole list and convert references for other wv's to firstWV, removing duplicates
+    for i in range(len(neigh)):
+        if neigh[i] != None:
+            neigh[i] = sorted(list(set([(firstWV if (j in wvl) else j) for j in neigh[i]])))
+
+def GetAllValsByFrame(neighborPairsByFrame):
+    allValsByFrame = []
+    for neighborPairs in neighborPairsByFrame:
+        allValsByFrame.append(sorted(list(set([j for i in neighborPairs for j in i]))))
+    return allValsByFrame
+
 
 # Implement these later... a partially-changed version is in Python folder...
 class WoundContours:
