@@ -139,7 +139,7 @@ from scipy.ndimage import center_of_mass,gaussian_filter,median_filter
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.nxutils import points_inside_poly
-import pylab
+#import pylab
 from mpl_polygon_lasso import PolyLasso
 
 import mahotas
@@ -817,7 +817,7 @@ class WatershedData:
         # Save Map Images
         if saveMapImages:
             oldIndex=self.index
-            pylab.ioff()
+            plt.ioff()
             for i in range(self.length):
                 self.index=i
                 if self.framesVisited[i]:
@@ -1349,7 +1349,7 @@ class WatershedData:
         self.UpdateSeeds()
     #def DrawOrigImage(self): # deprecated
     def MapPlot(self,saveFile=None,useText=False):
-        pylab.figure(2)#;cla()
+        plt.figure(2)#;cla()
         
         f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
         f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
@@ -1388,14 +1388,14 @@ class WatershedData:
                             self.mapCentroids[i].set_position([y-5,x+5])
                             self.mapCentroids[i].set_visible(True)
                         else:
-                            self.mapCentroids[i] = pylab.text(y-5,x+5,str(i),fontsize=10)
+                            self.mapCentroids[i] = plt.text(y-5,x+5,str(i),fontsize=10)
                             #self.mapCentroids[i].set_visible(True)
                         # Never actually remove the objects, just make them invisible...
                         # Sneaky...
                         
-            pylab.draw()
-            pylab.savefig(saveFile)
-            pylab.cla()
+            plt.draw()
+            plt.savefig(saveFile)
+            plt.cla()
         elif saveFile!=None:
             im = Image.fromarray(self.rgbM)
             im.save(saveFile)
@@ -1404,9 +1404,9 @@ class WatershedData:
             if self.mapPlot!=None:
                 self.mapPlot.set_data(self.rgbM)
             else:
-                self.mapPlot = pylab.imshow(self.rgbM,interpolation='nearest',animated=True)
+                self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
             self.DrawBWDot()
-            #pylab.draw() # Now DrawBWDot calls this instead...
+            #plt.draw() # Now DrawBWDot calls this instead...
     def MapPlotWTracks(self):
         # Disable the old mapPlot and redraw every time (will be slow...)
         # Later, could possibly store the tracks part for animations, too...
@@ -1427,15 +1427,15 @@ class WatershedData:
                 y.append([i[1] for i in centroid])
             x=np.array(x)
             y=n.array(y)
-        pylab.plot(y[0],x[0],'kx')
-        pylab.plot(y,x,'k')
+        plt.plot(y[0],x[0],'kx')
+        plt.plot(y,x,'k')
         # initiate the mouse-over printing...
-        pylab.gca().format_coord = GetReportPixel(self)
+        plt.gca().format_coord = GetReportPixel(self)
     def ToggleOverlaysVisible(self):
         self.overlayVisible = not self.overlayVisible
         self.ColorPlot()
     def ColorPlot(self):
-        pylab.figure(1)
+        plt.figure(1)
         im = self.filterData[self.index] # NOT 8- bit!!!
         seed = (self.seedArray!=0).astype(np.uint8)
         outl = self.woutline.astype(np.uint8)
@@ -1455,17 +1455,17 @@ class WatershedData:
             self.bgPlot.set_data(im)
             self.colorplot.set_data(self.rgba)
         else:
-            self.bgPlot = pylab.imshow(im,cmap=pylab.cm.gray,interpolation='nearest',animated=True)
-            self.colorplot = pylab.imshow(self.rgba,interpolation='nearest',animated=True)
-            pylab.xlim(0,self.watershed[0].shape[1])
-            pylab.ylim(self.watershed[0].shape[0],0)
+            self.bgPlot = plt.imshow(im,cmap=plt.cm.gray,interpolation='nearest',animated=True)
+            self.colorplot = plt.imshow(self.rgba,interpolation='nearest',animated=True)
+            plt.xlim(0,self.watershed[0].shape[1])
+            plt.ylim(self.watershed[0].shape[0],0)
         
         dprint(['wc',self.woundCenters[self.index],self.showWoundCenters])
         # Need to force this to plot so that axes will flip, just set to invisible...
         if self.redDot==None:
-            self.redDot=pylab.plot([0],[0],'ro')
-            pylab.xlim(0,self.watershed[0].shape[1])
-            pylab.ylim(self.watershed[0].shape[0],0)
+            self.redDot=plt.plot([0],[0],'ro')
+            plt.xlim(0,self.watershed[0].shape[1])
+            plt.ylim(self.watershed[0].shape[0],0)
         
         if self.showWoundCenters and self.woundCenters[self.index]!=None:
             [x,y] = self.woundCenters[self.index]
@@ -1473,14 +1473,14 @@ class WatershedData:
             self.redDot[0].set_visible(True) # Turn On Visible
         else:
             self.redDot[0].set_visible(False) # Turn Off Visible
-        #pylab.xlim(0,self.watershed[0].shape[1])
-        #pylab.ylim(self.watershed[0].shape[0],0)
+        #plt.xlim(0,self.watershed[0].shape[1])
+        #plt.ylim(self.watershed[0].shape[0],0)
         # AAARRRGGG!!!
         # NEED TO FORCE COORDINATES TO STAY IMAGE-STYLE!
         
         # This is by FAR the slowest step, about 0.25s
         self.HighlightRegion()
-        # pylab.draw() # Highlight Region also calls draw, so this doesn't need to!
+        # plt.draw() # Highlight Region also calls draw, so this doesn't need to!
     def UpdateSelection(self,point=None,append=False):
         if append==False:
             self.selectionVals=[]
@@ -1490,8 +1490,8 @@ class WatershedData:
         self.point_mode=False
         
     def DrawBWDot(self):
-        fn=pylab.gcf().number
-        pylab.figure(2)
+        fn=plt.gcf().number
+        plt.figure(2)
         
         if self.point_mode==False:
             cm=np.zeros([len(self.selectionVals),2],dtype=np.float)
@@ -1500,15 +1500,15 @@ class WatershedData:
                     # centroid of selected region v
                     cm[i] = center_of_mass((self.watershed[self.index]==v).astype(np.float))
             if self.bwDot==None and self.point_mode==False:
-                self.bwDot=pylab.plot(cm[:,1],cm[:,0],'ko')
+                self.bwDot=plt.plot(cm[:,1],cm[:,0],'ko')
                 self.bwDot[0].set_markeredgecolor('w')
                 self.bwDot[0].set_markeredgewidth(1.2)
             else:
                 self.bwDot[0].set_data(cm[:,1],cm[:,0])
         
-        pylab.draw()
+        plt.draw()
         # Set the figure back to what it was
-        pylab.figure(fn)
+        plt.figure(fn)
     
     def HighlightRegion(self):
         a=np.zeros(self.watershed[self.index].shape,dtype=np.uint8)
@@ -1542,9 +1542,9 @@ class WatershedData:
         if self.hiplot!=None:
             self.hiplot.set_data(self.rgbaH)
         else:
-            self.hiplot = pylab.imshow(self.rgbaH,interpolation='nearest',animated=True)
+            self.hiplot = plt.imshow(self.rgbaH,interpolation='nearest',animated=True)
         
-        pylab.draw()
+        plt.draw()
         
     def LassoCallback(self,verts):
         for i in range(len(verts)):
@@ -1561,8 +1561,8 @@ class WatershedData:
         
         self.ColorPlot()
         
-        pylab.figure(1).canvas.draw_idle()
-        pylab.figure(1).canvas.widgetlock.release(self.lasso)
+        plt.figure(1).canvas.draw_idle()
+        plt.figure(1).canvas.widgetlock.release(self.lasso)
         del self.lasso
     def CompressSeedValues(self):
         oldIndex = self.index
@@ -2040,28 +2040,28 @@ class WatershedData:
         area=np.array(self.area)
         per=np.array(self.perimeter)
         
-        fn=pylab.gcf().number
+        fn=plt.gcf().number
         for v in range(area.shape[1]):
-            pylab.figure(4)
-            pylab.plot(area[:,v],label=str(v))
-            pylab.figure(5)
-            pylab.plot(per[:,v],label=str(v))
-        pylab.figure(4)
-        pylab.legend()
-        pylab.figure(5)
-        pylab.legend()
-        pylab.figure(fn)
+            plt.figure(4)
+            plt.plot(area[:,v],label=str(v))
+            plt.figure(5)
+            plt.plot(per[:,v],label=str(v))
+        plt.figure(4)
+        plt.legend()
+        plt.figure(5)
+        plt.legend()
+        plt.figure(fn)
                 
     def TestCalculations(self):
         self.UpdateValuesList()
         print self.valList
         print self.GetBoundingRectangles()
         print self.CalculateCentroids()
-        fn=pylab.gcf().number
-        pylab.figure(2)
+        fn=plt.gcf().number
+        plt.figure(2)
         for [[xm,xM],[ym,yM]] in self.GetBoundingRectangles():
-            pylab.plot([ym,ym,yM,yM,ym],[xm,xM,xM,xm,xm],'k-')
-        pylab.figure(fn)
+            plt.plot([ym,ym,yM,yM,ym],[xm,xM,xM,xm,xm],'k-')
+        plt.figure(fn)
         
         print self.CalculateArea()
         print self.CalculatePerimeter()
@@ -2506,19 +2506,19 @@ class WatershedData:
         wi = np.array(self.watershed[ind],dtype=np.int)
         for v in woundVals:
             wi[np.where(wi==v)]=1e6
-        pylab.figure(10)
-        pylab.clf()
-        pylab.ylim(pylab.gca().get_ylim()[::-1])
+        plt.figure(10)
+        plt.clf()
+        plt.ylim(plt.gca().get_ylim()[::-1])
         for v in WNv[ind]:
             for c in ImageContour.GetBoundaryLine(wi,1e6,v):
-                pylab.plot(*(np.array( c )[:,::-1].T),marker='.')
+                plt.plot(*(np.array( c )[:,::-1].T),marker='.')
                 sleep(0.4)
-                pylab.draw()
+                plt.draw()
         for v in NNv[ind]:
             for c in ImageContour.GetBoundaryLine(wi,v[0],v[1]):
-                pylab.plot(*(np.array( c )[:,::-1].T))
+                plt.plot(*(np.array( c )[:,::-1].T))
                 sleep(0.4)
-                pylab.draw()
+                plt.draw()
     # Later, change this to use ExendedWoundContours instead of wcList,swcList
     def PerimeterTests(self,frame,testInd,woundVals,wcList,swcList,useSorted=False):
         """perimeter check for NO"""
@@ -2612,15 +2612,15 @@ class WatershedData:
                 ind=i+2
                 val=bins[i][j]+2
                 rgbMap4Rings[np.where(self.watershed[frame]==val)]=colors[ind-2+len(woundVals)]
-        pylab.imshow(rgbMap4Rings)
-        a=pylab.gca()
+        plt.imshow(rgbMap4Rings)
+        a=plt.gca()
         if not useNei:
-            cir = pylab.Circle( (self.woundCenters[0][0],self.woundCenters[0][1]), radius=0.1,Fill=False)
+            cir = plt.Circle( (self.woundCenters[0][0],self.woundCenters[0][1]), radius=0.1,Fill=False)
             a.add_patch(cir)
             for i in range(len(bins)):
-                cir = pylab.Circle( (self.woundCenters[0][0],self.woundCenters[0][1]), radius=initR+i*binSize,Fill=False)
+                cir = plt.Circle( (self.woundCenters[0][0],self.woundCenters[0][1]), radius=initR+i*binSize,Fill=False)
                 a.add_patch(cir)
-        pylab.draw()
+        plt.draw()
         return rgbMap4Rings
 
 mouseModeHelpTxt = ["Move Mode Help:\n"
@@ -2820,7 +2820,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.ToggleViewCheckbox.SetValue(self.wd.overlayVisible)
         
         #self.wd.DrawOrigImage()
-        pylab.figure(1); pylab.imshow(self.wd.filterData[self.wd.index],cmap=pylab.cm.gray)
+        plt.figure(1); plt.imshow(self.wd.filterData[self.wd.index],cmap=plt.cm.gray)
         
         # Automatically ask to open previous seeds (just hit cancel if none...)
         self.SetStatus('Checking on Optional Watershed and Seed Data')
@@ -2839,13 +2839,13 @@ Arrow Keys: Move selected seeds (after lasso)
         self.SetStatus('Ready')
     def SetMPLKeyConnections(self):
         for i in range(1,3):
-            pylab.figure(i)
-            pylab.figure(i).canvas.mpl_connect('key_press_event',self.OnKeyDownMPL)
-            pylab.figure(i).canvas.mpl_connect('key_release_event',self.OnKeyReleaseMPL)
-            pylab.gca().format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
+            plt.figure(i)
+            plt.figure(i).canvas.mpl_connect('key_press_event',self.OnKeyDownMPL)
+            plt.figure(i).canvas.mpl_connect('key_release_event',self.OnKeyReleaseMPL)
+            plt.gca().format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
     def SetConnection(self,f):
-        pylab.figure(1)
-        self.connection = pylab.connect('button_press_event',f)
+        plt.figure(1)
+        self.connection = plt.connect('button_press_event',f)
     
     def FileNameTextCallback(self,event):
         f=event.GetValue()
@@ -3058,14 +3058,14 @@ Arrow Keys: Move selected seeds (after lasso)
                     elif event.button == 3:
                         self.wd.DeleteSeedByRegion([y,x])
                     
-                    pylab.figure(1)#; cla()
+                    plt.figure(1)#; cla()
                     self.wd.ColorPlot()#([x,y])
                     #figure(1); plot([x],[y],'ro')
             elif self.mouseMode=='e':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        pylab.figure(1)
+                        plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
                             self.wd.ColorPlot()
@@ -3076,17 +3076,17 @@ Arrow Keys: Move selected seeds (after lasso)
                             self.wd.ColorPlot()
             elif self.mouseMode=='l':
                 x, y = int(event.xdata), int(event.ydata)
-                if pylab.figure(1).canvas.widgetlock.locked(): return
+                if plt.figure(1).canvas.widgetlock.locked(): return
                 if event.inaxes and event.button == 1:
                     self.wd.lasso = PolyLasso(event.inaxes, self.wd.LassoCallback)
                     # acquire a lock on the widget drawing
-                    pylab.figure(1).canvas.widgetlock(self.wd.lasso)
+                    plt.figure(1).canvas.widgetlock(self.wd.lasso)
                     #self.wd.ColorPlot()
             elif self.mouseMode=='x':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        pylab.figure(1)
+                        plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
                             self.wd.ColorPlot()
@@ -3100,7 +3100,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        pylab.figure(1)
+                        plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
                             self.wd.previousDrawPoint=None
@@ -3128,7 +3128,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 x, y = event.xdata, event.ydata # Do not round x and y!
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        pylab.figure(1)
+                        plt.figure(1)
                         if event.button == 1:
                             self.wd.woundCenters[self.wd.index]=[x,y]
                         elif event.button == 3:
@@ -3538,17 +3538,17 @@ class SegmenterApp(wx.App):
     def InitMPL(self):
         # Initialize the three figures in reverse order and disable keyboard navigation keys
         for j in range(2,0,-1):
-            f=pylab.figure(j)
+            f=plt.figure(j)
             if j==2 and DONT_PANIC:
-                pylab.gca()
-                pylab.title("Don't Panic!!!")
-            pylab.draw()
+                plt.gca()
+                plt.title("Don't Panic!!!")
+            plt.draw()
             for i in f.canvas.callbacks.callbacks:
                 if i=='key_press_event':
                     f.canvas.mpl_disconnect(f.canvas.callbacks.callbacks[i].keys()[0])
 
 def InitializeMPL():
-    pylab.ion()
+    plt.ion()
 
 if __name__=='__main__':
     #f=u'/home/mashbudn/Documents/VIIBRE--ScarHealing/ActiveData/Result of Stack_Zproject_GBR_DC0003.tif'
