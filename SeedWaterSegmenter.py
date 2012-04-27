@@ -1848,10 +1848,11 @@ class WatershedData:
             bigData.append([ColNames]+l)
         ExcelHelper.excelWrite(bigData,[str(i+1) for i in range(adjLength)],
                                os.path.join(directory,'TripleJunctionsWithCellIDs.xls'))
-    def GetNeighborPairsByFrame(self): # Merges wound vals... make sure you run LoadStats or CollectAllStats first!
+    #NOT TESTED
+    def GetNeighborPairsByFrame(self,woundVals): # Merges wound vals... make sure you run LoadStats or CollectAllStats first!
         neighborPairsByFrame = []
         for frame in range(self.length):
-            MergeWoundVals(self.neighbors[frame],woundValList[-1])
+            MergeWoundVals(self.neighbors[frame],woundVals)
             neighborPairs = set()
             for i in range(len(self.neighbors[frame])):
                 if self.neighbors[frame][i]!=None:
@@ -1859,6 +1860,7 @@ class WatershedData:
                         neighborPairs.update( [tuple(sorted([i+2,j])) for j in self.neighbors[frame][i] ] )
             neighborPairsByFrame.append(sorted(list(neighborPairs)))
         return neighborPairsByFrame
+    #NOT TESTED
     def GetContourValuesLengthsAndSubContoursByFrame(self,allValsByFrame,woundValsSorted):
         ######### NOT DONE!!!!!!! ####################
         # THIS IS NOT THIS SIMPLE... STILL NEED TO SOMEHOW MERGE WOUND
@@ -1882,6 +1884,7 @@ class WatershedData:
                     del(cVLS[i])
             cVLSByFrame.append(cVLS)
         return cVLSByFrame
+    #NOT TESTED
     def SaveSubContours(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory==None:
@@ -1892,8 +1895,8 @@ class WatershedData:
             return    
         woundValsSorted = sorted(MI.woundVals)
         self.CollectAllStats() # Safer but slower way to do it...
-        neighborPairsByFrame = self.GetNeighborPairsByFrame()
-        allValsByFrame = GetAllValsByFrame(neighborsPairsByFrame)
+        neighborPairsByFrame = self.GetNeighborPairsByFrame(woundValsSorted)
+        allValsByFrame = GetAllValsByFrame(neighborPairsByFrame)
         
         cVLSByFrame = self.GetContourValuesLengthsAndSubContoursByFrame(allValsByFrame,woundValsSorted)
         fid=open(os.path.join(directory,'CellBoundarySubContours.py'),'w')
