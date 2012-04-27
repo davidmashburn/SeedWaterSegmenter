@@ -1518,26 +1518,27 @@ class WatershedData:
         
         print usedVals
         
-        for i in range(numFrames):
-            print 'frame',i
-            newVal = 2
-            for val in usedVals:
-                self.index=i
-                ptsAtVal = np.where(self.watershed[i]==val)
-                self.watershed[i][ptsAtVal] = newVal
-                
-                for l in [self.seedVals[i],self.oldSeedVals,
-                          self.selectionVals]:
-                    if l not in [[],None]:
-                        while val in l:
-                            l[l.index(val)]=newVal
-                
-                self.UpdateSeeds()
-                self.UpdateValuesList()
-                self.UpdateSelection()
-                
-                self.framesVisited[i]=True
-                newVal+=1
+        newVal = 2
+        for val in usedVals:
+            if val!=newVal:
+                for i in range(numFrames):
+                    print 'frame',i
+                    self.index=i
+                    ptsAtVal = np.where(self.watershed[i]==val)
+                    self.watershed[i][ptsAtVal] = newVal
+                    
+                    for l in [self.seedVals[i],self.oldSeedVals,
+                            self.selectionVals]:
+                        if l not in [[],None]:
+                            while val in l:
+                                l[l.index(val)]=newVal
+                    
+                    self.UpdateSeeds()
+                    self.UpdateValuesList()
+                    self.UpdateSelection()
+                    
+                    self.framesVisited[i]=True
+            newVal+=1
         self.index = oldIndex
     def AutoCenterWound(self,woundVals):
         oldIndex=self.index
@@ -3154,6 +3155,11 @@ Arrow Keys: Move selected seeds (after lasso)
                         self.wd.ColorPlot()
                         self.wd.MapPlot()
                         print 'Watershed Done'
+            else:
+                if self.wd.seedList[self.wd.index] == None:
+                    self.wd.seedList[self.wd.index] = []
+                    self.wd.seedVals[self.wd.index] = []
+                    self.wd.seedSelections[self.wd.index] = []
         elif ckey=='r': # Reset all data 
             self.SetStatus('Resetting All Filters')
             print 'Reset All Filters on Figures 1 and 2'
