@@ -504,8 +504,9 @@ class WoundContours:
 
 def SeedListToSparse(seeds,vals,shape):
     if seeds!=None:
-        return scipy.sparse.coo_matrix((vals,(sL[:,0],sL[:,1])), shape=self.origData.shape[1:])
-                                       #(data,(  rows , cols  ))
+        sparse = scipy.sparse.coo_matrix((vals,(sL[:,0],sL[:,1])), shape=self.origData.shape[1:]).tolil()
+                                        #(data,(  rows , cols  ))
+        return sparse.tolil()
 
 # This class now deals with image stacks as well as images...
 class WatershedData:
@@ -541,7 +542,7 @@ class WatershedData:
         
         self.seedList = [previousSeeds]+[None]*(self.length-1) # [x,y]
         self.seedVals = [None]*self.length
-        self.cooList = [SeedListToSparse(self.seedList[i],self.seedVals[i],
+        self.sparseList = [SeedListToSparse(self.seedList[i],self.seedVals[i],
                                          self.shape[1:])] # sparse matrix list
         self.seedSelections = [None]*self.length
         if self.seedList[0]!=None:
@@ -592,7 +593,7 @@ class WatershedData:
         # For undo...
         self.oldSeedList = None
         self.oldSeedVals = None
-        self.oldCooList = None
+        self.oldSparseList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
         #self.UpdateSeeds()
@@ -602,7 +603,7 @@ class WatershedData:
         # This allows undo to work...
         self.oldSeedList = deepcopy(self.seedList[self.index])
         self.oldSeedVals = deepcopy(self.seedVals[self.index])
-        self.oldCooList = self.cooList[self.index]
+        self.oldSparseList = self.sparseList[self.index]
         self.oldSeedSelections = deepcopy(self.seedSelections[self.index])
         self.old_point_mode=self.point_mode
         self.previousDrawPoint=None
@@ -610,7 +611,7 @@ class WatershedData:
         # Remove old state
         self.oldSeedList = None
         self.oldSeedVals = None
-        self.oldCooList = None
+        self.oldSparseList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
     def Undo(self):
@@ -628,17 +629,17 @@ class WatershedData:
             
             tmpSL = self.oldSeedList
             tmpSV = self.oldSeedVals
-            tmpCL = self.oldCooList
+            tmpCL = self.oldSparseList
             tmpSS = self.oldSeedSelections
             tmpPM = self.old_point_mode
             self.oldSeedList = self.seedList[self.index]
             self.oldSeedVals = self.seedVals[self.index]
-            self.oldCooList = self.cooList[self.index]            
+            self.oldSparseList = self.sparseList[self.index]            
             self.oldSeedSelections = self.seedSelections[self.index]
             self.old_point_mode = self.point_mode
             self.seedList[self.index] = tmpSL
             self.seedVals[self.index] = tmpSV
-            self.cooList = tmpCL
+            self.sparseList = tmpCL
             self.seedSelections[self.index] = tmpSS
             self.point_mode = tmpPM
             self.previousDrawPoint=None
@@ -822,7 +823,7 @@ class WatershedData:
             self.seedList = Seeds.seedList
             self.seedVals = Seeds.seedVals
             for i in range(len(seedList)):
-                self.cooList[i] = SeedListToSparse(seedList[i],seedVals[i],
+                self.sparseList[i] = SeedListToSparse(seedList[i],seedVals[i],
                                                    self.origSeeds.shape[1:])
             
             try: # Since walgorithm is not part of early versions, allow it to be optional
@@ -894,7 +895,7 @@ class WatershedData:
                 self.seedVals[self.index]+=[i+2]*len(expandedPoints)
             
             ##############   FFFFFFFFIIIIIIIIIIIIXXXXXXXXXXXXXX        MMMMMMMMMMMEEEEEEEEEE    ############
-            # Also update the cooList here... eventually, we will remove references to seedList and seedVals except in the legacy save format...
+            # Also update the sparseList here... eventually, we will remove references to seedList and seedVals except in the legacy save format...
             
             #self.seedVals[self.index] = range(2,2+len(self.seedList[self.index]))
             self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
@@ -903,7 +904,7 @@ class WatershedData:
         #for i,s in enumerate(self.seedList[self.index]):
         #    self.seedArray[self.index,s[0],s[1]]=self.seedVals[self.index][i]
         
-        self.seedArray = self.cooList[self.index].toarray()
+        self.seedArray = self.sparseList[self.index].toarray()
         
         #PointsToArray(self.seedList[self.index], self.seedVals[self.index],self.seedArray)
         
