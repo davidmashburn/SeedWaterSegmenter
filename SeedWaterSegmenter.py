@@ -30,6 +30,7 @@ from numpy import nonzero
 from numpy.random import rand
 
 import scipy.ndimage
+import scipy.sparse
 import Image
 import GifTiffLoader as GTL
 from cmpGen import cmpGen
@@ -501,6 +502,11 @@ class WoundContours:
         self.NOv = wc.NOv
         self.NOl = wc.NOl
 
+def SeedListToSparse(seeds,vals,shape):
+    if seeds!=None:
+        return scipy.sparse.coo_matrix((vals,(sL[:,0],sL[:,1])), shape=self.origData.shape[1:])
+                                       #(data,(  rows , cols  ))
+
 # This class now deals with image stacks as well as images...
 class WatershedData:
     def __init__(self,arrayIn,previousSeeds=None):
@@ -509,7 +515,7 @@ class WatershedData:
         if len(arrayIn.shape)==2:
             arrayIn=arrayIn.reshape([1,arrayIn.shape[0],arrayIn.shape[1]])
         self.length=arrayIn.shape[0] # number of frames
-        
+        self.shape = arrayIn.shape
         # I AM CHANGING THE DEFAULT BEHAVIOR!!!!!!!!!
         # I don't really think this will change the watersheds, but it
         #  really might change the brightness of the image...
@@ -535,6 +541,8 @@ class WatershedData:
         
         self.seedList = [previousSeeds]+[None]*(self.length-1) # [x,y]
         self.seedVals = [None]*self.length
+        self.cooList = [SeedListToSparse(self.seedList[i],self.seedVals[i],
+                                         self.shape[1:])] # sparse matrix list
         self.seedSelections = [None]*self.length
         if self.seedList[0]!=None:
             self.seedVals[0] = range(2,2+len(self.seedList[0]))
@@ -584,6 +592,7 @@ class WatershedData:
         # For undo...
         self.oldSeedList = None
         self.oldSeedVals = None
+        self.oldCooList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
         #self.UpdateSeeds()
@@ -593,6 +602,7 @@ class WatershedData:
         # This allows undo to work...
         self.oldSeedList = deepcopy(self.seedList[self.index])
         self.oldSeedVals = deepcopy(self.seedVals[self.index])
+        self.oldCooList = self.cooList[self.index]
         self.oldSeedSelections = deepcopy(self.seedSelections[self.index])
         self.old_point_mode=self.point_mode
         self.previousDrawPoint=None
@@ -600,6 +610,7 @@ class WatershedData:
         # Remove old state
         self.oldSeedList = None
         self.oldSeedVals = None
+        self.oldCooList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
     def Undo(self):
@@ -617,14 +628,17 @@ class WatershedData:
             
             tmpSL = self.oldSeedList
             tmpSV = self.oldSeedVals
+            tmpCL = self.oldCooList
             tmpSS = self.oldSeedSelections
             tmpPM = self.old_point_mode
             self.oldSeedList = self.seedList[self.index]
             self.oldSeedVals = self.seedVals[self.index]
+            self.oldCooList = self.cooList[self.index]            
             self.oldSeedSelections = self.seedSelections[self.index]
             self.old_point_mode = self.point_mode
             self.seedList[self.index] = tmpSL
             self.seedVals[self.index] = tmpSV
+            self.cooList = tmpCL
             self.seedSelections[self.index] = tmpSS
             self.point_mode = tmpPM
             self.previousDrawPoint=None
@@ -807,6 +821,9 @@ class WatershedData:
         if len(Seeds.seedList)==self.length:
             self.seedList = Seeds.seedList
             self.seedVals = Seeds.seedVals
+            for i in range(len(seedList)):
+                self.cooList[i] = SeedListToSparse(seedList[i],seedVals[i],
+                                                   self.origSeeds.shape[1:])
             
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
@@ -876,14 +893,19 @@ class WatershedData:
                 self.seedList[self.index]+=expandedPoints
                 self.seedVals[self.index]+=[i+2]*len(expandedPoints)
             
+            ##############   FFFFFFFFIIIIIIIIIIIIXXXXXXXXXXXXXX        MMMMMMMMMMMEEEEEEEEEE    ############
+            # Also update the cooList here... eventually, we will remove references to seedList and seedVals except in the legacy save format...
+            
             #self.seedVals[self.index] = range(2,2+len(self.seedList[self.index]))
             self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
         
         #self.seedArray[self.index,:,:] = 0
         #for i,s in enumerate(self.seedList[self.index]):
         #    self.seedArray[self.index,s[0],s[1]]=self.seedVals[self.index][i]
-        PointsToArray(self.seedList[self.index], self.seedVals[self.index],
-                            self.seedArray)
+        
+        self.seedArray = self.cooList[self.index].toarray()
+        
+        #PointsToArray(self.seedList[self.index], self.seedVals[self.index],self.seedArray)
         
         if self.background:
             val = 2 #(2 if self.walgorithm=='cv' else 1) # I could do this, but what's the need?
