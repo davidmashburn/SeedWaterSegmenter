@@ -268,6 +268,30 @@ def GetPointsAtRadius(arr_shape,x,y,r):
                     l+=[[i,j]]
     return l
 
+def ImageCircle(r):
+    """Create a binary image of a circle radius r"""
+    im = np.zeros([2*r-1,2*r-1],dtype=np.int)
+    r2 = r**2
+    for i in range(2*r-1):
+        for j in range(2*r-1):
+            if (i-r+1)**2+(j-r+1)**2 < r2:
+                im[i,j] = 1
+            else:
+                im[i,j]=0
+    return im
+
+def blitCircleToArray(arr,x,y,r,val):
+    xL,xH = np.clip(x-r+1,0,arr.shape[0]), np.clip(x+r,0,arr.shape[0])
+    yL,yH = np.clip(y-r+1,0,arr.shape[1]), np.clip(y+r,0,arr.shape[1])
+    xcL,xcH = xL-(x-r+1), 2*r-1 + xH-(x+r)
+    ycL,ycH = yL-(y-r+1), 2*r-1 + yH-(y+r)
+    #print (xL,xH,yL,yH),(xcL,xcH,ycL,ycH)
+    #print xH-xL,yH-yL,xcH-xcL,ycH-ycL
+    c=ImageCircle(r)[xcL:xcH,ycL:ycH]
+    #print arr[xL:xH,yL:yH].shape,c.shape
+    arr[xL:xH,yL:yH] *= (1-c)
+    arr[xL:xH,yL:yH] += (val*c)
+
 def MaxMinFinder(x,useMin=True):
     sl  = [slice(None,-1),slice(None),slice(1,None)]
     sl2 = [slice(1,None),slice(None),slice(None,-1)]
