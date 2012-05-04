@@ -532,6 +532,16 @@ def SeedListToSparse(seeds,vals,shape):
                                         #(data,(  rows , cols  ))
         return sparse.tolil()
 
+def MakeCmapFromArray(a):
+    r,b,g = [],[],[]
+    for i in range(len(a[0])):
+        p=i*1./(len(a[0])-1)
+        r.append((p,a[0][i],a[0][i]))
+        g.append((p,a[1][i],a[1][i]))
+        b.append((p,a[2][i],a[2][i]))
+    segmentdata = {'red':tuple(r),'green':tuple(g),'blue':tuple(b)}
+    return matplotlib.colors.LinearSegmentedColormap('rand4SW',segmentdata)
+
 # This class now deals with image stacks as well as images...
 class WatershedData:
     def __init__(self,arrayIn,previousSeeds=None):
@@ -566,8 +576,8 @@ class WatershedData:
         
         self.seedList = [previousSeeds]+[None]*(self.length-1) # [x,y]
         self.seedVals = [None]*self.length
-        self.sparseList = [SeedListToSparse(self.seedList[i],self.seedVals[i],
-                                         self.shape[1:])] # sparse matrix list
+        self.sparseList = [ SeedListToSparse(self.seedList[i],self.seedVals[i],self.shape[1:])
+                            for i in range(self.length) ] # sparse matrix list
         self.seedSelections = [None]*self.length
         if self.seedList[0]!=None:
             self.seedVals[0] = range(2,2+len(self.seedList[0]))
@@ -611,6 +621,8 @@ class WatershedData:
                                           np.random.random(10000)*236+20], dtype=np.uint8)
         self.mapPlotRandomArray[:,0]=255
         self.mapPlotRandomArray[:,1]=255
+        self.mapPlotRandomFloatArray = np.array(self.mapPlotRandomArray,dtype=np.float)/255.
+        self.mapPlotCmap = MakeCmapFromArray(self.mapPlotRandomFloatArray)
         
         self.previousDrawPoint=None
         
@@ -928,9 +940,9 @@ class WatershedData:
         #for i,s in enumerate(self.seedList[self.index]):
         #    self.seedArray[self.index,s[0],s[1]]=self.seedVals[self.index][i]
         
-        self.seedArray = self.sparseList[self.index].toarray()
+        #self.seedArray = self.sparseList[self.index].toarray()
         
-        #PointsToArray(self.seedList[self.index], self.seedVals[self.index],self.seedArray)
+        PointsToArray(self.seedList[self.index], self.seedVals[self.index],self.seedArray)
         
         if self.background:
             val = 2 #(2 if self.walgorithm=='cv' else 1) # I could do this, but what's the need?
@@ -1386,9 +1398,13 @@ class WatershedData:
             #imsave(saveFile, map)
         else:
             if self.mapPlot!=None:
-                self.mapPlot.set_data(self.rgbM)
+                ###self.mapPlot.set_data(self.rgbM)
+                self.mapPlot.set_data(self.watershed[self.index])
+                
             else:
-                self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
+                ###self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
+                self.mapPlot = plt.imshow(self.watershed[self.index],animated=True,
+                                          interpolation='nearest',cmap=self.mapPlotCmap)
             self.DrawBWDot()
             #plt.draw() # Now DrawBWDot calls this instead...
     def MapPlotWTracks(self):
