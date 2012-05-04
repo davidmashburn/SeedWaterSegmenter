@@ -1347,21 +1347,7 @@ class WatershedData:
     def MapPlot(self,saveFile=None,useText=False):
         plt.figure(2)#;cla()
         
-        f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
-        f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
-        f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
-        
         wi = np.array(self.watershed[self.index],dtype=np.int)
-        
-        if self.rgbM==None:
-            self.rgbM = np.array([f1(wi),f2(wi),f3(wi)]).transpose(1,2,0)
-        else:
-            convToRandColors(self.mapPlotRandomArray,self.rgbM,
-                             wi,wi.shape[0],wi.shape[1])
-            # This step is still really slow...
-            #self.rgbM[:,:,0] = f1(self.watershed[self.index])
-            #self.rgbM[:,:,1] = f2(self.watershed[self.index])
-            #self.rgbM[:,:,2] = f3(self.watershed[self.index])
         
         if saveFile!=None and useText: # Normally skip all the text labels... they are painfully slow!
             for i in self.mapCentroids:
@@ -1392,7 +1378,22 @@ class WatershedData:
             plt.draw()
             plt.savefig(saveFile)
             plt.cla()
-        elif saveFile!=None:
+        elif saveFile!=None: # I may have broken this... sorry...
+            f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
+            f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
+            f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
+            
+            if self.rgbM==None:
+                self.rgbM = np.array([f1(wi),f2(wi),f3(wi)]).transpose(1,2,0)
+            else:
+                # No more dependence on cython function; save will be a little slower, but whatever...
+                #convToRandColors(self.mapPlotRandomArray,self.rgbM,
+                #                 wi,wi.shape[0],wi.shape[1])
+                # This step is still really slow...
+                self.rgbM[:,:,0] = f1(self.watershed[self.index])
+                self.rgbM[:,:,1] = f2(self.watershed[self.index])
+                self.rgbM[:,:,2] = f3(self.watershed[self.index])
+            
             im = Image.fromarray(self.rgbM)
             im.save(saveFile)
             #imsave(saveFile, map)
