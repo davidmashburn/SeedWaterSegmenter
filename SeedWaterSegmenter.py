@@ -862,9 +862,9 @@ class WatershedData:
         if len(Seeds.seedList)==self.length:
             self.seedList = Seeds.seedList
             self.seedVals = Seeds.seedVals
-            for i in range(len(self.seedList)):
-                self.sparseList[i] = SeedListToSparse(self.seedList[i],self.seedVals[i],
-                                                   self.origSeeds.shape[1:])
+            #for i in range(len(self.seedList)):
+            #    self.sparseList[i] = SeedListToSparse(self.seedList[i],self.seedVals[i],
+            #                                       self.origSeeds.shape[1:])
             
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
