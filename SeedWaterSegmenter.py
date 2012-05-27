@@ -532,6 +532,15 @@ def SeedListToSparse(seeds,vals,shape):
                                         #(data,(  rows , cols  ))
         return sparse.tolil()
 
+def GetMapPlotRandomArray():
+    np.random.seed(0)
+    mapPlotRandomArray=np.array([np.random.random(10000)*236+20,
+                                 np.random.random(10000)*236+20,
+                                 np.random.random(10000)*236+20], dtype=np.uint8)
+    mapPlotRandomArray[:,0]=255
+    mapPlotRandomArray[:,1]=255
+    return mapPlotRandomArray
+
 def MakeCmapFromArray(a):
     r,b,g = [],[],[]
     for i in range(len(a[0])):
@@ -615,12 +624,7 @@ class WatershedData:
         self.selectionVals=[]
         self.pointSize=DEFAULT_SEED_SIZE
         self.point_mode=False
-        np.random.seed(0)
-        self.mapPlotRandomArray=np.array([np.random.random(10000)*236+20,
-                                          np.random.random(10000)*236+20,
-                                          np.random.random(10000)*236+20], dtype=np.uint8)
-        self.mapPlotRandomArray[:,0]=255
-        self.mapPlotRandomArray[:,1]=255
+        self.mapPlotRandomArray=GetMapPlotRandomArray()
         self.mapPlotRandomFloatArray = np.array(self.mapPlotRandomArray,dtype=np.float)/255.
         self.mapPlotCmap = MakeCmapFromArray(self.mapPlotRandomFloatArray)
         
@@ -858,8 +862,8 @@ class WatershedData:
         if len(Seeds.seedList)==self.length:
             self.seedList = Seeds.seedList
             self.seedVals = Seeds.seedVals
-            for i in range(len(seedList)):
-                self.sparseList[i] = SeedListToSparse(seedList[i],seedVals[i],
+            for i in range(len(self.seedList)):
+                self.sparseList[i] = SeedListToSparse(self.seedList[i],self.seedVals[i],
                                                    self.origSeeds.shape[1:])
             
             try: # Since walgorithm is not part of early versions, allow it to be optional
