@@ -528,9 +528,9 @@ class WoundContours:
 
 def SeedListToSparse(seeds,vals,shape):
     if seeds!=None:
-        sparse = scipy.sparse.coo_matrix((vals,(sL[:,0],sL[:,1])), shape=self.origData.shape[1:]).tolil()
-                                        #(data,(  rows , cols  ))
-        return sparse.tolil()
+        row,col = np.array(seeds).T
+        sparse = scipy.sparse.coo_matrix((vals,(row,col)), shape=shape)
+        return sparse
 
 def GetMapPlotRandomArray():
     np.random.seed(0)
@@ -670,7 +670,7 @@ class WatershedData:
             
             tmpSL = self.oldSeedList
             tmpSV = self.oldSeedVals
-            tmpCL = self.oldSparseList
+            tmpSpL = self.oldSparseList
             tmpSS = self.oldSeedSelections
             tmpPM = self.old_point_mode
             self.oldSeedList = self.seedList[self.index]
@@ -680,7 +680,7 @@ class WatershedData:
             self.old_point_mode = self.point_mode
             self.seedList[self.index] = tmpSL
             self.seedVals[self.index] = tmpSV
-            self.sparseList = tmpCL
+            self.sparseList = tmpSpL
             self.seedSelections[self.index] = tmpSS
             self.point_mode = tmpPM
             self.previousDrawPoint=None
@@ -863,9 +863,9 @@ class WatershedData:
         if len(Seeds.seedList)==self.length:
             self.seedList = Seeds.seedList
             self.seedVals = Seeds.seedVals
-            #for i in range(len(self.seedList)):
-            #    self.sparseList[i] = SeedListToSparse(self.seedList[i],self.seedVals[i],
-            #                                       self.origSeeds.shape[1:])
+            for i in range(len(self.seedList)):
+                self.sparseList[i] = SeedListToSparse(self.seedList[i],self.seedVals[i],
+                                                      self.origData.shape[1:])
             
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
