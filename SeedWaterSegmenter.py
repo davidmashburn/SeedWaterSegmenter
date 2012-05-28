@@ -541,15 +541,15 @@ def GetMapPlotRandomArray():
     mapPlotRandomArray[:,1]=255
     return mapPlotRandomArray
 
-def MakeCmapFromArray(a):
-    r,b,g = [],[],[]
-    for i in range(len(a[0])):
-        p=i*1./(len(a[0])-1)
-        r.append((p,a[0][i],a[0][i]))
-        g.append((p,a[1][i],a[1][i]))
-        b.append((p,a[2][i],a[2][i]))
-    segmentdata = {'red':tuple(r),'green':tuple(g),'blue':tuple(b)}
-    return matplotlib.colors.LinearSegmentedColormap('rand4SW',segmentdata)
+#def MakeCmapFromArray(a):
+#    r,b,g = [],[],[]
+#    for i in range(len(a[0])):
+#        p=i*1./(len(a[0])-1)
+#        r.append((p,a[0][i],a[0][i]))
+#        g.append((p,a[1][i],a[1][i]))
+#        b.append((p,a[2][i],a[2][i]))
+#    segmentdata = {'red':tuple(r),'green':tuple(g),'blue':tuple(b)}
+#    return matplotlib.colors.LinearSegmentedColormap('rand4SW',segmentdata)
 
 # This class now deals with image stacks as well as images...
 class WatershedData:
@@ -626,7 +626,8 @@ class WatershedData:
         self.point_mode=False
         self.mapPlotRandomArray=GetMapPlotRandomArray()
         self.mapPlotRandomFloatArray = np.array(self.mapPlotRandomArray,dtype=np.float)/255.
-        self.mapPlotCmap = MakeCmapFromArray(self.mapPlotRandomFloatArray)
+        self.mapPlotCmap = matplotlib.colors.ListedColormap(self.mapPlotRandomFloatArray.T)
+        #self.mapPlotCmap = MakeCmapFromArray(self.mapPlotRandomFloatArray)
         
         self.previousDrawPoint=None
         
@@ -1409,7 +1410,8 @@ class WatershedData:
             else:
                 ###self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
                 self.mapPlot = plt.imshow(self.watershed[self.index],animated=True,
-                                          interpolation='nearest',cmap=self.mapPlotCmap)
+                                          interpolation='nearest',cmap=self.mapPlotCmap,
+                                          norm=matplotlib.colors.NoNorm() )
             self.DrawBWDot()
             #plt.draw() # Now DrawBWDot calls this instead...
     def MapPlotWTracks(self):
