@@ -527,9 +527,11 @@ class WoundContours:
         self.NOl = wc.NOl
 
 def SeedListToSparse(seeds,vals,shape):
-    if seeds!=None:
+    if seeds==None:
+        return None
+    else:
         row,col = np.array(seeds).T
-        sparse = scipy.sparse.coo_matrix((vals,(row,col)), shape=shape)
+        sparse = scipy.sparse.coo_matrix((vals,(row,col)), shape=shape).tolil()
         return sparse
 
 def GetMapPlotRandomArray():
@@ -583,9 +585,9 @@ class WatershedData:
         self.gaussSigma=0
         self.filterData = np.array(self.origData)  # 2 full copy
         
-        self.seedList = [previousSeeds]+[None]*(self.length-1) # [x,y]
-        self.seedVals = [None]*self.length
-        self.sparseList = [ SeedListToSparse(self.seedList[i],self.seedVals[i],self.shape[1:])
+        seedList = [previousSeeds]+[None]*(self.length-1) # [x,y]
+        seedVals = [None]*self.length
+        self.sparseList = [ SeedListToSparse(seedList[i],seedVals[i],self.shape[1:])
                             for i in range(self.length) ] # sparse matrix list
         self.seedSelections = [None]*self.length
         if self.seedList[0]!=None:
@@ -768,14 +770,17 @@ class WatershedData:
             GTL.SaveFileSequence(self.watershed,basename=outlinesBase,
                                  format='tif',sparseSave=self.framesVisited,functionToRunOnFrames=getOutlines)
         
-        # Just as well NOT to use all this replace stuff
-        # Just want an easy format to save and load...
-        seedListStr = repr(self.seedList)#.replace('[[[','['+os.linesep+'[[') \
+        # Still just want an easy format to save and load...
+        seedList = [i.tocoo() for i in self.sparseList]
+        seedVals = [i.data.astype(np.int).tolist() for i in seedList]
+        seedList = np.array([[i.row,i.col] for i in seedList]).transpose(0,2,1).tolist()
+        
+        seedListStr = repr(seedList)#.replace('[[[','['+os.linesep+'[[') \
                                          #.replace('[[','[ [') \
                                          #.replace(']]]','] ]'+os.linesep+']') \
                                          #.replace(']], ','] ],'+os.linesep) \
                                          #.replace('], ','],'+os.linesep+'  ')
-        seedValsStr = repr(self.seedVals)#.replace('[[','['+os.linesep+'[') \
+        seedValsStr = repr(seedVals)#.replace('[[','['+os.linesep+'[') \
                                          #.replace(']',']'+os.linesep+']') \
                                          #.replace(', ',','+os.linesep+'  ')
         walgorithmStr = repr(self.walgorithm)
@@ -792,11 +797,11 @@ class WatershedData:
         fid.write('woundCenters = '+woundCentersStr.replace('\r','').replace('\n',''))
         fid.write('\r\n')
         fid.close()
-        print 'Saving seeds for '+str(len(self.seedList))+' frames:'
-        for i,s in enumerate(self.seedList):
+        print 'Saving seeds for '+str(len(self.sparseList))+' frames:'
+        for i,s in enumerate(self.sparseList):
             if s==None:
                 print i,'--'
-            elif s==[]:
+            elif s.nnz==0:
                 print 'Empty!'
             else:
                 print i,'initialized'
@@ -928,26 +933,19 @@ class WatershedData:
             origSeedList = np.where(maxMap)
             origSeedList = np.array(origSeedList).T.tolist()
             
-            self.seedList[self.index]=[]
-            self.seedVals[self.index]=[]
+            row=[]
+            col=[]
+            vals=[]
             for i,s in enumerate(origSeedList):
-                expandedPoints=GetPointsAtRadius(self.origData[self.index].shape,s[0],s[1],r=DEFAULT_SEED_SIZE)
-                self.seedList[self.index]+=expandedPoints
-                self.seedVals[self.index]+=[i+2]*len(expandedPoints)
+                expandedPoints=np.array(GetPointsAtRadius(self.origData.shape[1:],s[0],s[1],r=DEFAULT_SEED_SIZE))
+                row += expandedPoints[:,0]
+                col += expandedPoints[:,0]
+                vals += [i+2]*len(expandedPoints)
             
-            ##############   FFFFFFFFIIIIIIIIIIIIXXXXXXXXXXXXXX        MMMMMMMMMMMEEEEEEEEEE    ############
-            # Also update the sparseList here... eventually, we will remove references to seedList and seedVals except in the legacy save format...
-            
-            #self.seedVals[self.index] = range(2,2+len(self.seedList[self.index]))
-            self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
-        
-        #self.seedArray[self.index,:,:] = 0
-        #for i,s in enumerate(self.seedList[self.index]):
-        #    self.seedArray[self.index,s[0],s[1]]=self.seedVals[self.index][i]
-        
-        #self.seedArray = self.sparseList[self.index].toarray()
-        
-        PointsToArray(self.seedList[self.index], self.seedVals[self.index],self.seedArray)
+            self.sparseList[self.index] = scipy.sparse.coo_matrix((vals,(row,col)),shape=self.origData.shape[1:]).tolil()
+            self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
+        else:
+            self.seedArray = self.sparseList[self.index].todense()
         
         if self.background:
             val = 2 #(2 if self.walgorithm=='cv' else 1) # I could do this, but what's the need?
@@ -955,11 +953,6 @@ class WatershedData:
             self.seedArray[-val:,:] = 1
             self.seedArray[:,:val]  = 1
             self.seedArray[:,-val:] = 1
-        #if self.seedListExtras==None:
-        #    self.seedListExtras=[]
-        #for i,s in enumerate(self.seedListExtras):
-        #    val = self.seedList
-        #    self.seedArray[s[0][0],s[0][1]]=s[2]
         self.Watershed()
     def Watershed(self,algorithm='PyMorph'): # Ignore Undo
         if not HAS_CV and algorithm in 'OpenCV':
@@ -1139,7 +1132,7 @@ class WatershedData:
             print 'Move to Frame',self.index
             self.UpdateSeeds()
             self.RemoveUndo()
-        elif newIndex==lastActiveFrame+1:
+        elif newIndex==lastActiveFram
             self.lastFrameVisited = self.index
             self.index=newIndex # hop ahead, then find new seeds...
             print 'Move to Frame',self.index
