@@ -8,10 +8,12 @@ subsequent frames are generated as centroids of regions in the previous
 frame.
 
 A few other custom-designed libraries are also employed:
-Cpyx is a semi-automatic cython compiler that can be called from within python.
-    Cython and Cpyx have been used to speed up the PyMorph watershed algorithm.
 GifTiffLoader is a wrapper to automatically load Tiff and Gif files as numpy
 arrays using PIL.  GifTiffLoader also relies on FilenameSort and cmpGen.
+
+(Cpyx support is no longer needed! This also means that SWS is now pure python!
+Cpyx is a semi-automatic cython compiler that can be called from within python.
+    Cython and Cpyx have been used to speed up the PyMorph watershed algorithm.)
 
 Sponsored by the NSF and HFSP through the Shane Hutson Laboratory, part of
 Vanderbilt Institute of Integrative Biosystems Research (VIIBRE)."""
@@ -152,26 +154,26 @@ username = os.path.split(os.path.expanduser('~'))[-1]
 
 if username in ['mashbudn']:
     DONT_PANIC=False
-    USE_COMPILE = False
+    #USE_COMPILE = False
     DEFAULT_SEED_SIZE=2
     USE_DEBUG_PRINT=True
     STEAL_B_KEY = False
 elif username in ['Holley']:
     DONT_PANIC=True
-    USE_COMPILE=False
+    #USE_COMPILE=False
     DEFAULT_SEED_SIZE=2
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = False
 elif username in ['Aroshan']:
     DONT_PANIC=False
-    USE_COMPILE = False
+    #USE_COMPILE = False
     DEFAULT_SEED_SIZE=3
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = True
     
 else:
     DONT_PANIC=False
-    USE_COMPILE = False
+    #USE_COMPILE = False
     DEFAULT_SEED_SIZE=3
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = False
@@ -181,65 +183,65 @@ def dprint(a):
     if USE_DEBUG_PRINT:
         print a
 
-if not USE_COMPILE:
-    from Pyx.SeedWaterImports import *
-    import pmWatershedSpecial as pmWatershed #Verbose as pmWatershed
-else:
-    import Cpyx
-    import pmWatershed #Verbose as pmWatershed
-    exec(Cpyx.CythonInline("""
-from __future__ import division
-import numpy as np
-cimport numpy as np
-cimport cython
+#if not USE_COMPILE:
+#    from Pyx.SeedWaterImports import *
+#    import pmWatershedSpecial as pmWatershed #Verbose as pmWatershed
+#else:
+#    import Cpyx
+#    import pmWatershed #Verbose as pmWatershed
+    #exec(Cpyx.CythonInline("""
+#from __future__ import division
+#import numpy as np
+#cimport numpy as np
+#cimport cython
 
-def PointsToArray32( list seedList,
-                     list seedVals,
-                     np.ndarray[np.int32_t, ndim=2] seedArray not None):
-    '''Update seedArray from seedList'''
-    cdef int i
-    cdef list s
-    seedArray[:,:] = 0
-    for i,s in enumerate(seedList):
-        seedArray[s[0],s[1]]=seedVals[i]
+#def PointsToArray32( list seedList,
+                     #list seedVals,
+                     #np.ndarray[np.int32_t, ndim=2] seedArray not None):
+    #'''Update seedArray from seedList'''
+    #cdef int i
+    #cdef list s
+    #seedArray[:,:] = 0
+    #for i,s in enumerate(seedList):
+        #seedArray[s[0],s[1]]=seedVals[i]
 
-def PointsToArray64( list seedList,
-                     list seedVals,
-                     np.ndarray[np.int64_t, ndim=2] seedArray not None):
-    '''Update seedArray from seedList'''
-    cdef int i
-    cdef list s
-    seedArray[:,:] = 0
-    for i,s in enumerate(seedList):
-        seedArray[s[0],s[1]]=seedVals[i]
+#def PointsToArray64( list seedList,
+                     #list seedVals,
+                     #np.ndarray[np.int64_t, ndim=2] seedArray not None):
+    #'''Update seedArray from seedList'''
+    #cdef int i
+    #cdef list s
+    #seedArray[:,:] = 0
+    #for i,s in enumerate(seedList):
+        #seedArray[s[0],s[1]]=seedVals[i]
 
-def convToRandColors32(np.ndarray[np.uint8_t, ndim=2] mapPlotRandomArray not None,
-                     np.ndarray[np.uint8_t, ndim=3] rgbM not None,
-                     np.ndarray[np.int32_t, ndim=2] water not None,
-                     int x, int y):
-    cdef int i,j,k
-    for i in range(x):
-        for j in range(y):
-            for k in range(3):
-                rgbM[i,j,k]=mapPlotRandomArray[k,water[i,j]]
+#def convToRandColors32(np.ndarray[np.uint8_t, ndim=2] mapPlotRandomArray not None,
+                     #np.ndarray[np.uint8_t, ndim=3] rgbM not None,
+                     #np.ndarray[np.int32_t, ndim=2] water not None,
+                     #int x, int y):
+    #cdef int i,j,k
+    #for i in range(x):
+        #for j in range(y):
+            #for k in range(3):
+                #rgbM[i,j,k]=mapPlotRandomArray[k,water[i,j]]
 
-def convToRandColors64(np.ndarray[np.uint8_t, ndim=2] mapPlotRandomArray not None,
-                     np.ndarray[np.uint8_t, ndim=3] rgbM not None,
-                     np.ndarray[np.int64_t, ndim=2] water not None,
-                     int x, int y):
-    cdef int i,j,k
-    for i in range(x):
-        for j in range(y):
-            for k in range(3):
-                rgbM[i,j,k]=mapPlotRandomArray[k,water[i,j]]
-"""))
+#def convToRandColors64(np.ndarray[np.uint8_t, ndim=2] mapPlotRandomArray not None,
+                     #np.ndarray[np.uint8_t, ndim=3] rgbM not None,
+                     #np.ndarray[np.int64_t, ndim=2] water not None,
+                     #int x, int y):
+    #cdef int i,j,k
+    #for i in range(x):
+        #for j in range(y):
+            #for k in range(3):
+                #rgbM[i,j,k]=mapPlotRandomArray[k,water[i,j]]
+#"""))
 
-if np.array(1).dtype==np.int32:
-    PointsToArray = PointsToArray32
-    convToRandColors = convToRandColors32
-elif np.array(1).dtype==np.int64:
-    PointsToArray = PointsToArray64
-    convToRandColors = convToRandColors64
+#if np.array(1).dtype==np.int32:
+    #PointsToArray = PointsToArray32
+    #convToRandColors = convToRandColors32
+#elif np.array(1).dtype==np.int64:
+    #PointsToArray = PointsToArray64
+    #convToRandColors = convToRandColors64
 
 txtHeader=["# SeedWater notes file version 1",
            "# This file is the generated notes from SeedWater.",
@@ -737,9 +739,10 @@ class WatershedData:
                                  format='tif',sparseSave=self.framesVisited,functionToRunOnFrames=getOutlines)
         
         # Still just want an easy format to save and load...
-        cooList = [i.tocoo() for i in self.sparseList]
-        seedList = np.array([[i.row,i.col] for i in cooList]).transpose(0,2,1).tolist()
-        seedVals = [i.data.astype(np.int).tolist() for i in cooList]
+        cooList = [  ( None if i==None else i.tocoo() )  for i in self.sparseList  ]
+        seedList = [  ( None if i==None else np.array([i.row,i.col]).T.tolist())  for i in cooList  ]
+        seedVals = [  ( None if i==None else i.data.astype(np.int).tolist() ) for i in cooList  ]
+        
         seedListStr = repr(seedList)#.replace('[[[','['+os.linesep+'[[') \
                                          #.replace('[[','[ [') \
                                          #.replace(']]]','] ]'+os.linesep+']') \
@@ -1189,7 +1192,7 @@ class WatershedData:
             return False
     def DeleteSelectedSeeds(self,invertSelections=False):
         self.SetUndoPoint()
-        wh = np.where( self.seedSelections[self,index].toarray() ^ invertSelections )
+        wh = np.where( self.seedSelections[self.index].toarray() ^ invertSelections )
         self.UpdatePointsWithVal(wh,0)
         
     def MergeSelectedSeeds(self):
