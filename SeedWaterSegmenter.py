@@ -836,7 +836,7 @@ class WatershedData:
                 else:
                     row,col = np.array(Seeds.seedList[i]).T
                     vals = Seeds.seedVals[i]
-                    self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil()) # I guess I could change the dtype later if I need to...
+                    self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil() # I guess I could change the dtype later if I need to...
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
             except:
@@ -898,7 +898,7 @@ class WatershedData:
             row,col = np.where(self.seedArray)
             for i in range(len(row)):
                 self.seedArray[row[i],col[i]] = i+2 # 0 and 1 are reserved for unfilled region and background value respectively
-            self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE)
+            self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE))
             self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
             self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
         else:
@@ -1018,7 +1018,7 @@ class WatershedData:
             for cm in cmList:
                 cm = [int(round(cm[0])),int(round(cm[1]))] # Convert to int
                 self.seedArray[cm[0],cm[1]] = self.watershed[self.index-1][cm[0],cm[1]]
-                self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE)
+                self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE))
                 self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
             self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
             self.UpdateSeeds()
@@ -1082,7 +1082,7 @@ class WatershedData:
             print 'Move to Frame',self.index
             self.UpdateSeeds()
             self.RemoveUndo()
-        elif newIndex==lastActiveFram
+        elif newIndex==lastActiveFrame:
             self.lastFrameVisited = self.index
             self.index=newIndex # hop ahead, then find new seeds...
             print 'Move to Frame',self.index
@@ -1143,9 +1143,10 @@ class WatershedData:
         
         if val==None:
             m = 2 # 0 is unassigned and 1 is for background...
-            for l in self.seedVals:
-                if l not in [[],None]:
-                    m = max(m,max(l))
+            for l in self.sparseList:
+                if l!=None:
+                    if l.nnz!=0:
+                        m = max( m, l.tocoo().data.max() )
             val = m+1
         
         points = np.array(newPoints).T
@@ -1226,10 +1227,10 @@ class WatershedData:
                 if i!=None:
                     i.set_visible(False)
             
-            for i in self.seedVals[self.index]:
+            for i in self.GetActiveSeedValues():
                 if i>0:
                     cm = center_of_mass((wi==i).astype(np.float))
-                    if math.isnan(cm[0]) or math.isnan(cm[0]):
+                    if math.isnan(cm[0]) or math.isnan(cm[1]):
                         print 'CM is NAN'
                         print 'val',i
                         print cm[0]
@@ -1467,16 +1468,20 @@ class WatershedData:
                 for i in range(numFrames):
                     print 'frame',i
                     self.index=i
-                    ptsAtVal = np.where(self.watershed[i]==val)
-                    self.watershed[i][ptsAtVal] = newVal
                     
-                    for l in [self.seedVals[i],self.oldSeedVals,
-                            self.selectionVals]:
-                        if l not in [[],None]:
-                            while val in l:
-                                l[l.index(val)]=newVal
+                    if self.oldSparseList!=None:
+                        oldSeedArray = self.oldSparseList.toarray()
+                        oldSeedArray[ np.where(oldSeedArray==val) ] = newVal
+                        self.oldSparseList = scipy.sparse.lil_matrix(oldSeedArray,dtype=np.uint16)
                     
-                    self.UpdateSeeds()
+                    self.seedArray[ np.where(self.seedArray==val) ] = newVal
+                    self.sparseList[i] = scipy.sparse.lil_matrix(self.seedArray,dtype=np.uint16)
+                    
+                    if self.selectionVals not in [[],None]:
+                        while val in l:
+                            l[l.index(val)]=newVal
+                    
+                    self.UpdateSeeds() # takes care of watershed...
                     self.UpdateValuesList()
                     self.UpdateSelection()
                     
@@ -1570,9 +1575,10 @@ class WatershedData:
         return neighborList
     def GetMaxSeedVal(self):
         maxSeedVal=2
-        for l in self.seedVals:
-            if l not in [[],None]:
-                maxSeedVal = max(maxSeedVal,max(l))
+        for l in self.sparseList:
+            if l!=None:
+                if l.nnz!=0:
+                    maxSeedVal = max( maxSeedVal, l.tocoo().data.max() 
         return maxSeedVal
     def CollectAllStats(self):
         maxSeedVal = self.GetMaxSeedVal()
@@ -1770,6 +1776,8 @@ class WatershedData:
                 fid.write(', ')
         fid.write(']')
         fid.close()
+    def GetActiveSeedValues(self):
+        return sorted(list(set( self.sparseList[self.index].tocoo().data.tolist() )))
     def SaveTripleJunctionsWithCellIDs(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory==None:
@@ -2218,12 +2226,12 @@ class WatershedData:
             print 'Error! You need to define the time information in ManualInputs.py!'
             return
         for i in range(self.length):
-            if self.seedVals[i]==None:
+            if self.sparseList[i]==None:
                 break
             else:
                 hasWound=False
                 for wv in woundVals:
-                    if wv in self.seedVals[i]:
+                    if wv in self.GetActiveSeedValues():
                         hasWound=True
                         break
                 if not hasWound:
