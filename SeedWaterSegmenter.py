@@ -1,26 +1,20 @@
 #!/usr/bin/env python
 """SeedWater Segmenter is a watershed segmentation / registration
 program for image stacks developed at Vanderbilt University using
-PyMorph, WxPython, Matplotlib, Numpy, Scipy, Cython, and PIL.
+Mahotas, WxPython, Matplotlib, Numpy, Scipy, and PIL.
 SeedWater enables users to generate seeds automatically and then edit
 them by hand in Matplotlib using custom interactions.  Seeds for
 subsequent frames are generated as centroids of regions in the previous
 frame.
 
-A few other custom-designed libraries are also employed:
-GifTiffLoader is a wrapper to automatically load Tiff and Gif files as numpy
-arrays using PIL.  GifTiffLoader also relies on FilenameSort and cmpGen.
-
-(Cpyx support is no longer needed! This also means that SWS is now pure python!
-Cpyx is a semi-automatic cython compiler that can be called from within python.
-    Cython and Cpyx have been used to speed up the PyMorph watershed algorithm.)
+Also, GifTiffLoader is a wrapper to automatically load Tiff and Gif
+files as numpy arrays using PIL.
+GifTiffLoader also relies on FilenameSort and cmpGen.
 
 Sponsored by the NSF and HFSP through the Shane Hutson Laboratory, part of
 Vanderbilt Institute of Integrative Biosystems Research (VIIBRE)."""
 
 __author__ = "David N. Mashburn <david.n.mashburn@gmail.com>"
-
-# Most recent version cut memory usage on a large stack from 2.1GB to 1.3GB!! That's almost half!
 
 import os,sys
 from copy import copy,deepcopy
@@ -36,7 +30,6 @@ import scipy.sparse
 import Image
 import GifTiffLoader as GTL
 from cmpGen import cmpGen
-#from enthought.mayavi import mlab
 
 import wx
 import math
@@ -45,7 +38,6 @@ from scipy.ndimage import center_of_mass,gaussian_filter,median_filter
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.nxutils import points_inside_poly
-#import pylab
 from mpl_polygon_lasso import PolyLasso
 
 import mahotas
@@ -154,26 +146,22 @@ username = os.path.split(os.path.expanduser('~'))[-1]
 
 if username in ['mashbudn']:
     DONT_PANIC=False
-    #USE_COMPILE = False
     DEFAULT_SEED_SIZE=2
     USE_DEBUG_PRINT=True
     STEAL_B_KEY = False
 elif username in ['Holley']:
     DONT_PANIC=True
-    #USE_COMPILE=False
     DEFAULT_SEED_SIZE=2
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = False
 elif username in ['Aroshan']:
     DONT_PANIC=False
-    #USE_COMPILE = False
     DEFAULT_SEED_SIZE=3
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = True
     
 else:
     DONT_PANIC=False
-    #USE_COMPILE = False
     DEFAULT_SEED_SIZE=3
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = False
@@ -182,66 +170,6 @@ def dprint(a):
     """Debug print"""
     if USE_DEBUG_PRINT:
         print a
-
-#if not USE_COMPILE:
-#    from Pyx.SeedWaterImports import *
-#    import pmWatershedSpecial as pmWatershed #Verbose as pmWatershed
-#else:
-#    import Cpyx
-#    import pmWatershed #Verbose as pmWatershed
-    #exec(Cpyx.CythonInline("""
-#from __future__ import division
-#import numpy as np
-#cimport numpy as np
-#cimport cython
-
-#def PointsToArray32( list seedList,
-                     #list seedVals,
-                     #np.ndarray[np.int32_t, ndim=2] seedArray not None):
-    #'''Update seedArray from seedList'''
-    #cdef int i
-    #cdef list s
-    #seedArray[:,:] = 0
-    #for i,s in enumerate(seedList):
-        #seedArray[s[0],s[1]]=seedVals[i]
-
-#def PointsToArray64( list seedList,
-                     #list seedVals,
-                     #np.ndarray[np.int64_t, ndim=2] seedArray not None):
-    #'''Update seedArray from seedList'''
-    #cdef int i
-    #cdef list s
-    #seedArray[:,:] = 0
-    #for i,s in enumerate(seedList):
-        #seedArray[s[0],s[1]]=seedVals[i]
-
-#def convToRandColors32(np.ndarray[np.uint8_t, ndim=2] mapPlotRandomArray not None,
-                     #np.ndarray[np.uint8_t, ndim=3] rgbM not None,
-                     #np.ndarray[np.int32_t, ndim=2] water not None,
-                     #int x, int y):
-    #cdef int i,j,k
-    #for i in range(x):
-        #for j in range(y):
-            #for k in range(3):
-                #rgbM[i,j,k]=mapPlotRandomArray[k,water[i,j]]
-
-#def convToRandColors64(np.ndarray[np.uint8_t, ndim=2] mapPlotRandomArray not None,
-                     #np.ndarray[np.uint8_t, ndim=3] rgbM not None,
-                     #np.ndarray[np.int64_t, ndim=2] water not None,
-                     #int x, int y):
-    #cdef int i,j,k
-    #for i in range(x):
-        #for j in range(y):
-            #for k in range(3):
-                #rgbM[i,j,k]=mapPlotRandomArray[k,water[i,j]]
-#"""))
-
-#if np.array(1).dtype==np.int32:
-    #PointsToArray = PointsToArray32
-    #convToRandColors = convToRandColors32
-#elif np.array(1).dtype==np.int64:
-    #PointsToArray = PointsToArray64
-    #convToRandColors = convToRandColors64
 
 txtHeader=["# SeedWater notes file version 1",
            "# This file is the generated notes from SeedWater.",
