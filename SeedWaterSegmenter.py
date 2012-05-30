@@ -585,26 +585,15 @@ class WatershedData:
         self.gaussSigma=0
         self.filterData = np.array(self.origData)  # 2 full copy
         
-        seedList = [previousSeeds]+[None]*(self.length-1) # [x,y]
-        seedVals = [None]*self.length
-        self.sparseList = [ SeedListToSparse(seedList[i],seedVals[i],self.shape[1:])
-                            for i in range(self.length) ] # sparse matrix list
-        self.seedSelections = [None]*self.length
-        if self.seedList[0]!=None:
-            self.seedVals[0] = range(2,2+len(self.seedList[0]))
-            self.seedSelections[0] = [0 for i in self.seedList[0]]
-        print self.seedList
-        print self.seedVals
-        print self.seedSelections
-        
-        self.notes=[None]*self.length
-        
+        self.sparseList = [None]*self.length # will be a list of sparse matrices (lil format)
+        self.seedSelections = [None]*self.length # will also be a sparse matrix list
+        self.notes = [None]*self.length
         self.woundCenters = [None]*self.length
         
         self.background = True # Set to True for better results...
-        self.watershed=np.zeros(self.origData.shape,dtype=np.int16)  # 3 full copy
-        self.seedArray = np.zeros(self.origData[0].shape,dtype=np.int)
-        self.woutline=np.zeros(self.origData[0].shape,dtype=np.int)
+        self.watershed=np.zeros(self.shape,dtype=np.int16)  # 3 full copy
+        self.seedArray = np.zeros(self.shape[1:],dtype=np.int)
+        self.woutline=np.zeros(self.shape[1:],dtype=np.int)
         self.index=0
         self.lastFrameVisited=0
         # walgorithm should be 'PyMorph', Dummy, ['OpenCV', 'CV2PM']
@@ -634,8 +623,6 @@ class WatershedData:
         self.previousDrawPoint=None
         
         # For undo...
-        self.oldSeedList = None
-        self.oldSeedVals = None
         self.oldSparseList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
@@ -644,47 +631,26 @@ class WatershedData:
     def SetUndoPoint(self):
         # Set old state to be current state before any action
         # This allows undo to work...
-        self.oldSeedList = deepcopy(self.seedList[self.index])
-        self.oldSeedVals = deepcopy(self.seedVals[self.index])
-        self.oldSparseList = self.sparseList[self.index]
+        self.oldSparseList = deepcopy(self.sparseList[self.index])
         self.oldSeedSelections = deepcopy(self.seedSelections[self.index])
         self.old_point_mode=self.point_mode
         self.previousDrawPoint=None
     def RemoveUndo(self):
         # Remove old state
-        self.oldSeedList = None
-        self.oldSeedVals = None
         self.oldSparseList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
     def Undo(self):
         # Swap old and current state
-        if None not in [self.oldSeedList,self.oldSeedVals,self.oldSeedSelections]:
+        if None not in [self.oldSparseList,self.oldSeedSelections]:
             print 'Undoing'
             print 'SL'
-            print len(self.seedList[self.index])
-            print 'SV'
-            print len(self.seedVals[self.index])
+            print self.sparseList[self.index].nnz
             print 'oSL'
-            print len(self.oldSeedList)
-            print 'oSV'
-            print len(self.oldSeedVals)
-            
-            tmpSL = self.oldSeedList
-            tmpSV = self.oldSeedVals
-            tmpSpL = self.oldSparseList
-            tmpSS = self.oldSeedSelections
-            tmpPM = self.old_point_mode
-            self.oldSeedList = self.seedList[self.index]
-            self.oldSeedVals = self.seedVals[self.index]
-            self.oldSparseList = self.sparseList[self.index]            
-            self.oldSeedSelections = self.seedSelections[self.index]
-            self.old_point_mode = self.point_mode
-            self.seedList[self.index] = tmpSL
-            self.seedVals[self.index] = tmpSV
-            self.sparseList = tmpSpL
-            self.seedSelections[self.index] = tmpSS
-            self.point_mode = tmpPM
+            print self.oldSparseList[self.index].nnz
+            self.sparseList[self.index], self.oldSparseList = self.oldSparseList, self.sparseList[self.index] # SWAP
+            self.seedSelections[self.index], self.oldSeedSelections = self.oldSeedSelections, self.seedSelections[self.index] # SWAP
+            self.point_mode, self.old_point_mode = self.old_point_mode,self.point_mode # SWAP
             self.previousDrawPoint=None
     def SaveTxt(self,filename):
         fid = open(filename,'w')
@@ -733,7 +699,7 @@ class WatershedData:
                 newFrame=False
             else:
                 self.notes[-1]+=line+os.linesep
-        self.notes+=[None]*(len(self.seedList)-len(self.notes))
+        self.notes+=[None]*(self.length-len(self.notes))
         print self.notes
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
         print 'Saving To ',d
@@ -771,10 +737,9 @@ class WatershedData:
                                  format='tif',sparseSave=self.framesVisited,functionToRunOnFrames=getOutlines)
         
         # Still just want an easy format to save and load...
-        seedList = [i.tocoo() for i in self.sparseList]
-        seedVals = [i.data.astype(np.int).tolist() for i in seedList]
-        seedList = np.array([[i.row,i.col] for i in seedList]).transpose(0,2,1).tolist()
-        
+        cooList = [i.tocoo() for i in self.sparseList]
+        seedList = np.array([[i.row,i.col] for i in cooList]).transpose(0,2,1).tolist()
+        seedVals = [i.data.astype(np.int).tolist() for i in cooList]
         seedListStr = repr(seedList)#.replace('[[[','['+os.linesep+'[[') \
                                          #.replace('[[','[ [') \
                                          #.replace(']]]','] ]'+os.linesep+']') \
@@ -784,7 +749,6 @@ class WatershedData:
                                          #.replace(']',']'+os.linesep+']') \
                                          #.replace(', ',','+os.linesep+'  ')
         walgorithmStr = repr(self.walgorithm)
-        
         woundCentersStr = repr(self.woundCenters)
         
         fid=open(seedPointsFile,'w')
@@ -797,7 +761,7 @@ class WatershedData:
         fid.write('woundCenters = '+woundCentersStr.replace('\r','').replace('\n',''))
         fid.write('\r\n')
         fid.close()
-        print 'Saving seeds for '+str(len(self.sparseList))+' frames:'
+        print 'Saving seeds for '+str(self.length)+' frames:'
         for i,s in enumerate(self.sparseList):
             if s==None:
                 print i,'--'
@@ -841,7 +805,7 @@ class WatershedData:
                 self.watershed[i] = watershedTemp[i]
                 #self.CreateOutlines(i)
         
-        print self.watershed.shape
+        print self.shape
         print self.watershed[0].max()
         
         #fid = open(seedPointsFile)
@@ -866,12 +830,13 @@ class WatershedData:
         #sys.path=oldPath
         
         if len(Seeds.seedList)==self.length:
-            self.seedList = Seeds.seedList
-            self.seedVals = Seeds.seedVals
-            for i in range(len(self.seedList)):
-                self.sparseList[i] = SeedListToSparse(self.seedList[i],self.seedVals[i],
-                                                      self.origData.shape[1:])
-            
+            for i in range(self.length):
+                if None in [Seeds.seedList[i],Seeds.seedVals[i]]:
+                    self.sparseList[i] = None
+                else:
+                    row,col = np.array(Seeds.seedList[i]).T
+                    vals = Seeds.seedVals[i]
+                    self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil()) # I guess I could change the dtype later if I need to...
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
             except:
@@ -885,19 +850,19 @@ class WatershedData:
             self.walgorithm = Seeds.walgorithm
             self.woundCenters = Seeds.woundCenters
             
-            print 'Loading seeds for '+str(len(self.seedList))+' frames:'
-            for i,s in enumerate(self.seedList):
+            print 'Loading seeds for '+str(self.length)+' frames:'
+            for i,s in enumerate(self.sparseList):
                 if s==None:
                     print i,'--'
-                elif s==[]:
+                elif s.nnz==0:
                     print 'Empty!'
                 else:
                     print i,'initialized'
             
-            self.seedSelections = [None]*len(self.seedList)
-            for i in range(len(self.seedList)):
-                if self.seedList[i]!=None:
-                    self.seedSelections[i] = [0]*len(self.seedList[i])
+            self.seedSelections = [None]*self.length
+            for i in range(self.length):
+                if self.sparseList[i]!=None:
+                    self.seedSelections[i] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
             
             # This is technically unnecessary because it only gets called
             # on new WatershedData's anyway and those are always initialized to frame 0
@@ -929,23 +894,15 @@ class WatershedData:
         '''Update seedArray from either local minima or seedList'''
         if force==True:
             self.SetUndoPoint()
-            maxMap=MaxMinFinder(gaussian_filter(self.origData[self.index],self.gaussSigma))
-            origSeedList = np.where(maxMap)
-            origSeedList = np.array(origSeedList).T.tolist()
-            
-            row=[]
-            col=[]
-            vals=[]
-            for i,s in enumerate(origSeedList):
-                expandedPoints=np.array(GetPointsAtRadius(self.origData.shape[1:],s[0],s[1],r=DEFAULT_SEED_SIZE))
-                row += expandedPoints[:,0]
-                col += expandedPoints[:,0]
-                vals += [i+2]*len(expandedPoints)
-            
-            self.sparseList[self.index] = scipy.sparse.coo_matrix((vals,(row,col)),shape=self.origData.shape[1:]).tolil()
+            self.seedArray = MaxMinFinder(gaussian_filter(self.origData[self.index],self.gaussSigma)) # Max pts of gauss filtered image (single pixels with values of 1)
+            row,col = np.where(self.seedArray)
+            for i in range(len(row)):
+                self.seedArray[row[i],col[i]] = i+2 # 0 and 1 are reserved for unfilled region and background value respectively
+            self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE)
+            self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
             self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
         else:
-            self.seedArray = self.sparseList[self.index].todense()
+            self.seedArray = self.sparseList[self.index].toarray()
         
         if self.background:
             val = 2 #(2 if self.walgorithm=='cv' else 1) # I could do this, but what's the need?
@@ -1056,34 +1013,27 @@ class WatershedData:
     def MakeSeedsFromPrevious(self):
         if self.index>0:
             self.SetUndoPoint()
-            self.seedList[self.index]=[]
-            self.seedVals[self.index]=[]
+            self.seedArray[:] = 0
             cmList = self.GetCentroids(self.index-1)
             for cm in cmList:
                 cm = [int(round(cm[0])),int(round(cm[1]))] # Convert to int
-                expandedPoints=GetPointsAtRadius(self.origData[self.index].shape,cm[0],cm[1],r=DEFAULT_SEED_SIZE)
-                self.seedList[self.index]+=expandedPoints
-                self.seedVals[self.index]+=[self.watershed[self.index-1][cm[0],cm[1]]]* \
-                                           len(expandedPoints)
-                
-                #self.seedList[self.index]+=[cm]
-                ##self.seedList = PointExpander(self.seedList,self.origData.shape,radius=2)
-                #self.seedVals[self.index]+=[self.watershed[self.index-1][cm[0],cm[1]]]
-            self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
+                self.seedArray[cm[0],cm[1]] = self.watershed[self.index-1][cm[0],cm[1]]
+                self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE)
+                self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
+            self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
             self.UpdateSeeds()
             self.Watershed()
     def CopySeedsFromPrevious(self):
         if self.index>0:
             self.SetUndoPoint()
-            self.seedList[self.index]=deepcopy(self.seedList[self.index-1])
-            self.seedVals[self.index]=deepcopy(self.seedVals[self.index-1])
+            self.sparseList[self.index]=deepcopy(self.sparseList[self.index-1])
             self.seedSelections[self.index]=deepcopy(self.seedSelections[self.index-1])
             self.UpdateSeeds()
             self.Watershed()
     def GetLastActiveFrame(self):
         lastActiveFrame=self.length-1
         for i in range(self.length):
-            if self.seedList[i]==None:
+            if self.sparseList[i]==None:
                 lastActiveFrame = i-1
                 break
         return lastActiveFrame
@@ -1094,7 +1044,7 @@ class WatershedData:
             self.index+=1
             
             print 'Move to Frame',self.index
-            if self.seedList[self.index]==None:
+            if self.sparseList[self.index]==None:
                 self.MakeSeedsFromPrevious()
             else:
                 self.UpdateSeeds()
@@ -1178,44 +1128,34 @@ class WatershedData:
         s=self.origData[self.index].shape
         return ( point[0]<0 or point[1]<0 or point[0]>=s[0] or point[1]>=s[1] )
         
-    def NewSeed(self,pointIn):
+    def UpdatePointsWithVal(self,wh,val): # Raw update given points and values
+        self.seedArray[wh] = val
+        self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray,dtype=np.uint16)
+        self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.uint16)
+        self.UpdateSeeds()
+    def NewSeed(self,pointIn,val=None):
         '''Add a new seed point'''
         if self.OutOfBounds(pointIn):
             return False
         self.SetUndoPoint()
         
         newPoints = GetPointsAtRadius(self.seedArray.shape,pointIn[0],pointIn[1],self.pointSize)
-        m = 2 # 0 is unassigned and 1 is for background...
-        for l in self.seedVals:
-            if l not in [[],None]:
-                m = max(m,max(l))
         
-        for point in newPoints:
-            self.seedList[self.index] += [point]
-            self.seedVals[self.index] += [m+1]
-        self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
+        if val==None:
+            m = 2 # 0 is unassigned and 1 is for background...
+            for l in self.seedVals:
+                if l not in [[],None]:
+                    m = max(m,max(l))
+            val = m+1
         
-        self.UpdateSeeds()
+        points = np.array(newPoints).T
+        wh = (points[0],points[1])
+        self.UpdatePointsWithVal(wh,val)
         
         return True
     def ExtraSeed(self,pointIn,val):
-        if self.OutOfBounds(pointIn) or val==None:
-            return False
-        self.SetUndoPoint()
-        
-        newPoints = GetPointsAtRadius(self.seedArray.shape,pointIn[0],pointIn[1],self.pointSize)
-        
-        for point in newPoints:
-            if self.seedArray[point[0]][point[1]]!=0:
-                ind = self.seedList[self.index].index(point)
-                self.seedVals[self.index][ind] = val
-            else:
-                self.seedList[self.index] += [point]
-                self.seedVals[self.index] += [val]
-        
-        self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
-        self.UpdateSeeds()
-        return True
+        return self.NewSeed(pointIn,val=val)
+    
     def ExtraSeedLine(self,point0,point1,val):
         newPoints = BresenhamFunction(point0, point1)
         if self.pointSize==1: # Make 1-pixel lines
@@ -1223,124 +1163,58 @@ class WatershedData:
         else:                 # Make 2-pixel lines
             dilateByCircle(newPoints,self.watershed[0].shape,1.9)
         
-        for point in newPoints:
-            if self.seedArray[point[0]][point[1]]!=0:
-                ind = self.seedList[self.index].index(point)
-                self.seedVals[self.index][ind] = val
-            else:
-                self.seedList[self.index] += [point]
-                self.seedVals[self.index] += [val]
-        
-        self.seedSelections[self.index]=[0 for i in self.seedList[self.index]]
-        self.UpdateSeeds()
-                                
+        points = np.array(newPoints).T
+        wh = (points[0],points[1])
+        self.UpdatePointsWithVal(wh,val)
+    
     def DeleteSeedByRegion(self,point):
         '''Remove the seed point from the list'''
         self.SetUndoPoint()
-        
-        ranQ=False
         if self.watershed[self.index]!=None:
             val=self.watershed[self.index,point[0],point[1]]
-            # Problem is that self.watershed keeps the old seed values
-            # But self.seedArray changes seed values in self.UpdateSeeds...
-            # A couple different ways to fix this, both will work...
-            # Ah! the easy way... use boolean seedArray and
-            #     multiply by watershed array, then use where...
-            w=np.array( np.where( (self.seedArray!=0)*
-                                   self.watershed[self.index] == val ) ).T
-            #w=np.array(np.where(self.seedArray==val)).T
-            for i in w:
-                if [i[0],i[1]] in self.seedList[self.index]:
-                    ind = self.seedList[self.index].index([i[0],i[1]])
-                    del(self.seedList[self.index][ind])
-                    del(self.seedVals[self.index][ind])
-                    del(self.seedSelections[self.index][ind])
-                    ranQ=True
-            self.UpdateSeeds()
-            
-        return ranQ
+            wh = np.where(self.seedArray==val)
+            self.UpdatePointsWithVal( wh, 0)
+            return True
+        else:
+            return False
     def DeleteSeed(self,point):
         '''Remove the seed point from the list'''
         self.SetUndoPoint()
-        
         if self.seedArray[point[0],point[1]]!=0:
-            ind = self.seedList[self.index].index(point)
-            del(self.seedList[self.index][ind])
-            del(self.seedVals[self.index][ind])
-            del(self.seedSelections[self.index][ind])
-            self.UpdateSeeds()
-            
+            self.UpdatePointsWithVal( ( np.array([point[0]]) , np.array([point[1]]) ), 0)
             return True
         else:
             return False
     def DeleteSelectedSeeds(self,invertSelections=False):
         self.SetUndoPoint()
+        wh = np.where( self.seedSelections[self,index].toarray() ^ invertSelections )
+        self.UpdatePointsWithVal(wh,0)
         
-        print len(self.seedList[self.index])
-        print len(self.oldSeedList)
-        
-        for i in range(len(self.seedList[self.index]))[::-1]:# Delete starting at the end...
-            if self.seedSelections[self.index][i] ^ invertSelections: # use xor to invert selections...
-                del(self.seedList[self.index][i])
-                del(self.seedVals[self.index][i])
-                del(self.seedSelections[self.index][i])
-            elif invertSelections:
-                self.seedSelections[self.index][i] = 0
-        
-        print len(self.seedList[self.index])
-        print len(self.oldSeedList)
-        
-        self.UpdateSeeds()
     def MergeSelectedSeeds(self):
         self.SetUndoPoint()
         
-        val=None
-        for i in range(len(self.seedList[self.index])):
-            if self.seedSelections[self.index][i]:
-                if val==None:
-                    val=self.seedVals[self.index][i]
-                else:
-                    self.seedVals[self.index][i]=val
-                self.seedSelections[self.index][i]=0
-        self.UpdateSeeds()      
+        # get the val to change to:
+        wh = np.where(self.seedArray * self.seedSelections[self.index].toarray())
+        newVal = min(self.seedArray[wh])
+        self.UpdatePointsWithVal(wh,newVal)
     
     def ChangeRegionValue(self,vOld,vNew):
         # I think it is probaly the right thing to add undo here, but it sure
         # Does make things quirky b/c only changes in seeds are recorded in Undo...
         #self.SetUndoPoint()
-        
         self.RemoveUndo()
-        
-        for i,v in enumerate(self.seedVals[self.index]):
-            if v==vOld:
-                self.seedVals[self.index][i]=vNew
-        
-        for i in range(len(self.seedVals[self.index])):
-            if self.seedVals[self.index][i]==vOld:
-                print 'OOPS!!',i
-        
-        w=np.where(self.watershed[self.index]==vOld)
-        self.watershed[self.index][w]=vNew
-        
-        self.UpdateSeeds()
+        wh = np.where(self.seedArray==vOld)
+        self.UpdatePointsWithVal(wh,vNew)
     def SwitchRegionValues(self,v1,v2):
         # I think it is probaly the right thing to add undo here, but it sure
         # Does make things quirky b/c only changes in seeds are recorded in Undo...
         #self.SetUndoPoint()
         
         self.RemoveUndo()
-        
-        for i,v in enumerate(self.seedVals[self.index]):
-            if v==v1:
-                self.seedVals[self.index][i]=v2
-            elif v==v2:
-                self.seedVals[self.index][i]=v1
-        w1=np.where(self.watershed[self.index]==v1)
-        w2=np.where(self.watershed[self.index]==v2)
-        self.watershed[self.index][w1]=v2
-        self.watershed[self.index][w2]=v1
-        
-        self.UpdateSeeds()
+        wh1 = np.where(self.seedArray==v1)
+        wh2 = np.where(self.seedArray==v2)
+        self.UpdatePointsWithVal(wh1,v2)
+        self.UpdatePointsWithVal(wh2,v1)
     #def DrawOrigImage(self): # deprecated
     def MapPlot(self,saveFile=None,useText=False):
         plt.figure(2)#;cla()
@@ -1420,7 +1294,9 @@ class WatershedData:
             x=[]
             y=[]
             for index in range(self.length):
-                if self.seedList[index] in [None,[]]:
+                if self.sparseList[index]==None:
+                    break
+                elif self.sparseList[index].nnz==0:
                     break
                 centroid = self.GetCentroids(index,doUpdate=False)
                 x.append([i[0] for i in centroid])
@@ -1511,13 +1387,10 @@ class WatershedData:
         plt.figure(fn)
     
     def HighlightRegion(self):
-        a=np.zeros(self.watershed[self.index].shape,dtype=np.uint8)
+        a=np.zeros(self.shape[1:],dtype=np.uint8)
         if self.point_mode:
-            for i in range(len(self.seedList[self.index])):
-                #if i>0:
-                if self.seedSelections[self.index][i]:
-                    x,y = self.seedList[self.index][i]
-                    a[x,y]=255
+            a[:] = self.seedSelections[self.index].toarray()*255
+            
             if self.rgbaH==None:
                 self.rgbaH=np.array([a,a*0,a,a]).transpose(1,2,0)
             else:
@@ -1547,15 +1420,22 @@ class WatershedData:
         plt.draw()
         
     def LassoCallback(self,verts):
-        for i in range(len(verts)):
-            verts[i] = verts[i][::-1]
+        verts = [ v[::-1] for v in verts ]
         
         self.SetUndoPoint()
         
         self.seedSelections[self.index] = [0 for i in self.seedSelections[self.index]]
         
-        for i in nonzero(points_inside_poly(np.array(self.seedList[self.index]), verts))[0]:
-            self.seedSelections[self.index][i] = 1
+        cooMat = self.sparseList[self.index].tocoo()
+        seedList = np.array([cooMat.row,cooMat.col]).T
+        wh = np.where(points_inside_poly(seedList, verts))
+        row = np.array([cooMat.row[i] for i in wh])
+        col = np.array([cooMat.col[i] for i in wh])
+        
+        # This should be faster for big selections
+        sel = self.seedSelections[self.index].toarray()
+        sel[(row,col)] = 1
+        self.seedSelections = sel
         
         self.point_mode=True
         
@@ -1569,7 +1449,7 @@ class WatershedData:
         
         numFrames=self.length
         for i in range(self.length):
-            if self.seedList[i]==None:
+            if self.sparseList[i]==None:
                 numFrames = i
                 break
         
@@ -1606,7 +1486,7 @@ class WatershedData:
     def AutoCenterWound(self,woundVals):
         oldIndex=self.index
         for self.index in range(self.length): # For each frame
-            if self.seedList[self.index]!=None:
+            if self.sparseList[self.index]!=None:
                 newWVal = 1e6 # I don't think anyone will ever create a million cells...
                 wi = np.array(self.watershed[self.index],dtype=np.int)
                 for v in woundVals:
@@ -1716,8 +1596,6 @@ class WatershedData:
         adjLength = self.GetLastActiveFrame()+1
         for index in range(adjLength):
             self.index=index
-            #if self.seedList[self.index] in [None,[]]: # Not necessary now...
-            #    break
             
             print 'Calculating for Frame',index
             print 'Get Values'
@@ -2191,20 +2069,21 @@ class WatershedData:
         WNsortedVals,NNsortedVals,NOsortedVals = [],[],[]
         for index in range(self.length):
             dprint('index: '+str(index))
-            if self.seedList[index] not in [[],None]:
-                for i in [WNv,WNl,NNv,NNl,NOv,NOl]:
-                    i.append([])
-                WNv[-1],WNl[-1],NNv[-1],NNl[-1],NOv[-1],NOl[-1] = \
-                                 self.GetWoundNeighborContourLengths(index,woundVals)
-                for i in WNv[-1]:
-                    if i not in WNsortedVals:
-                        WNsortedVals.append(i)
-                for i in NNv[-1]:
-                    if (i not in NNsortedVals) and (i[::-1] not in NNsortedVals):
-                        NNsortedVals.append(i)
-                for i in NOv[-1]:
-                    if i not in NOsortedVals:
-                        NOsortedVals.append(i)
+            if self.sparseList[index]!=None:
+                if self.sparseList[index].nnz!=0:
+                    for i in [WNv,WNl,NNv,NNl,NOv,NOl]:
+                        i.append([])
+                    WNv[-1],WNl[-1],NNv[-1],NNl[-1],NOv[-1],NOl[-1] = \
+                                     self.GetWoundNeighborContourLengths(index,woundVals)
+                    for i in WNv[-1]:
+                        if i not in WNsortedVals:
+                            WNsortedVals.append(i)
+                    for i in NNv[-1]:
+                        if (i not in NNsortedVals) and (i[::-1] not in NNsortedVals):
+                            NNsortedVals.append(i)
+                    for i in NOv[-1]:
+                        if i not in NOsortedVals:
+                            NOsortedVals.append(i)
         WNsortedVals.sort()
         NNsortedVals.sort()
         NOsortedVals.sort()
@@ -2258,7 +2137,9 @@ class WatershedData:
         
         # Verification ;)
         for frame in range(self.length):
-            if self.seedList[frame] in [[],None]:
+            if self.sparseList[frame]==None:
+                break
+            elif self.sparseList[frame].nnz==0:
                 break
             # get the wound perimeter the good way ;)
             newWVal = 1e6 # I don't think anyone will ever create a million cells...
@@ -2423,8 +2304,11 @@ class WatershedData:
         rrdththMeans = [["time"]+["ring"+str(i+1) for i in range(len(bins))]]
         
         for frame in range(self.length):
-            if self.seedList[frame] in [None,[]]:
+            if self.sparseList[frame]==None:
                 break
+            elif self.sparseList[index].nnz==0:
+                break
+            
             if i>=len(self.woundCenters):
                 print 'No Wound Centers After Frame',i,'!'
                 break
@@ -2885,8 +2769,8 @@ Arrow Keys: Move selected seeds (after lasso)
         self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
         print self.NotesTextBox.GetValue()
         i2 = max(0,ind-1)
-        if self.wd.seedList[i2]!=None and ind<self.wd.length: # If frame before the one to move to is defined
-            if self.wd.seedList[ind]==None:
+        if self.wd.sparseList[i2]!=None and ind<self.wd.length: # If frame before the one to move to is defined
+            if self.wd.sparseList[ind]==None:
                 self.SetStatus('Moving to New Frame '+str(ind))
             else:
                  self.SetStatus('Moving to Frame '+str(ind))
@@ -2915,7 +2799,7 @@ Arrow Keys: Move selected seeds (after lasso)
     #    self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
     def ReSaveAllFramesCallback(self,event):
         for i in range(self.wd.length):
-            if not self.wd.seedList[i]==None:
+            if self.wd.sparseList[i]!=None:
                 self.wd.framesVisited[i]=True
         self.HandleMPLandWxKeyEvents('s')
     def ReRunAllWatershedsCallback(self,event):
@@ -2931,7 +2815,7 @@ Arrow Keys: Move selected seeds (after lasso)
         # Get the number of frames...
         numFrames=self.wd.length
         for i in range(self.wd.length):
-            if self.wd.seedList[i]==None:
+            if self.wd.sparseList[i]==None:
                 numFrames = i
                 break
         
@@ -3023,8 +2907,11 @@ Arrow Keys: Move selected seeds (after lasso)
         #self.wd.TestCalculations()
         self.SetStatus('Running Calculations')
         for index in range(self.wd.length):
-            if self.wd.seedList[index] in [None,[]]:
+            if self.wd.sparseList[index]==None:
                 break
+            elif self.wd.sparseList[index].nnz==0:
+                break
+            
             if self.wd.woundCenters[index]==None:
                 s = 'You must use Center Mode to define a' + os.linesep + \
                     'center for all initialized frames!'
@@ -3204,7 +3091,9 @@ Arrow Keys: Move selected seeds (after lasso)
                     #self.wd.DrawOrigImage()
                     
                     doWater=False
-                    if self.wd.seedList[self.wd.index] in [[],None]:
+                    if self.wd.sparseList[self.wd.index]==None:
+                        doWater=True
+                    elif self.wd.sparseList[index].nnz==0:
                         doWater=True
                     else:
                         self.SetStatus('Checking On Update Seeds')
@@ -3222,11 +3111,11 @@ Arrow Keys: Move selected seeds (after lasso)
                         self.wd.MapPlot()
                         print 'Watershed Done'
             else:
-                if self.wd.seedList[self.wd.index] == None:
-                    self.wd.seedList[self.wd.index] = []
-                    self.wd.seedVals[self.wd.index] = []
-                    self.wd.seedSelections[self.wd.index] = []
-        elif ckey=='r': # Reset all data 
+                if self.wd.sparseList[self.wd.index] == None:
+                    self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.uint16)
+                    # I guess I could change the dtype later if I need to...
+                    self.wd.seedSelections[self.wd.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
+        elif ckey=='r': # Reset all data
             self.SetStatus('Resetting All Filters')
             print 'Reset All Filters on Figures 1 and 2'
             self.wd.ResetData() # NEEDS UNDO_RESET
@@ -3317,7 +3206,7 @@ Arrow Keys: Move selected seeds (after lasso)
         elif ckey=='n': # Next frame
             ind = self.wd.index+1
             if ind<self.wd.length:
-                if self.wd.seedList[ind]==None:
+                if self.wd.sparseList[ind]==None:
                     self.SetStatus('Moving to Frame '+str(ind)+ ' (with Watershed)')
                 else:
                     self.SetStatus('Moving to Frame '+str(ind))
@@ -3401,10 +3290,24 @@ Arrow Keys: Move selected seeds (after lasso)
             elif ckey in ['right',']','}']:
                 u=[0,1]
             ind=self.wd.index
-            for i in range(len(self.wd.seedList[ind])):
-                if self.wd.seedSelections[ind][i]:
-                    self.wd.seedList[ind][i][0] = self.wd.seedList[ind][i][0]+u[0]
-                    self.wd.seedList[ind][i][1] = self.wd.seedList[ind][i][1]+u[1]
+            
+            wh = np.where(self.wd.seedSelections[self.wd.index])
+            oldSA = self.wd.seedArray[wh]
+            self.seedArray[wh]=0
+            self.wd.seedSelections[self.wd.index][wh] = 0
+            wh[0]+=u[0]
+            wh[1]+=u[1]
+            np.clip(wh[0],0,self.wd.shape[1]) # This is an ok solution, but there is probably a better one...
+            np.clip(wh[1],0,self.wd.shape[2])
+            self.wd.seedArray[wh] = oldSA
+            self.wd.seedSelections[self.wd.index][wh] = 1
+            
+            # I broke this old behavior for nudge for now...
+            # I think the right way to do it is basically a cut and paste for an overlay array...or something...
+            #for i in range(len(self.wd.seedList[ind])):
+            #    if self.wd.seedSelections[ind][i]:
+            #        self.wd.seedList[ind][i][0] = self.wd.seedList[ind][i][0]+u[0]
+            #        self.wd.seedList[ind][i][1] = self.wd.seedList[ind][i][1]+u[1]
             
             self.wd.UpdateSeeds()
             self.wd.ColorPlot()
@@ -3420,21 +3323,21 @@ Arrow Keys: Move selected seeds (after lasso)
                 if self.shiftDown:
                     print 'Deleting Outside Lasso Now...'
                     self.SetStatus('Deleting Unselected Points')
-                    print len(self.wd.seedList[self.wd.index])
-                    print len(self.wd.oldSeedList)
+                    print self.wd.sparseList[self.wd.index].nnz
+                    print self.wd.oldSparseList.nnz
                     self.wd.DeleteSelectedSeeds(invertSelections=True) # NEEDS UNDO
-                    print len(self.wd.seedList[self.wd.index])
-                    print len(self.wd.oldSeedList)
+                    print self.wd.sparseList[self.wd.index].nnz
+                    print self.wd.oldSparseList.nnz
                     self.wd.ColorPlot()
                     print 'Finished Deleting'
                 else:
                     print 'Deleting Now...'
                     self.SetStatus('Deleting Selected Points')
-                    print len(self.wd.seedList[self.wd.index])
-                    print len(self.wd.oldSeedList)
+                    print self.wd.sparseList[self.wd.index].nnz
+                    print self.wd.oldSparseList.nnz
                     self.wd.DeleteSelectedSeeds() # NEEDS UNDO
-                    print len(self.wd.seedList[self.wd.index])
-                    print len(self.wd.oldSeedList)
+                    print self.wd.sparseList[self.wd.index].nnz
+                    print self.wd.oldSparseList.nnz
                     self.wd.ColorPlot()
                     print 'Finished Deleting'
         elif ckey=='m':
