@@ -647,7 +647,7 @@ class WatershedData:
             print 'SL'
             print self.sparseList[self.index].nnz
             print 'oSL'
-            print self.oldSparseList[self.index].nnz
+            print self.oldSparseList.nnz
             self.sparseList[self.index], self.oldSparseList = self.oldSparseList, self.sparseList[self.index] # SWAP
             self.seedSelections[self.index], self.oldSeedSelections = self.oldSeedSelections, self.seedSelections[self.index] # SWAP
             self.point_mode, self.old_point_mode = self.old_point_mode,self.point_mode # SWAP
@@ -894,13 +894,14 @@ class WatershedData:
         '''Update seedArray from either local minima or seedList'''
         if force==True:
             self.SetUndoPoint()
-            self.seedArray = MaxMinFinder(gaussian_filter(self.origData[self.index],self.gaussSigma)) # Max pts of gauss filtered image (single pixels with values of 1)
-            row,col = np.where(self.seedArray)
+            maxMap = MaxMinFinder(gaussian_filter(self.origData[self.index],self.gaussSigma)) # Max pts of gauss filtered image (single pixels with values of 1)
+            row,col = np.where(maxMap)
+            self.seedArray[:]=0
             for i in range(len(row)):
                 self.seedArray[row[i],col[i]] = i+2 # 0 and 1 are reserved for unfilled region and background value respectively
             self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE))
-            self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
-            self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
+            self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray,dtype=np.uint16)
+            self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
         else:
             self.seedArray = self.sparseList[self.index].toarray()
         
@@ -1018,9 +1019,9 @@ class WatershedData:
             for cm in cmList:
                 cm = [int(round(cm[0])),int(round(cm[1]))] # Convert to int
                 self.seedArray[cm[0],cm[1]] = self.watershed[self.index-1][cm[0],cm[1]]
-                self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE))
-                self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
-            self.seedSelections[self.index]=[0]*self.sparseList[self.index].nnz
+            self.seedArray = scipy.ndimage.morphology.grey_dilation(self.seedArray,footprint=ImageCircle(DEFAULT_SEED_SIZE))
+            self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray)
+            self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
             self.UpdateSeeds()
             self.Watershed()
     def CopySeedsFromPrevious(self):
@@ -1131,7 +1132,7 @@ class WatershedData:
     def UpdatePointsWithVal(self,wh,val): # Raw update given points and values
         self.seedArray[wh] = val
         self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray,dtype=np.uint16)
-        self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.uint16)
+        self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
         self.UpdateSeeds()
     def NewSeed(self,pointIn,val=None):
         '''Add a new seed point'''
@@ -1390,7 +1391,7 @@ class WatershedData:
     def HighlightRegion(self):
         a=np.zeros(self.shape[1:],dtype=np.uint8)
         if self.point_mode:
-            a[:] = self.seedSelections[self.index].toarray()*255
+            a[:] = self.seedSelections[self.index].toarray().astype(np.uint8)*255
             
             if self.rgbaH==None:
                 self.rgbaH=np.array([a,a*0,a,a]).transpose(1,2,0)
@@ -1410,7 +1411,6 @@ class WatershedData:
                 self.rgbaH[:,:,1]=a
                 self.rgbaH[:,:,2]=a*0
                 self.rgbaH[:,:,3]=a//2
-            
             self.DrawBWDot()
         
         if self.hiplot!=None:
@@ -1425,7 +1425,8 @@ class WatershedData:
         
         self.SetUndoPoint()
         
-        self.seedSelections[self.index] = [0 for i in self.seedSelections[self.index]]
+        # Clear selections...
+        self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
         
         cooMat = self.sparseList[self.index].tocoo()
         seedList = np.array([cooMat.row,cooMat.col]).T
@@ -1436,7 +1437,7 @@ class WatershedData:
         # This should be faster for big selections
         sel = self.seedSelections[self.index].toarray()
         sel[(row,col)] = 1
-        self.seedSelections = sel
+        self.seedSelections[self.index] = scipy.sparse.lil_matrix(sel)
         
         self.point_mode=True
         
@@ -1578,7 +1579,7 @@ class WatershedData:
         for l in self.sparseList:
             if l!=None:
                 if l.nnz!=0:
-                    maxSeedVal = max( maxSeedVal, l.tocoo().data.max() 
+                    maxSeedVal = max( maxSeedVal, l.tocoo().data.max() )
         return maxSeedVal
     def CollectAllStats(self):
         maxSeedVal = self.GetMaxSeedVal()
@@ -3120,7 +3121,7 @@ Arrow Keys: Move selected seeds (after lasso)
                         print 'Watershed Done'
             else:
                 if self.wd.sparseList[self.wd.index] == None:
-                    self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.uint16)
+                    self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(self.wd.shape[1:],dtype=np.uint16)
                     # I guess I could change the dtype later if I need to...
                     self.wd.seedSelections[self.wd.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
         elif ckey=='r': # Reset all data
@@ -3299,16 +3300,20 @@ Arrow Keys: Move selected seeds (after lasso)
                 u=[0,1]
             ind=self.wd.index
             
-            wh = np.where(self.wd.seedSelections[self.wd.index])
+            wh = np.where(self.wd.seedSelections[self.wd.index].toarray())
             oldSA = self.wd.seedArray[wh]
-            self.seedArray[wh]=0
-            self.wd.seedSelections[self.wd.index][wh] = 0
-            wh[0]+=u[0]
-            wh[1]+=u[1]
+            sel = self.wd.seedSelections[self.wd.index].toarray()
+            self.wd.seedArray[wh]=0
+            sel[wh] = 0
+            print 'Whr r u?',len(wh),len(u)
+            wh = ( wh[0]+u[0] , wh[1]+u[1] )
             np.clip(wh[0],0,self.wd.shape[1]) # This is an ok solution, but there is probably a better one...
             np.clip(wh[1],0,self.wd.shape[2])
             self.wd.seedArray[wh] = oldSA
-            self.wd.seedSelections[self.wd.index][wh] = 1
+            sel[wh] = 1
+            self.wd.seedSelections[self.wd.index] =scipy.sparse.lil_matrix(sel,dtype=np.bool)
+            
+            self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(self.wd.seedArray,dtype=np.uint16)
             
             # I broke this old behavior for nudge for now...
             # I think the right way to do it is basically a cut and paste for an overlay array...or something...
