@@ -298,7 +298,7 @@ def ContourPlotFromImage(im,neighborPairs):
             x,y = whY[1][j]+0.5 , whY[0][j]-0.5
             _=plt.plot([x,x],[y,y+1],colors[i],linewidth=2)
 
-def CountourPlotFromCVLS(cVLS,neighborPairs):
+def CountourPlotFromCVLS(cVLS):
     for cvls in cVLSByFrame[0]:
         _=dplot(cvls[2])
 
