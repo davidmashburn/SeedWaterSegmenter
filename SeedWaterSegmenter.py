@@ -3407,9 +3407,6 @@ def InitializeMPL():
     plt.ion()
 
 if __name__=='__main__':
-    #f=u'/home/mashbudn/Documents/VIIBRE--ScarHealing/ActiveData/Result of Stack_Zproject_GBR_DC0003.tif'
-    #f=u'/home/mashbudn/Documents/VIIBRE--ScarHealing/ActiveData/Stack_Zproject_GBR_DC.tif'
-    #f=u'X:/Documents/VIIBRE--ScarHealing/ActiveData/Stack_Zproject_GBR_DC.tif'
     InitializeMPL()
     app = SegmenterApp(0)
     if len(sys.argv)>1:
