@@ -146,6 +146,7 @@ def GetTimeAxisAdj():
     return sList
 
 def SaveOverlayImages(tifStackData,SeedsPyFile,SegmentsDirectory,red=True):
+    # This function is more-or-less just a template right now, has MAJOR issues...
     r = GTL.LoadFileSequence(di, wildcard='*.tif')
     rgbM = CreateMapPlots(r)
     
@@ -170,7 +171,7 @@ def SaveOverlayImages(tifStackData,SeedsPyFile,SegmentsDirectory,red=True):
         # Get the watershed file from the saved tif:
         watershed = GTL.LoadSingle(Files[i])
         # Find and load the correct original array based on the frame number:
-        originalDir = '/home/mashbudn/Documents/VIIBRE--ScarHealing/ActiveData/NewSegmentation/AS Edge Wound Healing/2010FEB09_Edge5/TiffStack'
+        originalDir = '.../2010FEB09_Edge5/TiffStack' # Put in the right directory here...
         origFile = FS.getSortedListOfFiles(originalDir)[frameNumber]
         original = GTL.LoadSingle(origFile)
         
