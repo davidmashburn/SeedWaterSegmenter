@@ -59,7 +59,7 @@ def DivideConvertType(arr,bits=16,maxVal=None,zeroMode='clip',maxMode='clip'):
     else:
         print "'zeroMode' must be one of: 'clip' , 'abs' , 'stretch'"
     
-    clipRatio = (maxClip/(maxVal-minVal))
+    clipRatio = 1.*maxClip/(maxVal-minVal)
     
     if zeroMode=='stretch' or clipRatio<1:
         arr = np.double(arr)
@@ -79,6 +79,7 @@ def ConvertTo32Bit(arr):
 def GetShape(filename=None):
     if filename==None:
         filename=wx.FileSelector()
+        print filename
     im=Image.open(filename)
     
     if im.format in _tif_names:  datatype=np.uint16
@@ -130,6 +131,7 @@ def GetDatatype(im):
 def GetShapeMonolithicOrSequence(filename=None):
     if filename==None:
         filename=wx.FileSelector()
+        print filename
     
     numFrames,w,h = GetShape(filename)
     
@@ -145,6 +147,7 @@ def GetShapeMonolithicOrSequence(filename=None):
 def LoadSingle(filename=None):
     if filename==None:
         filename=wx.FileSelector()
+        print filename
     im=Image.open(filename)
     
     # TODO: Need to add more smarts to this based on the mode 'I;16' vs. RGB, etc...
@@ -251,6 +254,7 @@ def SaveSingle(arr,filename=None,format='gif',tiffBits=16):
 def LoadFileSequence(dirname=None,wildcard='*[!.txt]'):
     if dirname==None:
         dirname=wx.DirSelector()
+        print dirname
     files = getSortedListOfFiles(dirname,globArg=wildcard)
     if len(files)==0:
         print 'Empty Directory!'
@@ -316,6 +320,7 @@ def LoadMonolithic(filename=None):
     #f='C:/Documents and Settings/Owner/Desktop/Stack_Zproject_GBR_DC.gif'
     if filename==None:
         filename=wx.FileSelector()
+        print filename
     im=Image.open(filename)
     
     datatype = GetDatatype(im)
@@ -356,6 +361,7 @@ def LoadFrameFromMonolithic(filename=None,frameNum=0):
     #f='C:/Documents and Settings/Owner/Desktop/Stack_Zproject_GBR_DC.gif'
     if filename==None:
         filename=wx.FileSelector()
+        print filename
     im=Image.open(filename)
     
     datatype = GetDatatype(im)
@@ -401,6 +407,7 @@ def SaveMonolithic(arr,filename=None):
 def LoadMonolithicOrSequenceSpecial(filename=None):
     if filename==None:
         filename=wx.FileSelector()
+        print filename
     
     numFrames,w,h,isSequence = GetShapeMonolithicOrSequence(filename)
     
@@ -424,6 +431,7 @@ def LoadMonolithicOrSequenceSpecial(filename=None):
 def LoadSequence4D(dirname=None,wildcard='*[!.txt]'):
     if dirname==None:
         dirname=wx.DirSelector()
+        print dirname
     
     files = getSortedListOfFiles(dirname,globArg=wildcard)
     
@@ -450,6 +458,23 @@ def LoadSequence4D(dirname=None,wildcard='*[!.txt]'):
     
     for i in l:
         t[i[1],i[2]]=LoadSingle(i[0]) #load the data for each gif directly into one big array, indexing based on numbering
+    
+    return t
+
+def LoadMonolithicSequence4D(dirname=None,wildcard='*[!.txt]'):
+    if dirname==None:
+        dirname=wx.DirSelector()
+        print dirname
+    files = getSortedListOfFiles(dirname,globArg=wildcard)
+    if len(files)==0:
+        print 'Empty Directory!'
+        return
+    t0=LoadMonolithic(files[0])
+    
+    t=np.zeros([len(files)]+list(t0.shape),t0.dtype)
+    
+    for i in range(len(files)):
+        t[i]=LoadMonolithic(files[i])
     
     return t
 
