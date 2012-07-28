@@ -20,6 +20,8 @@ from dplot import dplot
 import GifTiffLoader as GTL
 import SeedWaterSegmenter as SWS
 
+from np_utils import flatten
+
 from MyPath import cprint
 #from pylab import *
 
@@ -298,8 +300,8 @@ def ContourPlotFromImage(im,neighborPairs):
             x,y = whY[1][j]+0.5 , whY[0][j]-0.5
             _=plt.plot([x,x],[y,y+1],colors[i],linewidth=2)
 
-def CountourPlotFromCVLS(cVLSByFrame):
-    for cvls in cVLSByFrame[0]:
+def ContourPlotFromCVLS(cVLSByFrame,frame=0):
+    for cvls in cVLSByFrame[frame]:
         _=dplot(cvls[2])
 
 def GetPairLengthsAndBadSpots(pairs,pairsByFrame,cVLSByFrame,tAx):
@@ -320,3 +322,37 @@ def GetPairLengthsAndBadSpots(pairs,pairsByFrame,cVLSByFrame,tAx):
             elif pair not in pairsByFrame[i]:
                 badSpots[-1].append([tAx[i],pairLengths[-1][-1]])
     return pairLengths,badSpots
+
+# If you need to use the cVLS's anyway, why compute them twice??
+# BTW, this works fine for static but DOES NOT give good connection from frame to frame
+#   1: No connection from point to point through time
+#   2: In-between points can come and go willy-nilly!!
+def MakePolygonNetworkFromWaterSeg(waterArr,minSplit=30,allValsByFrame=None,cVLS=None):
+    if allValsByFrame==None:
+        allValsByFrame = [ list(set(w.flat)) for w in waterArr ]
+    if cVLS==None:
+        cVLS = SWHelpers.GetContourValuesLengthsAndSubContoursByFrame(waterArr,allValsByFrame)
+    allPtsList = []
+    allSegsList = []
+    for t in range(len(cVLS)):
+        contours = [i[2] for i in cVLS[t]]
+        nc = len(contours)
+        lc = [len(i) for i in contours]
+        div = [i//30 for i in lc]
+        sep = [ (lc[i] if div[i]==0 else lc[i]//div[i])  for i in range(nc)]
+        #subPtsOld = [ ([] if div[i]==0 else contours[i][ ::(len(contours[i])//div[i]) ]  )
+        #          for i in range(nc) ]
+        inds = [  ( [0,lc[i]-1] if (lc[i]-1 < 2*minSplit) else
+                    range(0,lc[i]-2,sep[i])+[lc[i]-1] )
+                for i in range(nc)  ]
+        
+        subPts = [[ tuple(contours[i][j]) for j in inds[i] ] 
+                                          for i in range(nc) ]
+        allPts = sorted(list(set(flatten( subPts ))))
+        subPtsInds = [[ allPts.index(j) for j in i ] 
+                                        for i in subPts ]
+        allSegsInds = flatten([ zip(i[:-1],i[1:]) for i in subPtsInds ])
+        allPtsList.append(allPts)
+        allSegsList.append(allSegsInds)
+        
+    return allPtsList,allSegsList
