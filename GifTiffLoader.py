@@ -97,6 +97,41 @@ def GetShape(filename=None):
     
     return numFrames,w,h
 
+def GetDirectoryShape(dirname=None,wildcard='*[!.txt]',dims=1):
+    '''For data stored as image sequences, get the number of them'''
+    if dirname==None:
+        dirname=wx.DirSelector()
+        print dirname
+    
+    files = getSortedListOfFiles(dirname,globArg=wildcard)
+    
+    if len(files)==0:
+        print 'Empty Directory!'
+        return 0,[]
+    
+    if dims==1: # flat sequence (time series)
+        return len(files),files
+    elif dims==2: # series of z-stacks
+        l=[]
+        
+        for i in files:
+            e=os.path.split(i)[1]
+            if len(e.split('_'))>=3:
+                #print e,':', e.split('_')[0],e.split('_')[1],e.split('_')[2][:3]
+                #l.append([i,int(e.split('_')[1]),int(e.split('_')[2][:3])])
+                l.append([i,int(e.split('_')[-2]),int(e.split('_')[-1][:3])])
+        
+        if len(l)==0:
+            print 'Empty Directory!'
+            return [0,0],[]
+        
+        tdim=max([i[1] for i in l])+1
+        zdim=max([i[2] for i in l])+1
+        return [tdim,zdim],l
+    else:
+        print 'No code for 5D stacks... yet...'
+        return # Should throw downstream errors... just sayin...
+
 def GetDatatype(im):
     """Automatically determine the datatype using the PIL -> numpy conversion."""
     
@@ -255,15 +290,17 @@ def LoadFileSequence(dirname=None,wildcard='*[!.txt]'):
     if dirname==None:
         dirname=wx.DirSelector()
         print dirname
-    files = getSortedListOfFiles(dirname,globArg=wildcard)
-    if len(files)==0:
-        print 'Empty Directory!'
+    
+    numFiles,files = GetDirectoryShape(dirname,wildcard)
+    
+    if numFiles==0:
         return
+    
     t0=LoadSingle(files[0])
     
-    t=np.zeros([len(files),t0.shape[0],t0.shape[1]],t0.dtype)
+    t=np.zeros([numFiles,t0.shape[0],t0.shape[1]],t0.dtype)
     
-    for i in range(len(files)):
+    for i in range(numFiles):
         t[i]=LoadSingle(files[i])
     
     return t
@@ -433,30 +470,19 @@ def LoadSequence4D(dirname=None,wildcard='*[!.txt]'):
         dirname=wx.DirSelector()
         print dirname
     
-    files = getSortedListOfFiles(dirname,globArg=wildcard)
+    [tdim,zdim],files = GetDirectoryShape(dirname,wildcard,dims=2)
     
-    l=[]
-    
-    for i in files:
-        e=os.path.split(i)[1]
-        if len(e.split('_'))>=3:
-            #print e,':', e.split('_')[0],e.split('_')[1],e.split('_')[2][:3]
-            #l.append([i,int(e.split('_')[1]),int(e.split('_')[2][:3])])
-            l.append([i,int(e.split('_')[-2]),int(e.split('_')[-1][:3])])
-    
-    if len(l)==0:
+    if len(files)==0:
         print 'Empty Directory!'
         return
     
-    test=LoadSingle(l[0][0])
+    test=LoadSingle(files[0][0])
     
     [xdim,ydim]=test.shape
-    tdim=max([i[1] for i in l])+1
-    zdim=max([i[2] for i in l])+1
     
     t=np.zeros([tdim,zdim,xdim,ydim],test.dtype)
     
-    for i in l:
+    for i in files:
         t[i[1],i[2]]=LoadSingle(i[0]) #load the data for each gif directly into one big array, indexing based on numbering
     
     return t
