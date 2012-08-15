@@ -356,3 +356,43 @@ def MakePolygonNetworkFromWaterSeg(waterArr,minSplit=30,allValsByFrame=None,cVLS
         allSegsList.append(allSegsInds)
         
     return allPtsList,allSegsList
+
+def MultNumOrNone(x,y):
+    if x==None or y==None:
+        return None # None's -> None's
+    else:
+        return x*y
+
+def SquareNumOrNone(x):
+    if x==None:
+        return None
+    else:
+        return x**2
+
+def GetNormalizedArea(areaFromCSV):
+    NormArea = []
+    for i in range(areaFromCSV.shape[1]):
+        if None in areaFromCSV[:,i].tolist():
+            NormArea.append(areaFromCSV[:,i])
+        else:
+            NormArea.append( areaFromCSV[:,i] / np.mean(areaFromCSV[:,i]) )
+    NormArea=np.array(NormArea).T
+    return NormArea
+
+def GetWoundValues(d):
+    if 'ManualInputs.py' in os.listdir(d):
+        exec(read(d+'/ManualInputs.py').replace('\r','').split('\n')[0])
+        return woundVals
+    else:
+        print 'ManualInputs.py does not exist!'
+def GetNeighborValues(d,wv,ind):
+    if 'Neighbors.py' in os.listdir(d):
+        exec(read(d+'/Neighbors.py'))
+        allVals = []
+        for v in wv:
+            n=neighbors[ind][v-2]
+            if n!=None:  allVals+=n
+        allVals = list(set(allVals).difference(wv))
+        return allVals
+    else:
+        print 'Neighbors.py does not exist!'
