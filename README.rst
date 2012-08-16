@@ -16,7 +16,7 @@ Source is hosted on GitHub: https://github.com/davidmashburn/SeedWaterSegmenter/
 
 The Google Code page has binary releases (http://code.google.com/p/seedwater/) that should work on 32-bit Windows or 64-bit Linux.
 
-For more details, see Python Install Instructions \*.txt
+For more details, see Python Install Instructions 20XX.txt
 You may also want to read the manual: SeedWater Segmenter V x.x Manual.txt
 
 ----
