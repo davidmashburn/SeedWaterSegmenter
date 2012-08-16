@@ -1,4 +1,4 @@
-Seedwater Segmenter
+SeedWater Segmenter
 ===================
 
 Seedwater Segmenter (SWS) is a graphical Python program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines). The interactions are entirely based on the editing of seeds, which in turn are expanded by a watershed algorithm. The major difference between SWS and other tools is that you can place more than one seed per cell which can help you adjust the boundaries of difficult cells.
