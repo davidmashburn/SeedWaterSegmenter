@@ -1,0 +1,4 @@
+include *.txt
+recursive-include SeedWaterSegmenter *.png
+recursive-include SeedWaterSegmenter *.ico
+recursive-include SeedWaterSegmenter *.svg
