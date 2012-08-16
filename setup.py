@@ -10,6 +10,9 @@ setup(
     url='http://pypi.python.org/pypi/SeedWaterSegmenter/',
     license='LICENSE.txt',
     description='',
-    long_description=open('README.txt').read(),
-    install_requires=[],
+    long_description=open('README.rst').read(),
+    install_requires=[
+                      'wx>=2.8',
+                      'numpy>=0.9',
+                      ],
 )
