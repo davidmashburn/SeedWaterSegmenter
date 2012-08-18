@@ -3,3 +3,8 @@
 *.pyo
 *.c
 *~
+dist
+dist/*
+build
+built/*
+MANIFEST
