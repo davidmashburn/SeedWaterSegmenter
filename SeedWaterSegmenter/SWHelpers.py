@@ -287,7 +287,7 @@ def GetContourValuesLengthsAndSubContoursByFrame(watershed,allValsByFrame):
     return cVLSByFrame
 
 def ContourPlotFromImage(im,neighborPairs):
-    _=imshow_vr(im,interpolation='nearest',cmap=cm.gray)
+    _=imshow_vr(im,interpolation='nearest',cmap=plt.cm.gray)
     for i,nPair in enumerate(neighborPairs):
         whX = np.where(  ((im[:-1,:]==nPair[0]) & (im[1:,:]==nPair[1])) |
                          ((im[:-1,:]==nPair[1]) & (im[1:,:]==nPair[0]))  )
@@ -396,3 +396,81 @@ def GetNeighborValues(d,wv,ind):
         return allVals
     else:
         print 'Neighbors.py does not exist!'
+
+#####################################################################
+# Integrated intensity functions:
+#####################################################################
+def OutlineMasksPlot(arr,waterArr,cellID,t=0):
+    '''Plot the image and 3 outline masks to demonstrate the effects of different numbers of dilate/erodes'''
+    wv = (waterArr[t]==cellID)
+    bright = np.zeros_like(arr[t])
+    
+    wh=np.where(wv)
+    bright[wh] = arr[t][wh]
+    
+    plt.clf()
+    plt.subplot(231)
+    plt.imshow(arr[t],cmap=plt.cm.gray)
+    
+    plt.subplot(232)
+    plt.imshow(bright,cmap=plt.cm.gray)
+    
+    for i in range(1,5):
+        wo = ndimage.binary_dilation(wv,iterations=i) -  \
+             ndimage.binary_erosion(wv,iterations=i)
+        wh=np.where(wo)
+        bright = np.zeros_like(arr[t])
+        bright[wh]=arr[t][wh]
+        
+        plt.subplot(2,3,i+2)
+        plt.imshow(bright,cmap=plt.cm.gray)
+
+def GetTotalIntegratedBrightness(arr,waterArr,cellID,iterations=0):
+    '''Sum the brightness of the original image under the final segmented region'''
+    sums = []
+    bright = np.zeros_like(arr[0])
+    for t in range(len(arr)):
+        bright[:]=0
+        w = (waterArr[t]==cellID)
+        if iterations>0: #if iterations is >0, w turns into the outline region instead
+            w = ndimage.binary_dilation(w,iterations=iterations) -  \
+                ndimage.binary_erosion(w,iterations=iterations)
+        wh = np.where(w)
+        bright[wh]=arr[t][wh]
+        sums.append( bright.sum() )
+    return np.array(sums)
+
+def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2):
+    '''Sum the brightness of the original image under the edges of the final segmented region, with a specificed thickness (even integers only)'''
+    if thickness%2==1 or thickness<2:
+        print 'thickness parameter must be an even integer > 0!'
+        return
+    iterations = thickness//2
+    return GetTotalIntegratedBrightness(arr,waterArr,cellID,iterations=iterations)
+#####################################################################
+
+
+#####################################################################
+# An old function from CellFunctions.py for plotting some weird gradient angles...
+# Just put it here to keep from losing the code
+#####################################################################
+def GradientAnglePlot(f='/media/sda1/Documents and Settings/Owner/My Documents/VIIBRE--ScarHealing/ActiveData/Stack_Zproject_GBR_DC.gif'):
+    r=VolumeGif.LoadMonolithicGif(f)[0]
+    
+    clf()
+    numSub=5
+    g=4
+    subplot(1,numSub,1)
+    test=ndimage.gaussian_filter(1.*r[120:180,120:180],g)
+    pdx=ndimage.convolve(test,n.array([[-1],[0],[1]]))
+    pdy=ndimage.convolve(test,n.array([[-1,0,1]]))
+    imshow(test)
+    subplot(1,numSub,2)
+    imshow(pdx)
+    subplot(1,numSub,3)
+    imshow(pdy)
+    subplot(1,numSub,4)
+    imshow(n.arctan(pdy/pdx))
+    subplot(1,numSub,5)
+    imshow(ndimage.convolve(test,n.array([[-1,0,1],[0,0,0],[1,0,-1]])))
+
