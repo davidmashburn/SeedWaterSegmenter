@@ -7,4 +7,6 @@ dist
 dist/*
 build
 built/*
+zips
+zips/*
 MANIFEST
