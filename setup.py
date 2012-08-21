@@ -2,11 +2,13 @@ from distutils.core import setup
 
 setup(
     name='SeedWaterSegmenter',
-    version='0.6.0',
+    version='0.5.1',
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],
-    scripts=[],
+    package_dir={'SeedWaterSegmenter': 'SeedWaterSegmenter'},
+    package_data={'SeedWaterSegmenter': ['icons/*']},   
+    scripts = ['postinstall.py'],
     url='http://pypi.python.org/pypi/SeedWaterSegmenter/',
     license='LICENSE.txt',
     description='',
@@ -19,6 +21,8 @@ setup(
                       'scipy>=0.8',
                       'matplotlib>=1.0',
                       'Image>=1.1.5',
+                      'xlrd>=0.7'
+                      'xlwt>=0.7'
                       'mahotas>=0.5',
                       # Projects that used to be internal
                       'cmpGen>=0.1',

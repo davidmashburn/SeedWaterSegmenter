@@ -16,7 +16,8 @@ Windows:
             (It works if it pops up with the ">>>" below and does not genetate a large error message)
 Ubuntu (or Debian):
     Install the necessary packages with this command:
-        sudo apt-get install python-scipy python-matplotlib python-wxtools cython python-imaging python-xlrd python-xlwt
+        sudo apt-get install python-setuptools python-wxtools python-numpy python-scipy python-matplotlib python-imaging python-xlrd python-xlwt
+        ( Make sure you have the "Community" source available )
     Test:
         In a terminal, run "python"
         Type and run "import numpy"
@@ -33,41 +34,27 @@ Mac OS X:
 Other:
     Ask me...
 
-1B: Install Mahotas
+2: Install Python Dependencies and SeedWaterSegmenter:
 ---------------------------------------
 The watershed algorithm that used to come from a modified version of PyMorph by Luis Pedro
 now comes from the package "mahotas" by Luis Pedro (new implementation of the same algorithm).
 It is much faster!
 
-All platforms:
-    Open a shell (cmd on Windows, Terminal on Mac and Linux)
-    Type and run the command:
-        easy_install mahotas
-    Give it permission if needed
+SeedWater also depends on a number of other packages by David Mashburn that used to be included in SWS but are now separate packages:
+
+cmpGen
+EllipseFitter
+FilenameSort
+GifTiffLoader
+ImageContour
+
+To install all of these, open a shell (cmd on Windows, Terminal on Mac and Linux)
+Type and run the command:
+    easy_install mahotas cmpGen EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
+Give it permission if needed
 
 
-2: Install SeedWater:
----------------------------------------
-Choose a location (empty directory) to store the SeedWater script files
-   (I like a place where I can edit them without special permissions, usually in my Home folder)
-Copy all the SeedWater files into this folder (in the zip file)
-Copy the full path to this folder
-    Open seedwater.pth and paste this path WITHOUT QUOTES (will probably start with C:\)
-        Change all the \ characters to / characters
-        Copy the new version of the path.
-    Open "SetEnvironVars.py" and change the value of d to be the path you just copied (in quotes, no \ characters).
-
-Copy the "seedwater.pth" file to:
-(On Windows) C:\Python27\Lib\site-packages\
-(On Ubuntu) /usr/lib/python2.7/dist-packages/
-(On Mac) /Library/Frameworks/Python.framework/Versions/7.0/lib/python2.7/site-packages
-
-3: Test imports:
---------------------
-Start python the way you did in the Step 1 Test.
-    This time, run "import Cpyx" instead.
-
-4: Test SeedWater
+3: Test SeedWater
 --------------------
 Double-click "SeedWaterSegmenter.py" and run it.
     Wait a long time.

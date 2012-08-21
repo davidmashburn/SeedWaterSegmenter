@@ -1,0 +1,13 @@
+Metadata-Version: 1.1
+Name: SeedWaterSegmenter
+Version: 0.5.1
+Author: David Mashburn
+Author-email: david n mashburn at gmail com
+Home-page: http://code.google.com/p/seedwater/
+Download-url: UNKNOWN
+Summary: Program to interactively segmenter cells in tissue
+License: New BSD
+Description: Seedwater Segmenter (SWS) is a graphical Python program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines). The interactions are entirely based on the editing of seeds, which in turn are expanded by a watershed algorithm. The major difference between SWS and other tools is that you can place more than one seed per cell which can help you adjust the boundaries of difficult cells.
+Keywords: cells, tissue, fluorescence, segmentation, image processing,
+Platform: Windows, Mac OS X, Linux
+Classifier: Development Status :: 4 - Beta

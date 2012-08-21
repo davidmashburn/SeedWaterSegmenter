@@ -20,15 +20,29 @@ For more details, see Python Install Instructions 20XX.txt You may also want to 
 ----
 == Installing and Running ==
 
-Installing is unnecessarily complex right now (I would prefer some binaries and/or auto-compiled solution on PyPI), but the instruction in the package are not too difficult to follow:
+Installing is FINALLY easy!
+
+In fact, you can now "easy_install SeedWaterSegmenter"
+
+=== Quick instructions: ===
+
+Windows/Mac:
+  Install Enthought Python Distribution http://www.enthought.com/products/edudownload.php
+
+
+Ubuntu/Debian:
+  sudo apt-get install python-setuptools python-wxtools python-numpy python-scipy python-matplotlib python-imaging python-xlrd python-xlwt
+
+
+easy_install mahotas cmpGen EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
+
+=== Detailed Instructions: ===
 
 The latest version is called:
 
-"Python Install Instructions June 2011.txt"
+"Python Install Instructions August 2012.txt"
 
-https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/Python%20Install%20Instructions%20June%202011.txt
-
-*Update:* SeedWater is about to get a whole lot easier to install! There are now *no compiled modules*, so the code should just run from the source directory once all the dependencies are installed. If you want to try it, check out the 5.0 preview. This version has not been thoroughly tested and major changes were made under the hood (notable use of matplotlib.colors.ListedColormap and EXTENSIVE use of scipy.sparse to replace the compiled modules), so use with caution.
+https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/Python%20Install%20Instructions%20August%202012.txt
 
 
 ----

@@ -1,0 +1,12 @@
+
+[Desktop Entry]
+Name=SeedWaterSegmenter
+Name[en_US]=SeedWaterSegmenter.desktop
+Comment=None
+Exec=/usr/local/bin/seedwatersegmenter %f
+Type=Application
+Terminal=false
+Icon=/usr/local/share/pixmaps/SeedWaterSegmenter.svg
+Icon[en_US]=/usr/local/share/pixmaps/SeedWaterSegmenter.svg
+StartupNotify=true
+MimeType=text/x-python;
