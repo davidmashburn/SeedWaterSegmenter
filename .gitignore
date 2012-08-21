@@ -4,9 +4,7 @@
 *.c
 *~
 dist
-dist/*
 build
-built/*
 zips
-zips/*
+SeedWaterSegmenter.egg-info
 MANIFEST
