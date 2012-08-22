@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='SeedWaterSegmenter',
-    version='0.5.1',
+    version='0.5.2',
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],
@@ -16,7 +16,7 @@ setup(
     install_requires=[
 # Adding install requirements may make this quirk out on a new system
 # If it does, I'll have to patch it!
-                      'wx>=2.8',
+                      'wxPython>=2.8',
                       'numpy>=1.0',
                       'scipy>=0.8',
                       'matplotlib>=1.0',
