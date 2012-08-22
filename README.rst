@@ -13,9 +13,13 @@ http://onlinelibrary.wiley.com/doi/10.1002/cyto.a.22034/abstract
 
 Source code is mirrored to four repositories and to PyPI:
 - GitHub:      http://github.com/davidmashburn/SeedWaterSegmenter/
+
 - Bitbucket:   http://bitbucket.org/davidmashburn/seedwatersegmenter
+
 - Gitorious:   http://gitorious.org/seedwatersegmenter
+
 - Google Code: http://code.google.com/p/seedwater/
+
 - PyPI:        http://pypi.python.org/pypi/SeedWaterSegmenter
 
 The Google Code page also has some binary releases (http://code.google.com/p/seedwater/) that should work on 32-bit Windows or 64-bit Linux, but these are now old. Please use the "easy_install" method now.
