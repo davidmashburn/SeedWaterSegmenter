@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='SeedWaterSegmenter',
-    version='0.5.2',
+    version='0.5.3',
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],
@@ -20,7 +20,7 @@ setup(
                       'numpy>=1.0',
                       'scipy>=0.8',
                       'matplotlib>=1.0',
-                      'Image>=1.1.5',
+                      'PIL>=1.1.5',
                       'xlrd>=0.7'
                       'xlwt>=0.7'
                       'mahotas>=0.5',
