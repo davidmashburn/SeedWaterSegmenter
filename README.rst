@@ -12,6 +12,7 @@ The publication about SWS that gives all these details and more in Cytometry Par
 http://onlinelibrary.wiley.com/doi/10.1002/cyto.a.22034/abstract
 
 Source code is mirrored to four repositories and to PyPI:
+
 - GitHub:      http://github.com/davidmashburn/SeedWaterSegmenter/
 
 - Bitbucket:   http://bitbucket.org/davidmashburn/seedwatersegmenter
