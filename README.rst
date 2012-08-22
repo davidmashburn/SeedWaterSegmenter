@@ -34,7 +34,7 @@ Installing and Running
 ----------------------
 Installing is FINALLY easy!
 
-In fact, you can now "easwy_install SeedWaterSegmenter"
+In fact, you can now "easy_install SeedWaterSegmenter"
 
 Quick instructions:
 ^^^^^^^^^^^^^^^^^^^
