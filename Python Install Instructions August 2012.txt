@@ -41,14 +41,13 @@ now comes from the package "mahotas" by Luis Pedro (new implementation of the sa
 It is much faster!
 
 SeedWater also depends on a number of other packages by David Mashburn that used to be included in SWS but are now separate packages:
+    cmpGen
+    EllipseFitter
+    FilenameSort
+    GifTiffLoader
+    ImageContour
 
-cmpGen
-EllipseFitter
-FilenameSort
-GifTiffLoader
-ImageContour
-
-To install all of these, open a shell (cmd on Windows, Terminal on Mac and Linux)
+To install all of these, open a shell (cmd on Windows (use "Run as Administrator"), Terminal on Mac and Linux)
 Type and run the command:
     easy_install mahotas cmpGen EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
 Give it permission if needed

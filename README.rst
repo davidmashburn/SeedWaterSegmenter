@@ -25,7 +25,7 @@ Installing and Running
 ----------------------
 Installing is FINALLY easy!
 
-In fact, you can now "easy_install SeedWaterSegmenter"
+In fact, you can now "easwy_install SeedWaterSegmenter"
 
 Quick instructions:
 ^^^^^^^^^^^^^^^^^^^
@@ -35,7 +35,8 @@ Windows/Mac:
 Ubuntu/Debian:
     sudo apt-get install python-setuptools python-wxtools python-numpy python-scipy python-matplotlib python-imaging python-xlrd python-xlwt
 
-easy_install mahotas cmpGen EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
+In a cmd window (must run as Administrator under Windows Vista/7) or Terminal (Mac/Linux), run:
+    easy_install mahotas cmpGen EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
 
 Detailed Instructions:
 ^^^^^^^^^^^^^^^^^^^^^^
