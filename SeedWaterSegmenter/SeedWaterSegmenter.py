@@ -3033,7 +3033,7 @@ Arrow Keys: Move selected seeds (after lasso)
                     doWater=False
                     if self.wd.sparseList[self.wd.index]==None:
                         doWater=True
-                    elif self.wd.sparseList[index].nnz==0:
+                    elif self.wd.sparseList[self.wd.index].nnz==0:
                         doWater=True
                     else:
                         self.SetStatus('Checking On Update Seeds')

@@ -1,26 +1,32 @@
-Probably easiest to follow if I explain the main point of it and general workflow, then the mouse modes, and then moving from frame to frame...
+First, let me explain the main point and the general workflow. Next, I will go into more detail about mouse modes and moving from frame to frame.
 
 The point:
 ------------------
 Basically, as the user, you are creating a map of seed points with different values.
 These are fed to the watershed algorithm and fill out as regions.
-I decided to enable this large amount of manual intervention because most of the problems we encounter would not be well-solved by any automatic segmenter (fuzzy edges, missing sections, the wound boundary, the vitelline scar, etc...)
+I decided to enable this large amount of manual intervention because most of the problems we encounter would not be well-solved by any automatic segmenter (fuzzy edges, missing sections, the wound boundary, the vitelline scar, etc...).
 
 Main workflow:
 ---------------------------
-* When you initiate the program, pick a tiff stack (or a file out of a tiff sequence).
+* When you initiate the program, pick a tiff stack (or any file from a tiff sequence).
 
-* Next, it will ask you if you want to load seed points.  If you are running it for the first time on that sequence, just hit cancel
+* Next, it will ask you if you want to load seed points.  If you are running it for the first time on that sequence, just hit cancel.
 
-* Now, to get started, hit g (or Ctrl-G) to create run the gaussian filter on Figure 1...
-  this will automatically then run the minima finder to create seed points and run watershed as well.
-  -  If you are (generally) happy with the seeds, put aside Figure 1 and look at Figures 2 and 3.
-  -  If not, you can use "g" to add more blur (if you had too many points) or use "r" to reset the figure back to the start and try again with a new radius (hit "g" again)
+* To get started, the program will ask you for a gaussian sigma in order to initialize the seeds
+  This automatically runs the minima finder to create seed points (green) and also the watershed algorithm to generate boundaries (blue).
+  -  If you are (generally) happy with the seeds, continue
+  -  If not, you can use "g" (or Ctrl-G) to re-run the gauss blur and try a different sigma (bigger sigma for fewer seeds)
   -  This doesn't have to be perfect, it's just to minimize the manual intervention on the first frame...
 
-* Looking at Figure 2, this is where all the action takes place.
-First and foremost, "w" is the command to re-run watershed... it now takes less than a second and happends automatically (used to take 4-6 seconds and had to be manually invoked)
-"w" is still useful in updating figure 3 (the "Map Plot") and reverting from y mode (dummy watershed).
+* Now all three windows of the program will be activated:
+  -  Figure 1 is the editing window and shows the raw data overlaid with green seeds and blue watershed outlines
+  -  Figure 2 is the false colormap plot of the watershed image; you may need to use the "w" command to update the data in this window
+  -  The main window, "SeedWater Segmenter" has four main sections:
+        - at the top, the path to the image file being used
+        - at the right, a list of all keyboard commands
+        - at the left, all possible gui actions as well as "Notes" and "Status"
+
+* Preferrably, these windows should be where you can see them simultaneously, but you only have to look at Figure 1 most of the time
 
 The Mouse Modes:
 ----------------------------------
@@ -82,4 +88,9 @@ Frame switching:
    -  If you ever want to regenerate these centroids, go to the bad frame and hit "f" (Force regenerate seeds).  You would only use this if:
         - You hit "n" twice by accident and the second frame you generated was really off
         - You accidentally deleted a bunch of seeds and can't undo)
+
+Other notes:
+-----------------------------
+"w" is the command to re-run watershed... it now takes less than a second and happends automatically (used to take 4-6 seconds and had to be manually invoked)
+"w" is still useful in updating Figure 2 (the "Map Plot") and reverting from y mode (dummy watershed).
 
