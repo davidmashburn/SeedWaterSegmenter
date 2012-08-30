@@ -425,28 +425,35 @@ def OutlineMasksPlot(arr,waterArr,cellID,t=0):
         plt.subplot(2,3,i+2)
         plt.imshow(bright,cmap=plt.cm.gray)
 
-def GetTotalIntegratedBrightness(arr,waterArr,cellID,iterations=0):
-    '''Sum the brightness of the original image under the final segmented region'''
+def GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=None,iterations=0):
+    '''Sum the brightness of the original image under the final segmented region (2D+time or 3D+time)'''
     sums = []
     bright = np.zeros_like(arr[0])
     for t in range(len(arr)):
         bright[:]=0
         w = (waterArr[t]==cellID)
         if iterations>0: #if iterations is >0, w turns into the outline region instead
-            w = ndimage.binary_dilation(w,iterations=iterations) -  \
-                ndimage.binary_erosion(w,iterations=iterations)
+            w = ndimage.binary_dilation(w,structure=structure,iterations=iterations) -  \
+                ndimage.binary_erosion(w,structure=structure,iterations=iterations)
         wh = np.where(w)
         bright[wh]=arr[t][wh]
         sums.append( bright.sum() )
     return np.array(sums)
 
-def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2):
-    '''Sum the brightness of the original image under the edges of the final segmented region, with a specificed thickness (even integers only)'''
+def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBottom=False):
+    '''Sum the brightness of the original image under the edges of the final segmented region, with a specificed thickness (even integers only) (2D+time or 3D+time)'''
     if thickness%2==1 or thickness<2:
         print 'thickness parameter must be an even integer > 0!'
         return
     iterations = thickness//2
-    return GetTotalIntegratedBrightness(arr,waterArr,cellID,iterations=iterations)
+    if not skip3DTopAndBottom:
+        return GetTotalIntegratedBrightness(arr,waterArr,cellID,iterations=iterations)
+    elif arr.ndim==4:
+        structure = np.array([ [[0,1,0],[1,1,1],[0,1,0]] ],np.bool)
+        return GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=structure,iterations=iterations)
+    else:
+        'You can only use skip3DTopAndBottom=True on a 4D array!'
+        return
 #####################################################################
 
 
