@@ -179,9 +179,11 @@ class manager(object):
     
     
 if __name__ == '__main__':
-    import numpy
-    from matplotlib.nxutils import points_inside_poly
-    from matplotlib.pyplot import figure, show
+    import wx
+    #import numpy
+    #from matplotlib.nxutils import points_inside_poly
+    #from matplotlib.pyplot import figure, show
     m = manager()
     show()
-    import DelayApp
+    
+    app=wx.App();wx.MessageBox('Close to finish')
