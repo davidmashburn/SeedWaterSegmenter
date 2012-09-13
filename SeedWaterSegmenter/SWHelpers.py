@@ -425,6 +425,23 @@ def OutlineMasksPlot(arr,waterArr,cellID,t=0):
         plt.subplot(2,3,i+2)
         plt.imshow(bright,cmap=plt.cm.gray)
 
+def DilateMinusErode(binaryArr,structure=None,iterations=1):
+    if iterations<1:
+        print 'You must specify at least one iteration!!!'
+        return
+    else:
+        return ndimage.binary_dilation(binaryArr,structure=structure,iterations=iterations) -  \
+                ndimage.binary_erosion(binaryArr,structure=structure,iterations=iterations)
+
+def GetCellVolume(waterArr,cellID,structure=None,iterations=0):
+    sums = []
+    for t in range(len(waterArr)):
+        w = (waterArr[t]==cellID)
+        if iterations>0: #if iterations is >0, w turns into the outline region instead
+            w = DilateMinusErode(w,structure=structure,iterations=iterations)
+        sums.append( w.sum() )
+    return np.array(sums)
+
 def GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=None,iterations=0):
     '''Sum the brightness of the original image under the final segmented region (2D+time or 3D+time)'''
     sums = []
@@ -433,8 +450,7 @@ def GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=None,iterations=0
         bright[:]=0
         w = (waterArr[t]==cellID)
         if iterations>0: #if iterations is >0, w turns into the outline region instead
-            w = ndimage.binary_dilation(w,structure=structure,iterations=iterations) -  \
-                ndimage.binary_erosion(w,structure=structure,iterations=iterations)
+            w = DilateMinusErode(w,structure=structure,iterations=iterations)
         wh = np.where(w)
         bright[wh]=arr[t][wh]
         sums.append( bright.sum() )
@@ -454,6 +470,21 @@ def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBott
     else:
         'You can only use skip3DTopAndBottom=True on a 4D array!'
         return
+
+def GetVolumesAndIntegratedBrightnesses(testArrays,waterArr,cellID,thickness,skip3DBottomAndTop=True):
+    volume = GetCellVolume(waterArr,cellID)
+    volumeEdge = GetCellVolume(waterArr,cellID,structure=[[[0,1,0],[1,1,1],[0,1,0]]],iterations=thickness//2)
+    
+    intensities = [ GetTotalIntegratedBrightness(i,waterArr,cellID=cellID)
+                   for i in testArrays ]
+    edgeIntensities = [ GetEdgeIntegratedBrightness(i,waterArr,cellID,thickness=thickness,skip3DTopAndBottom=skip3DBottomAndTop)
+                       for i in testArrays ]
+    
+    intensitiesPerPixel = [ i/volume for i in intensities ]
+    edgeIntensitiesPerPixel = [ i/volumeEdge for i in edgeIntensities ]
+    
+    return [volume,volumeEdge],intensities,edgeIntensities,intensitiesPerPixel,edgeIntensitiesPerPixel
+
 #####################################################################
 
 
