@@ -286,6 +286,71 @@ def GetContourValuesLengthsAndSubContoursByFrame(watershed,allValsByFrame):
         cVLSByFrame.append(cVLS)
     return cVLSByFrame
 
+def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,allValsByFrame):
+    cVLSandOrderByFrame = []
+    orderOfSCsByValueByFrame = [] # List of dicts
+    for frame in range(len(watershed)):
+        identifier=0 # unique id for each cVLS
+        cVLS = [] # for each subcountour: [value, length, subcontour points]
+        orderOfSCsByValue = {} # For each cellID, an ordered list of indexes to the subcontours (into cVLS) that reconstruct the contour (negative values mean the sc needs to be flipped)
+        for v in allValsByFrame[frame]:
+            boundingRect=ImageContour.GetBoundingRect(watershed[frame],v)
+            perimeterVals,perimeterList,subContours = ImageContour.GetPerimeterByNeighborVal(watershed[frame],v,boundingRect=boundingRect,getSubContours=True)
+            numSCs=len(perimeterVals)
+            subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist() for sc in subContours] # Will need to - 0.5 to line up on an overlay
+            if len(perimeterList)>0:
+                orderOfSCsByValue[v] = []
+                for i in range(numSCs):
+                    newSC = [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i],identifier]
+                    matchingCVLS = [ sc for sc in cVLS if sc[0]==newSC[0] ]
+                    matchingCVLS = [ sc for sc in matchingCVLS if sorted([newSC[2][0],newSC[2][-1]]) == sorted([sc[2][0],sc[2][-1]]) ]  # Should only possibly find 1 match...
+                    if matchingCVLS==[]: # New contour!
+                        cVLS.append(newSC)
+                        orderOfSCsByValue[v].append(identifier)
+                        identifier+=1
+                    else:
+                        matchingCVLS[0][1] = min(matchingCVLS[0][1],newSC[1]) # keep the minimum perimeter length...
+                        orderOfSCsByValue[v].append(-matchingCVLS[3]) # Minus means it is backwards!        
+        cVLS.sort()
+        IDs = [i[3] for i in cVLS]
+        cVLS = [i[:3] for i in cVLS] # Remove identifiers from cVLS
+        # Reindex after sorting...
+        for v in allValsByFrame[frame]:       #cmp(x,0) -> sign(x) in python
+            orderOfSCsByValue[v] = [cmp(ID,0)*IDs.index(abs(ID)) for ID in orderOfSCsByValue[v]]
+        cVLSByFrame.append(cVLS)
+        orderOfSCsByValueByFrame.append(orderOfSCsByValue)
+    return cVLSByFrame,orderOfSCsByValueByFrame
+
+        ## NOT NEEDED! KEEPING FOR REFERENCE!
+        #for i in range(len(cVLS)-1,0,-1):
+        #    for j in range(i-1,-1,-1): # Loop backwards through the sorted list of cvls's... if the value pair matches, check the endpoints (they will always be reversed for adjacent regions (always go ccw...))
+        #        if cVLS[i][0]!=cVLS[j][0]: # once we no longer match the value pair, we know there are no more matches in the list...
+        #            break
+        #        ######## VERIFY THIS ACTUALLY WORKS THE SAME WAY!!!
+        #        elif (cVLS[i][2][-1],cVLS[i][2][0]]) == (cVLS[j][2][0],cVLS[j][2][-1]):  # if 2 subcoutours are the same,
+        #            if cVLS[j][1]>cVLS[i][1]:
+        #                cVLS[j],cVLS[i] = cVLS[i],cVLS[j] #swap!
+        #            shortest = min(cVLS[j][1],cVLS[i][1])                              # keep only the one with the minimum length computation
+        #            
+        #            cVLS[j][1] = shortest
+        #            del(cVLS[i])
+        #            break
+
+def GetXYListAndPolyListFromCVLS(cVLS,orderOfSCsByValueByFrame):
+    numFrames = len(cVLS)
+    allValsByFrame = [ sorted(orderOfSCsByValueByFrame[t].keys()) for t in range(numFrames) ]
+    xyList = [ sorted(list(set(totuple( flatten(i,2) )))) for i in subContoursByValueByFrame ]
+    polyList = []
+    
+    for t in range(numFrames):
+        polyList.append({})
+        for v in allValsByFrame[t]:
+            subContours = [ ( cVLS[t][-index][2][::-1] if index<0 else cVLS[t][index][2] )
+                           for index in orderOfSCsByValueByFrame[t][v] ] # reconstruct the sc's, flipping if index is negative
+            polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContours for pt in sc ]
+            polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
+    return xyList,polyList
+
 def GetSubContoursByFrameAndValue(watershed,allValsByFrame):
     perimeterValsByValueByFrame = []
     subContoursByValueByFrame = []
