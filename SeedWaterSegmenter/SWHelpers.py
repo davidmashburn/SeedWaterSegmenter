@@ -350,7 +350,7 @@ def GetXYListAndPolyListFromCVLS(cVLS,allValsByFrame,orderOfSCsByValueByFrame):
             polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
     return xyList,polyList
 
-def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderOfSCsByValueByFrame,splitLength=1,fixedNumInteriorPoints=None):
+def GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength=1,fixedNumInteriorPoints=None):
     allValues = list(set(tuple(flatten(allValsByFrame))))
     allPairs = sorted(list(set([tuple(c[0]) for cVLSByFrame in cVLS for c in cVLSByFrame])))
 
@@ -367,7 +367,10 @@ def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderO
     for cvlsByValue in cVLS2:
         for c in cvlsByValue:
             c[2] = limitInteriorPoints(c[2],numInteriorPoints[tuple(c[0])])
-    # return cVLS2
+    return cVLS2
+
+def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderOfSCsByValueByFrame,splitLength=1,fixedNumInteriorPoints=None):
+    cvls2 = GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength,fixedNumInteriorPoints)
     return GetXYListAndPolyListFromCVLS(cVLS2,allValsByFrame,orderOfSCsByValueByFrame)
 
 def ContourPlotFromImage(im,neighborPairs):
