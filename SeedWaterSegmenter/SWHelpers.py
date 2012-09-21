@@ -370,71 +370,6 @@ def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderO
     # return cVLS2
     return GetXYListAndPolyListFromCVLS(cVLS2,allValsByFrame,orderOfSCsByValueByFrame)
 
-def GetSubContoursByFrameAndValue(watershed,allValsByFrame):
-    perimeterValsByValueByFrame = []
-    subContoursByValueByFrame = []
-    tjsByValueByFrame = []
-    tjsByFrame = []
-    for frame in range(len(watershed)):
-        perimeterValsByValue = []
-        subContoursByValue = []
-        tjsByValue = []
-        for v in allValsByFrame[frame]:
-            boundingRect=ImageContour.GetBoundingRect(watershed[frame],v)
-            perimeterVals,perimeterList,subContours = ImageContour.GetPerimeterByNeighborVal(watershed[frame],v,boundingRect=boundingRect,getSubContours=True)
-            subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist() for sc in subContours] # Will need to - 0.5 to line up on an overlay
-            
-            perimeterValsByValue.append(perimeterVals)
-            subContoursByValue.append(subContoursAdj)
-            tjsByValue.append( sorted(list(set(totuple(flatten([ [i[0],i[-1]] for i in subContoursAdj ]))))) )
-        
-        perimeterValsByValueByFrame.append(perimeterValsByValue)
-        subContoursByValueByFrame.append(subContoursByValue)
-        tjsByValueByFrame.append(tjsByValue)
-        tjsByFrame.append( flatten(tjsByValue) )
-    
-    return subContoursByValueByFrame, perimeterValsByValueByFrame, tjsByValueByFrame, tjsByFrame
-
-#def limitInteriorPoints(l,numInteriorPoints):
-#    return [  l[i] for i in  np.linspace(0,len(l)-1,numInteriorPoints+2).round().astype(np.integer)  ]
-
-def GetSubContoursLimitedToFixedSections(watershed,allValsByFrame,numInteriorPoints=2):
-    subContoursByValueByFrame, perimeterValsByValueByFrame, tjsByValueByFrame, tjsByFrame = GetSubContoursByFrameAndValue(watershed,allValsByFrame)
-    scNew = []
-    for frame in range(len(watershed)):
-        scNew.append([])
-        for i in range(len(allValsByFrame[frame])):
-            sc = subContoursByValueByFrame[frame][i]
-            scNew[-1].append( [ limitInteriorPoints(i,numInteriorPoints) for i in sc ] )
-    
-    return scNew
-
-def GetSubContoursLimitedToEvenSections(watershed,allValsByFrame,minimumLength=30):
-    '''Limit the number of points in each subcontour based dividing it's minimum length (through time) into relatively even sections'''
-    subContoursByValueByFrame, perimeterValsByValueByFrame, tjsByValueByFrame, tjsByFrame = GetSubContoursByFrameAndValue(watershed,allValsByFrame)
-    
-    # First, determine the minimum length of each contour for each neighbor pair:
-    allVals = flatten(allValsByFrame)
-    #subContourMinimums = 
-    # First, determine the number of interior points needed for each subcontour
-
-def GetXYListAndPolyListFromSubContours(subContoursByValueByFrame,allValsByFrame):
-    '''subContoursByValueByFrame is a list of lists of subcontours where subcontours are lists of coordinate pairs.
-       allValByFrame is a list of lists of cellIDs
-       returns:
-           xyList: nested list of xy pairs for each time point.
-           polyList: nested list of dictionaries for each time point where
-                     each entry is like: {cellID: [ <indexes into xyList> ]}'''
-    xyList = [ sorted(list(set(totuple( flatten(i,2) )))) for i in subContoursByValueByFrame ]
-    polyList = []
-    for t in range(len(allValsByFrame)):
-        polyList.append({})
-        for i,v in enumerate(allValsByFrame[t]):
-            polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContoursByValueByFrame[t][i] for pt in sc ]
-            polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
-    
-    return xyList,polyList
-
 def ContourPlotFromImage(im,neighborPairs):
     _=imshow_vr(im,interpolation='nearest',cmap=plt.cm.gray)
     for i,nPair in enumerate(neighborPairs):
@@ -505,26 +440,6 @@ def MakePolygonNetworkFromWaterSeg(waterArr,minSplit=30,allValsByFrame=None,cVLS
         allSegsList.append(allSegsInds)
         
     return allPtsList,allSegsList
-
-# This is probably going to be deleted soon... akward to implement...
-def GetVoronoiNetworkFromCVLSs(allValsByFrame,cVLS): # cVLS is also "ByFrame"
-    '''Take cVLS's and reconstruct points and connections:
-    points are, at simplest, the triple junctions [[x,y], ...]
-    connections is a list for each cell of [ [cellID, [indices of all the points in points...]], ...]'''
-    # first round of this function should just use TJ's to verify accuracy...
-    # stitch together the subcontours to reconstruct the real contour
-    tjsByFrame = []
-    for t in range(len(allValsByFrame)):
-        tjsByFrame.append([])
-        for v in allValByFrame[t]:
-            tjsByFrame[t]+=[ [c[2][0],c[2][-1]] for c in cVLS[t] if c[0]==v ] # Builds a list of [[startPt,endPt], ... ]
-        tjsByFrame[t] = sorted(list(set(flatten(tjsByFrame[t])))) # flatten, remove duplicates, and sort
-    
-    for t in range(len(allValsByFrame)):
-        for v in allValByFrame[t]:
-            subContoursByID = [c[2] for c in cVLS[t] if v in c[0]] # re-grab all the subcontours associated with each val
-            
-    
 
 def MultNumOrNone(x,y):
     if x==None or y==None:
