@@ -287,7 +287,7 @@ def GetContourValuesLengthsAndSubContoursByFrame(watershed,allValsByFrame):
     return cVLSByFrame
 
 def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,allValsByFrame):
-    cVLSandOrderByFrame = []
+    cVLSByFrame = []
     orderOfSCsByValueByFrame = [] # List of dicts
     for frame in range(len(watershed)):
         identifier=0 # unique id for each cVLS
@@ -310,7 +310,7 @@ def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,
                         identifier+=1
                     else:
                         matchingCVLS[0][1] = min(matchingCVLS[0][1],newSC[1]) # keep the minimum perimeter length...
-                        orderOfSCsByValue[v].append(-matchingCVLS[3]) # Minus means it is backwards!        
+                        orderOfSCsByValue[v].append(-matchingCVLS[0][3]) # Minus means it is backwards!        
         cVLS.sort()
         IDs = [i[3] for i in cVLS]
         cVLS = [i[:3] for i in cVLS] # Remove identifiers from cVLS
@@ -336,10 +336,9 @@ def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,
         #            del(cVLS[i])
         #            break
 
-def GetXYListAndPolyListFromCVLS(cVLS,orderOfSCsByValueByFrame):
+def GetXYListAndPolyListFromCVLS(cVLS,allValsByFrame,orderOfSCsByValueByFrame):
     numFrames = len(cVLS)
-    allValsByFrame = [ sorted(orderOfSCsByValueByFrame[t].keys()) for t in range(numFrames) ]
-    xyList = [ sorted(list(set(totuple( flatten(i,2) )))) for i in subContoursByValueByFrame ]
+    xyList = [ sorted(list(set(  tuple(pt) for c in cvlsByVal for pt in c[2]  ))) for cvlsByVal in cVLS ]
     polyList = []
     
     for t in range(numFrames):
@@ -350,6 +349,26 @@ def GetXYListAndPolyListFromCVLS(cVLS,orderOfSCsByValueByFrame):
             polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContours for pt in sc ]
             polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
     return xyList,polyList
+
+def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderOfSCsByValueByFrame,splitLength=1,fixedNumInteriorPoints=None):
+    allValues = list(set(tuple(flatten(allValsByFrame))))
+    allPairs = sorted(list(set([tuple(c[0]) for cVLSByFrame in cVLS for c in cVLSByFrame])))
+
+    if fixedNumInteriorPoints:
+        numInteriorPoints = {p:fixedNumInteriorPoints for p in allPairs}
+    else:
+        minLength = {}
+        for p in allPairs:
+            minLength[p] = min([ len(c[2]) for cVLSByFrame in cVLS for c in cVLSByFrame if tuple(c[0])==p ])
+        numInteriorPoints = {}
+        for p in allPairs:
+            numInteriorPoints[p] = minLength[p]//splitLength
+    cVLS2 = deepcopy(cVLS)
+    for cvlsByValue in cVLS2:
+        for c in cvlsByValue:
+            c[2] = limitInteriorPoints(c[2],numInteriorPoints[tuple(c[0])])
+    # return cVLS2
+    return GetXYListAndPolyListFromCVLS(cVLS2,allValsByFrame,orderOfSCsByValueByFrame)
 
 def GetSubContoursByFrameAndValue(watershed,allValsByFrame):
     perimeterValsByValueByFrame = []
