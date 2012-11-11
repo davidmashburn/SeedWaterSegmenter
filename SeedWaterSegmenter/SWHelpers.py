@@ -17,7 +17,7 @@ from ValueReceived import imshow_vr
 import GifTiffLoader as GTL
 import SeedWaterSegmenter as SWS
 
-from np_utils.list_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,deletecases,floatIntStringOrNone
+from np_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,deletecases,floatIntStringOrNone
 
 from MyPath import cprint
 #from pylab import *
