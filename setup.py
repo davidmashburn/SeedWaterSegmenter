@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='SeedWaterSegmenter',
-    version='0.5.4.2',
+    version='0.5.4.3',
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],

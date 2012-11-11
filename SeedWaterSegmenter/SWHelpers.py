@@ -19,7 +19,7 @@ import SeedWaterSegmenter as SWS
 
 from np_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,deletecases,floatIntStringOrNone
 
-from MyPath import cprint
+#from MyPath import cprint
 #from pylab import *
 
 def norm(a,framesExcludeAfter=None):
@@ -181,7 +181,7 @@ def SaveOverlayImages(tifStackData,SeedsPyFile,SegmentsDirectory,red=True):
         nameSeedsOutl = name+'SO.png'
         im = Image.fromarray(overlayIm)
         im.save(os.path.join(overlayDir,nameSeedsOutl))
-        cprint(str(i))    
+        #cprint(str(i))    
 def SaveDiffImages(logDir):
     diffDir = os.path.join(logDir,'Diff')
     if not os.path.exists(diffDir):
