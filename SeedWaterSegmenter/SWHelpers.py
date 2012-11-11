@@ -10,16 +10,14 @@ import Image
 import matplotlib.pyplot as plt
 
 from cmpGen import cmpGen
-from openCSV import openCSV
 import FilenameSort as FS
 import ExcelHelper
 import ImageContour
 from ValueReceived import imshow_vr
-from dplot import dplot
 import GifTiffLoader as GTL
 import SeedWaterSegmenter as SWS
 
-from np_utils import flatten,limitInteriorPoints,totuple,removeDuplicates
+from np_utils.list_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,deletecases,floatIntStringOrNone
 
 from MyPath import cprint
 #from pylab import *
@@ -29,14 +27,14 @@ def norm(a,framesExcludeAfter=None):
         return a/np.mean(a)
     else:
         return a/np.mean(a[:framesExcludeAfter])
-def deletecases(l,valList):
-    if not hasattr(valList,'__iter__'):
-        valList=[valList]
-    l=copy(l) # work on a copy
-    for v in valList:
-        for i in range(l.count(v)):
-            l.remove(v)
-    return l
+
+def openCSV(filename,colDelim=',',rowDelim='\n',allowNone=True):
+    '''A very basic .csv reader'''
+    fid=open(filename,'r')
+    r=fid.read()
+    fid.close()
+    
+    return [[floatIntStringOrNone(i) for i in j.split(colDelim)] for j in r.replace('\r','').replace(' ','').split(rowDelim)]
 
 def GetWoutline(watershed,dilate):
     woutline = np.zeros(watershed.shape,np.int)
@@ -388,7 +386,8 @@ def ContourPlotFromImage(im,neighborPairs):
 
 def ContourPlotFromCVLS(cVLSByFrame,frame=0):
     for cvls in cVLSByFrame[frame]:
-        _=dplot(cvls[2])
+        cvls=np.array(cvls[2])
+        _=plt.plot( cvls[:,0], cVLS[:,1] )
 
 def GetPairLengthsAndBadSpots(pairs,pairsByFrame,cVLSByFrame,tAx):
     pairLengths = []

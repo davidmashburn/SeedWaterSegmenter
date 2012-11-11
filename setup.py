@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='SeedWaterSegmenter',
-    version='0.5.4.0',
+    version='0.5.4.1',
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],
@@ -16,7 +16,7 @@ setup(
     install_requires=[
 # Adding install requirements may make this quirk out on a new system
 # If it does, I'll have to patch it!
-                      'wxPython>=2.8',
+                      #'wxPython>=2.8', # wxPython isn't being found correctly by setuptools -- please install it manually!
                       'numpy>=1.0',
                       'scipy>=0.8',
                       'matplotlib>=1.0',
@@ -28,7 +28,8 @@ setup(
                       'cmpGen>=0.1',
                       'EllipseFitter>=0.1',
                       'FilenameSort>=0.1',
-                      'GifTiffLoader>=0.1',
+                      'GifTiffLoader>=0.1.4',
                       'ImageContour>=0.1',
+                      'np_utils>=0.2.1',
                       ],
 )
