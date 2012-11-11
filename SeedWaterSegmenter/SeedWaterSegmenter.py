@@ -3236,7 +3236,6 @@ Arrow Keys: Move selected seeds (after lasso)
             sel = self.wd.seedSelections[self.wd.index].toarray()
             self.wd.seedArray[wh]=0
             sel[wh] = 0
-            print 'Whr r u?',len(wh),len(u)
             wh = ( wh[0]+u[0] , wh[1]+u[1] )
             np.clip(wh[0],0,self.wd.shape[1]) # This is an ok solution, but there is probably a better one...
             np.clip(wh[1],0,self.wd.shape[2])

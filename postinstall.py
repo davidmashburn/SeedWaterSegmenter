@@ -13,7 +13,8 @@ name = 'SeedWaterSegmenter'
 modulePath = imp.find_module(name)[1]
 
 if sys.platform == "win32":
-    from postinstall import get_special_folder_path
+    # This is apparently wrong... import happens by magic instead...
+    #from postinstall import get_special_folder_path
     DESKTOP_FOLDER = get_special_folder_path("CSIDL_DESKTOPDIRECTORY")
 
     if sys.argv[1] == '-install':
@@ -22,7 +23,7 @@ if sys.platform == "win32":
             os.path.join(sys.prefix, 'pythonw.exe'), # program
             name, # description
             lnkName, # filename
-            os.path.join(modulePath, shellName+'.py'), # parameters
+            os.path.join(modulePath, name+'.py'), # parameters
             '', # workdir
             os.path.join(modulePath,'icons',name+'.ico'), # iconpath
         )
