@@ -10,7 +10,6 @@ import Image
 import matplotlib.pyplot as plt
 
 from cmpGen import cmpGen
-from InstantRead import read
 from openCSV import openCSV
 import FilenameSort as FS
 import ExcelHelper
@@ -468,13 +467,13 @@ def GetNormalizedArea(areaFromCSV):
 
 def GetWoundValues(d):
     if 'ManualInputs.py' in os.listdir(d):
-        exec(read(d+'/ManualInputs.py').replace('\r','').split('\n')[0])
+        exec( open(d+'/ManualInputs.py','r').read().replace('\r','').split('\n')[0] )
         return woundVals
     else:
         print 'ManualInputs.py does not exist!'
 def GetNeighborValues(d,wv,ind):
     if 'Neighbors.py' in os.listdir(d):
-        exec(read(d+'/Neighbors.py'))
+        exec( open(d+'/Neighbors.py','r').read() )
         allVals = []
         for v in wv:
             n=neighbors[ind][v-2]
