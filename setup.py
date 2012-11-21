@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='SeedWaterSegmenter',
-    version='0.5.4.4',
+    version='0.5.4.5',
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],
@@ -27,7 +27,7 @@ setup(
 #                      # Projects that used to be internal
                       'cmpGen>=0.1',
                       'EllipseFitter>=0.1',
-                      'FilenameSort>=0.1',
+                      'FilenameSort>=0.1.3',
                       'GifTiffLoader>=0.1.4',
                       'ImageContour>=0.1',
                       'np_utils>=0.2.1',

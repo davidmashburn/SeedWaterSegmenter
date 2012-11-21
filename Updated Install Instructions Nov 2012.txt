@@ -1,0 +1,67 @@
+Updated Installation Instructions for SeedWaterSegmenter on Windows:
+
+After trying (and failing) to install one of my dependencies (mahotas) on Windows under the latest Enthought Python Distribution (EPD 8+), I am recommending that people NOT use this version of EPD for SeedWaterSegmenter. Either use standard Python 2.7, EPD version 7, or PythonXY. I think the problem could also be remedied by installing the correct version of MS Visual C++, but that is a large download, and I prefer not making users deal with licenses if at all possible. Also, wherever the breakage has occurred may be corrected by the maintainers of these packages, so feel free to try installing mahotas under EPD 8 again at a later date to see if starts working.
+
+Below are detailed instructions with links up-to-date as of Nov 11, 2012. I just tested these on a clean install of Windows 7 32-bit (and 64-bit should be exactly the same).
+
+Please feel free to email me at david.n.mashburn@gmail.com if you have questions or need help.
+================================================================================
+
+No matter which install method you choose, if you are having strange problems (aka you installed EPD 8 and SeedWater it isn't working), first uninstall all old Python versions:
+    1. Open "Add/Remove Programs" and remove all packages related to python
+    2. Go to C:\ and delete "Python27" and any the other Python folders
+    3. Go to your user folder
+
+If you choose to install standard ("vanilla") Python 2.7, please install this (choose 32-bit Python, even in 64-bit Windows):
+http://www.python.org/ftp/python/2.7.3/python-2.7.3.msi
+
+Standard Python 2.7 comes without many of the modules pre-loaded in EPD and PythonXY; if you choose standard Python, install these packages for SeedWater:
+-------------------------------------------------------------------------------
+ * Python Windows extensions
+     http://sourceforge.net/projects/pywin32/files/pywin32/Build%20218/pywin32-218.win32-py2.7.exe/download
+ * WxPython, the GUI toolkit
+     http://downloads.sourceforge.net/wxpython/wxPython2.8-win32-unicode-2.8.12.1-py27.exe
+ * Numpy, the array library
+     http://sourceforge.net/projects/numpy/files/NumPy/1.6.2/numpy-1.6.2-win32-superpack-python2.7.exe/download
+ * Matplotlib, the plotting library
+     https://github.com/downloads/matplotlib/matplotlib/matplotlib-1.2.0.win32-py2.7.exe
+ * Scipy, a great collection of numerical routines
+     http://sourceforge.net/projects/scipy/files/scipy/0.11.0/scipy-0.11.0-win32-superpack-python2.7.exe/download
+ * Python Imaging Library
+     http://effbot.org/downloads/PIL-1.1.7.win32-py2.7.exe
+-------------------------------------------------------------------------------
+
+No matter what installation you choose, make sure setuptools (easy_install) is as up-to-date as possible (older versions have some quirks like exiting on errors without even showing you what went wrong):
+   http://pypi.python.org/packages/2.7/s/setuptools/setuptools-0.6c11.win32-py2.7.exe#md5=57e1e64f6b7c7f1d2eddfc9746bbaf20
+
+Then, follow these instructions to get SeedWaterSegmenter installed:
+
+ * Install mahotas, the morphology library
+   Go to the website:
+     http://www.lfd.uci.edu/~gohlke/pythonlibs/
+   and download:
+     mahotas-0.9.5.win32-py2.7.‌exe
+
+ * Go to the PATH Environment Variable:
+     1. Right-click My Computer, and then click Properties.
+     2. Click the Advanced tab.
+     3. Click Environment variables.
+     4. Go down to the lower section, find "PATH", and click "Edit"
+   Add this to the end of the line:
+     ;C:\Python27;C:\Python27\Scripts
+   This makes global commands like "python", "easy_install", and "pyslices" work.
+
+ * Download this zip file and unpack this matplitlibrc file into the folder "C:\Users\YOURNAME\.matplotlib\"
+      http://seedwater.googlecode.com/files/matplotlibrc.zip
+   This makes matplotlib use wxPython (necessary for SWS to work)
+   (To repeat, under Windows Vista/7/8 place this in "C:\Users\YOURNAME\.matplotlib\")
+   (In XP and earlier it is "C:\Documents and Settings\YOURNAME\.matplotlib")
+
+ * Now, from the Start Menu, run "cmd" and then run this command:
+     easy_install SeedWaterSegmenter
+   This automatically fetches all the other dependencies!
+
+ * Last, run this to make a Desktop icon:
+     http://seedwater.googlecode.com/files/SeedWaterSegmenter-0.5.4.5.win32.exe
+
+ * Double-click the icon and then segment some cells!

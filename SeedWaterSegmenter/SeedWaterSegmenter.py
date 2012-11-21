@@ -764,10 +764,15 @@ class WatershedData:
             for i in range(self.length):
                 if None in [Seeds.seedList[i],Seeds.seedVals[i]]:
                     self.sparseList[i] = None
+                elif [] in [Seeds.seedList[i],Seeds.seedVals[i]]:
+                    self.sparseList[i] = scipy.sparse.lil_matrix(self.shape[1:], dtype=np.uint16)
                 else:
                     row,col = np.array(Seeds.seedList[i]).T
                     vals = Seeds.seedVals[i]
                     self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil() # I guess I could change the dtype later if I need to...
+                
+                if i==0 and self.sparseList[i]==None:
+                    self.sparseList[i] = scipy.sparse.lil_matrix(self.shape[1:], dtype=np.uint16)
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
             except:
