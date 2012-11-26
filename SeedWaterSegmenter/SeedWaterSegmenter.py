@@ -17,6 +17,20 @@ Vanderbilt Institute of Integrative Biosystems Research (VIIBRE)."""
 __author__ = "David N. Mashburn <david.n.mashburn@gmail.com>"
 
 import os,sys
+
+# Replace the default buggy print buffers when using pythonw.exe:
+# See these to understand the issue we're fixing:
+#     http://bugs.python.org/issue973507
+#     http://bytes.com/topic/python/answers/727288-pythonw-exe-exits-prematurely
+
+if os.path.split(sys.executable)[1]=='pythonw.exe':
+    outfile = open(os.devnull,'w')
+    # alternative if you want to print output to the desktop instead
+    #outfile = open('C:\\Users\\Test\\Desktop\\out.txt','w')
+    
+    sys.stdout= outfile
+    sys.stderr = outfile
+
 from copy import copy,deepcopy
 from time import time, sleep
 import imp
