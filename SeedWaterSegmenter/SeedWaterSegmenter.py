@@ -1357,8 +1357,8 @@ class WatershedData:
             if self.rgbaH==None:
                 self.rgbaH=np.array([a,a,a*0,a//2]).transpose(1,2,0)
             else:
-                self.rgbaH[:,:,0]=a
-                self.rgbaH[:,:,1]=a
+                self.rgbaH[:,:,0]=a//2-1 # These 2 lines used to be just "=a", but then the behavior of
+                self.rgbaH[:,:,1]=a//2-1 # matplotlib changed and the yellow highlight turned gray
                 self.rgbaH[:,:,2]=a*0
                 self.rgbaH[:,:,3]=a//2
             self.DrawBWDot()
@@ -1700,18 +1700,8 @@ class WatershedData:
                 fid.close()
     def CheckForMalformedRegions(self):
         '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
-        ### THIS FUNCTION IMPORTS SHAPELY DIRECTLY ... DO NOT LINK TO IT!
-        ### NO NEED TO ADD ANOTHER DEPENDENCY FOR EVERYONE ELSE!
-        import shapely.geometry
-        for frame in range(wd.GetLastActiveFrame()+1):
-            wd.UpdateValuesList(frame)
-            for v in wd.valList:
-                ic = ImageContour.GetContourInPlace(wd.watershed[frame],v)
-                p=shapely.geometry.asPolygon(ic.tolist())
-                if (wd.watershed[frame]==v).sum()!=p.area:
-                     print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
-                if not p.is_valid:
-                    print 'frame:',frame,'value:',v,'--Value has regions connected by point only!'
+        ### Deprecated... just use the one in SWHelpers directly!
+        SWHelpers.CheckForMalformedRegions(self.wd.watershed)
     def SaveTripleJunctions(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory==None:

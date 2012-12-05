@@ -216,6 +216,31 @@ def MergeWoundVals(neigh,wvl):
         if neigh[i] != None:
             neigh[i] = sorted(list(set([(firstWV if (j in wvl) else j) for j in neigh[i]])))
 
+def polyArea(vertexList):
+    '''Gotta love (almost) one-liners! (and Gauss' Law...)'''
+    a=np.array(vertexList,dtype=np.float)
+    return abs(np.sum(np.cross(a,np.roll(a,-1,axis=0)))/2)
+
+def CheckForMalformedRegions(watershed):
+    '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
+    
+    ### THIS FUNCTION IMPORTS SHAPELY DIRECTLY ... DO NOT LINK TO IT!
+    ### NO NEED TO ADD ANOTHER DEPENDENCY FOR EVERYONE ELSE!
+    #import shapely.geometry
+    # Actually, shapely is not needed for this operation after all (now uses polyArea)
+    
+    for frame in range(len(watershed)):
+        if watershed[frame]!=None:
+            allVals = np.unique(watershed[frame])
+            for v in allVals:
+                ic = ImageContour.GetContourInPlace(watershed[frame],v)
+                #p=shapely.geometry.asPolygon(ic.tolist())
+                if (watershed[frame]==v).sum() != polyArea(ic): #p.area:
+                     print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
+                #if not p.is_valid: # (temporarily?) removed
+                #    print 'frame:',frame,'value:',v,'--Value has regions connected by point only!'
+
+
 def GetNeighborPairsByFrame(neighbors,woundVals): # pass Neighbors.neighbors
     neighborPairsByFrame = []
     for frame in range(len(neighbors)):
@@ -284,6 +309,8 @@ def GetContourValuesLengthsAndSubContoursByFrame(watershed,allValsByFrame):
     return cVLSByFrame
 
 def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,allValsByFrame):
+    '''Identify every contour in the watershed segmentation for each frame as defined by each pair of cell IDs (vals).
+       Also, return the order of contours that is needed to reconstruct the border surrounding each cell.'''
     cVLSByFrame = []
     orderOfSCsByValueByFrame = [] # List of dicts
     for frame in range(len(watershed)):
