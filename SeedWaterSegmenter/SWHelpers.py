@@ -217,7 +217,7 @@ def MergeWoundVals(neigh,wvl):
             neigh[i] = sorted(list(set([(firstWV if (j in wvl) else j) for j in neigh[i]])))
 
 def polyArea(vertexList):
-    '''Gotta love (almost) one-liners! (and Gauss' Law...)'''
+    '''Gotta love (almost) one-liners! (and Green's Theorem...)'''
     a=np.array(vertexList,dtype=np.float)
     return abs(np.sum(np.cross(a,np.roll(a,-1,axis=0)))/2)
 
@@ -233,10 +233,18 @@ def CheckForMalformedRegions(watershed):
         if watershed[frame]!=None:
             allVals = np.unique(watershed[frame])
             for v in allVals:
-                ic = ImageContour.GetContourInPlace(watershed[frame],v)
-                #p=shapely.geometry.asPolygon(ic.tolist())
-                if (watershed[frame]==v).sum() != polyArea(ic): #p.area:
-                     print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
+                if v==1:
+                    # For the background, take the inverse instead
+                    filledRegion = (watershed[frame]!=1).astype(np.uint8)
+                    ic = ImageContour.GetContourInPlace(filledRegion,1)
+                    #p=shapely.geometry.asPolygon(ic.tolist())
+                    if filledRegion.sum() != polyArea(ic): #p.area:
+                        print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
+                else:
+                    ic = ImageContour.GetContourInPlace(watershed[frame],v)
+                    #p=shapely.geometry.asPolygon(ic.tolist())
+                    if (watershed[frame]==v).sum() != polyArea(ic): #p.area:
+                        print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
                 #if not p.is_valid: # (temporarily?) removed
                 #    print 'frame:',frame,'value:',v,'--Value has regions connected by point only!'
 
@@ -314,7 +322,7 @@ def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,
     cVLSByFrame = []
     orderOfSCsByValueByFrame = [] # List of dicts
     for frame in range(len(watershed)):
-        identifier=0 # unique id for each cVLS
+        identifier=1 # unique id for each cVLS -- have to start with 1 b/c we use negatives and 0 can't be negative
         cVLS = [] # for each subcountour: [value, length, subcontour points]
         orderOfSCsByValue = {} # For each cellID, an ordered list of indexes to the subcontours (into cVLS) that reconstruct the contour (negative values mean the sc needs to be flipped)
         for v in allValsByFrame[frame]:
@@ -325,16 +333,18 @@ def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,
             if len(perimeterList)>0:
                 orderOfSCsByValue[v] = []
                 for i in range(numSCs):
-                    newSC = [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i],identifier]
-                    matchingCVLS = [ sc for sc in cVLS if sc[0]==newSC[0] ]
-                    matchingCVLS = [ sc for sc in matchingCVLS if sorted([newSC[2][0],newSC[2][-1]]) == sorted([sc[2][0],sc[2][-1]]) ]  # Should only possibly find 1 match...
+                    newSC = [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i],identifier] # New Subcontours have 4 parts: valuePair,perimeter,list of xy pairs for subcontours, and identifier (arbitrary, for sorting...)
+                    matchingCVLS = [ sc for sc in cVLS if sc[0]==newSC[0] ] # match any subcoutours in cVLS so far that are for the same pair of cells
+                    matchingCVLS = [ sc for sc in matchingCVLS if totuple(sc[2][::-1])==totuple(newSC[2]) ] # Only keep subcoutours where the points match the reverse of the points in newSC
+                                    #sorted([newSC[2][0],newSC[2][-1]]) == sorted([sc[2][0],sc[2][-1]]) ]
+                                                                                                             # Should only possibly find 1 match...
                     if matchingCVLS==[]: # New contour!
                         cVLS.append(newSC)
                         orderOfSCsByValue[v].append(identifier)
                         identifier+=1
                     else:
                         matchingCVLS[0][1] = min(matchingCVLS[0][1],newSC[1]) # keep the minimum perimeter length...
-                        orderOfSCsByValue[v].append(-matchingCVLS[0][3]) # Minus means it is backwards!        
+                        orderOfSCsByValue[v].append(-matchingCVLS[0][3]) # Negative identifier means the subcountour is backwards for this cell!
         cVLS.sort()
         IDs = [i[3] for i in cVLS]
         cVLS = [i[:3] for i in cVLS] # Remove identifiers from cVLS
@@ -370,8 +380,9 @@ def GetXYListAndPolyListFromCVLS(cVLS,allValsByFrame,orderOfSCsByValueByFrame):
         for v in allValsByFrame[t]:
             subContours = [ ( cVLS[t][-index][2][::-1] if index<0 else cVLS[t][index][2] )
                            for index in orderOfSCsByValueByFrame[t][v] ] # reconstruct the sc's, flipping if index is negative
-            polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContours for pt in sc ]
-            polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
+            polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContours for pt in sc[:-1] ]
+            polyList[-1][v] = polyList[-1][v]+[polyList[-1][v][0]] # Tack on the first point at the end to close the loop
+            #polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
     return xyList,polyList
 
 def GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength=1,fixedNumInteriorPoints=None):
