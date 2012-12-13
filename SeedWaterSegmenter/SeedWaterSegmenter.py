@@ -60,6 +60,8 @@ import ImageContour
 import EllipseFitter
 import ExcelHelper
 
+import SWHelpers
+
 class Timer:
     def __init__(self):
         self.timeStart=time()
@@ -2511,6 +2513,7 @@ class SegmenterFrame(wx.Frame):
         self.AutoCenterWoundButton = wx.Button(self.MainPanel, -1, "Auto Center Wound")
         self.RunCalculationsButton = wx.Button(self.MainPanel, -1, "Run Calculations for All Frames")
         self.RunCalculations2Button = wx.Button(self.MainPanel, -1, "Run Calculations (2) for All Frames")
+        self.CheckForMalformedRegionsButton = wx.Button(self.MainPanel, -1, "Check for malformed regions")
         self.StatusText = wx.StaticText(self.MainPanel, -1, "Status:\n    Initializing...")
         self.SummaryText = wx.StaticText(self.MainPanel, -1, '''
 Summary of Key Commands:
@@ -2590,6 +2593,8 @@ Arrow Keys: Move selected seeds (after lasso)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(self.RunCalculations2Button, 0, 0, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
+        controlsVSizer.Add(self.CheckForMalformedRegionsButton, 0, 0, 0)
+        controlsVSizer.Add((10,10), 0, 0, 0)
         
         controlsVSizer.Add(self.StatusText, 0, wx.EXPAND, 0)
         
@@ -2610,7 +2615,9 @@ Arrow Keys: Move selected seeds (after lasso)
                   self.MouseModeHelpText,self.FrameNumber,self.FrameNumberText,
                   self.ToggleViewCheckbox,self.NotesTextBox,
                   self.ReSaveAllFramesButton,self.ReRunAllWatershedsButton,
-                  self.CompressSeedValuesButton,self.AutoCenterWoundButton,self.RunCalculationsButton,self.RunCalculations2Button,
+                  self.CompressSeedValuesButton,self.AutoCenterWoundButton,
+                  self.RunCalculationsButton,self.RunCalculations2Button,
+                  self.CheckForMalformedRegionsButton,
                   self.StatusText,self.SummaryText]:
             i.Bind(wx.EVT_KEY_DOWN, self.OnKeyDownWx)
         
@@ -2625,6 +2632,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.Bind(wx.EVT_BUTTON, self.AutoCenterWoundCallback,self.AutoCenterWoundButton)
         self.Bind(wx.EVT_BUTTON, self.RunCalculationsCallback, self.RunCalculationsButton)
         self.Bind(wx.EVT_BUTTON, self.RunCalculations2Callback, self.RunCalculations2Button)
+        self.Bind(wx.EVT_BUTTON, self.CheckForMalformedRegionsCallback, self.CheckForMalformedRegionsButton)
         
     def OnInit(self,filename=None,setConnections=True):
         if setConnections:
@@ -2877,6 +2885,20 @@ Arrow Keys: Move selected seeds (after lasso)
         self.SetStatus('Running Calculations (2)')
         self.wd.RunCalculations2(self.saveDir)
         self.SetStatus('Ready')
+    def CheckForMalformedRegionsCallback(self,event):
+        print 'Checking for malformed regions!'
+        self.SetStatus('Checking for malformed regions')
+        s = SWHelpers.CheckForMalformedRegions(self.wd.watershed,usePrint=False)
+        print s
+        
+        # Non-modal message:
+        dia = wx.Frame(None,-1,'Malformed Regions:')
+        wx.TextCtrl(dia,-1,s,style=wx.TE_MULTILINE|wx.TE_READONLY) # add the text to the Dialog
+        dia.Show()
+        #wx.MessageBox(s,'Malformed Regions')
+        
+        self.SetStatus('Ready')
+    
     
     def SetStatus(self,text):
         # The 200 spaces ensure that any string will print completely after "Ready" (known problem on Linux)

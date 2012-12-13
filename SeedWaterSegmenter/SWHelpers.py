@@ -221,7 +221,7 @@ def polyArea(vertexList):
     a=np.array(vertexList,dtype=np.float)
     return abs(np.sum(np.cross(a,np.roll(a,-1,axis=0)))/2)
 
-def CheckForMalformedRegions(watershed):
+def CheckForMalformedRegions(watershed,usePrint=True):
     '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
     
     ### THIS FUNCTION IMPORTS SHAPELY DIRECTLY ... DO NOT LINK TO IT!
@@ -229,24 +229,31 @@ def CheckForMalformedRegions(watershed):
     #import shapely.geometry
     # Actually, shapely is not needed for this operation after all (now uses polyArea)
     
+    outputString = ''
+    
     for frame in range(len(watershed)):
         if watershed[frame]!=None:
             allVals = np.unique(watershed[frame])
             for v in allVals:
                 if v==1:
                     # For the background, take the inverse instead
-                    filledRegion = (watershed[frame]!=1).astype(np.uint8)
-                    ic = ImageContour.GetContourInPlace(filledRegion,1)
-                    #p=shapely.geometry.asPolygon(ic.tolist())
-                    if filledRegion.sum() != polyArea(ic): #p.area:
-                        print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
+                    filledRegion = (watershed[frame]!=1).astype(np.int)
                 else:
-                    ic = ImageContour.GetContourInPlace(watershed[frame],v)
-                    #p=shapely.geometry.asPolygon(ic.tolist())
-                    if (watershed[frame]==v).sum() != polyArea(ic): #p.area:
-                        print 'frame:',frame,'value:',v,'-- Value has disjoint regions!'
+                    filledRegion = (watershed[frame]==v).astype(np.int)
+                ic = ImageContour.GetContourInPlace(filledRegion,1)
+                #p=shapely.geometry.asPolygon(ic.tolist())
+                if filledRegion.sum() != polyArea(ic): #p.area:
+                    s = ' '.join(['frame:',str(frame),', value:',str(v)])
+                    outputString = outputString + ' ' + s + '\n'
                 #if not p.is_valid: # (temporarily?) removed
                 #    print 'frame:',frame,'value:',v,'--Value has regions connected by point only!'
+    if outputString=='':
+        outputString = 'No malformed regions found!'
+    
+    if usePrint:
+        print outputString
+    else:
+        return outputString
 
 
 def GetNeighborPairsByFrame(neighbors,woundVals): # pass Neighbors.neighbors
