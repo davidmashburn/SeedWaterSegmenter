@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+''''A useful collection of helper functions for SWS'''
 import os
 import glob
 import imp
@@ -15,7 +17,8 @@ import ExcelHelper
 import ImageContour
 from ValueReceived import imshow_vr
 import GifTiffLoader as GTL
-import SeedWaterSegmenter as SWS
+#import SeedWaterSegmenter as SWS # No longer needed; plus SWS imports this (and circluar references are bad)
+import mahotas
 
 from np_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,deletecases,floatIntStringOrNone
 
@@ -23,6 +26,7 @@ from np_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,delete
 #from pylab import *
 
 def norm(a,framesExcludeAfter=None):
+    '''Standard norm (divide by the mean). Can ignore frames at the end when computing the mean'''
     if framesExcludeAfter==None:
         return a/np.mean(a)
     else:
@@ -34,7 +38,9 @@ def openCSV(filename,colDelim=',',rowDelim='\n',allowNone=True):
     r=fid.read()
     fid.close()
     
-    return [[floatIntStringOrNone(i) for i in j.split(colDelim)] for j in r.replace('\r','').replace(' ','').split(rowDelim)]
+    return [[floatIntStringOrNone(i)
+              for i in j.split(colDelim)]
+             for j in r.replace('\r','').replace(' ','').split(rowDelim)]
 
 def GetWoutline(watershed,dilate):
     woutline = np.zeros(watershed.shape,np.int)
@@ -45,7 +51,7 @@ def GetWoutline(watershed,dilate):
     
     return woutline
 
-def GetSeedArray(watershed,SeedsPyFile,frameNumber):
+def GetSeedArray(watershed,SeedsPyFile,frameNumber):  # THIS FUNCTION IS CURRENTLY BROKEN
     # Load the SeedsPyFile:
     fid = open(SeedsPyFile)
     try:
@@ -58,7 +64,9 @@ def GetSeedArray(watershed,SeedsPyFile,frameNumber):
     seedArray = np.zeros(watershed.shape,np.int)
     
     if seedList[frameNumber]!=None:
-        SWS.PointsToArray(seedList[frameNumber], seedVals[frameNumber],seedArray)
+        pass
+        ################## This function no longer exists:
+        ##################SWS.PointsToArray(seedList[frameNumber], seedVals[frameNumber],seedArray)
     val = 2 #(2 if self.walgorithm=='cv' else 1) # I could do this, but what's the need?
     seedArray[:val,:]  = 1
     seedArray[-val:,:] = 1
@@ -221,6 +229,23 @@ def polyArea(vertexList):
     a=np.array(vertexList,dtype=np.float)
     return abs(np.sum(np.cross(a,np.roll(a,-1,axis=0)))/2)
 
+def ConvertOutlinesToWatershed(origArr,outlines,useDilate=False,structure=[[0,1,0],[1,1,1],[0,1,0]]):
+    if useDilate:
+        outlines=scipy.ndimage.morphology.binary_dilation(a,structure=[[0,1,0],[1,1,1],[0,1,0]])
+    labels = scipy.ndimage.label(1-outlines)[0]
+    wh=np.where(labels==0)
+    labels[wh]=-1
+    labels+=1
+    labels = labels.astype(np.uint16)
+    labels[0]=1
+    labels[-1]=1
+    labels[:,0]=1
+    labels[:,-1]=1
+    
+    water = mahotas.cwatershed(origArr,labels)
+    return water
+
+
 def CheckForMalformedRegions(watershed,usePrint=True):
     '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
     
@@ -288,7 +313,7 @@ def GetWoundNeighborSetsByFrame(neighborPairsByFrame,wv):
             if (n[0] in woundNeighbors) and (n[1] in woundNeighbors):
                 woundNeighbors2.append(tuple(sorted(n)))
         secondNeighbors = [] # Anything touching a wound neighbor
-        woundNeighborOuterPairs = [] # This essentially constitutes everything that would make up the perimeter around the 1st ring of wound neighbors
+        woundNeighborOuterPairs = [] # Everything making up the perimeter around 1st ring of wound neighbors
         for n in nPairs:
             if (n[0] in woundNeighbors) and not (n[1] in (woundNeighbors+[wv])):
                 secondNeighbors.append(n[1])
@@ -312,9 +337,11 @@ def GetContourValuesLengthsAndSubContoursByFrame(watershed,allValsByFrame):
             boundingRect=ImageContour.GetBoundingRect(watershed[frame],v)
             # No longer needed: #contour,turns,vals = ImageContour.GetContour(watershed[0],v,boundingRect=boundingRect,byNeighbor=True)
             perimeterVals,perimeterList,subContours = ImageContour.GetPerimeterByNeighborVal(watershed[frame],v,boundingRect=boundingRect,getSubContours=True)
-            subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist() for sc in subContours] # Will need to - 0.5 to line up on an overlay
+            subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist()
+                              for sc in subContours] # Will need to - 0.5 to line up on an overlay
             if len(perimeterList)>0:
-                cVLS += [ [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i]] for i in range(len(perimeterVals))]
+                cVLS += [ [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i]]
+                         for i in range(len(perimeterVals))]
         cVLS.sort(cmpGen(lambda x: x[0]))
         for i in range(len(cVLS)-1,0,-1):
             if cVLS[i-1][0]==cVLS[i][0]:                    # if 2 subcoutours are the same,
@@ -336,15 +363,15 @@ def GetContourValuesLengthsAndSubContoursAndOrderOfSubContoursByFrame(watershed,
             boundingRect=ImageContour.GetBoundingRect(watershed[frame],v)
             perimeterVals,perimeterList,subContours = ImageContour.GetPerimeterByNeighborVal(watershed[frame],v,boundingRect=boundingRect,getSubContours=True)
             numSCs=len(perimeterVals)
-            subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist() for sc in subContours] # Will need to - 0.5 to line up on an overlay
+            subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist()
+                              for sc in subContours] # Will need to - 0.5 to line up on an overlay
             if len(perimeterList)>0:
                 orderOfSCsByValue[v] = []
                 for i in range(numSCs):
                     newSC = [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i],identifier] # New Subcontours have 4 parts: valuePair,perimeter,list of xy pairs for subcontours, and identifier (arbitrary, for sorting...)
                     matchingCVLS = [ sc for sc in cVLS if sc[0]==newSC[0] ] # match any subcoutours in cVLS so far that are for the same pair of cells
                     matchingCVLS = [ sc for sc in matchingCVLS if totuple(sc[2][::-1])==totuple(newSC[2]) ] # Only keep subcoutours where the points match the reverse of the points in newSC
-                                    #sorted([newSC[2][0],newSC[2][-1]]) == sorted([sc[2][0],sc[2][-1]]) ]
-                                                                                                             # Should only possibly find 1 match...
+                                    #sorted([newSC[2][0],newSC[2][-1]]) == sorted([sc[2][0],sc[2][-1]]) ]    # Should only possibly find 1 match...
                     if matchingCVLS==[]: # New contour!
                         cVLS.append(newSC)
                         orderOfSCsByValue[v].append(identifier)
@@ -461,7 +488,7 @@ def MakePolygonNetworkFromWaterSeg(waterArr,minSplit=30,allValsByFrame=None,cVLS
     if allValsByFrame==None:
         allValsByFrame = [ list(set(w.flat)) for w in waterArr ]
     if cVLS==None:
-        cVLS = SWHelpers.GetContourValuesLengthsAndSubContoursByFrame(waterArr,allValsByFrame)
+        cVLS = GetContourValuesLengthsAndSubContoursByFrame(waterArr,allValsByFrame)
     allPtsList = []
     allSegsList = []
     for t in range(len(cVLS)):
@@ -521,7 +548,8 @@ def GetNeighborValues(d,wv,ind):
         allVals = []
         for v in wv:
             n=neighbors[ind][v-2]
-            if n!=None:  allVals+=n
+            if n!=None:
+                allVals+=n
         allVals = list(set(allVals).difference(wv))
         return allVals
     else:
