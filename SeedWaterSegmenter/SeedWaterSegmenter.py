@@ -137,7 +137,7 @@ f: Force Remake of Seeds From Centroids of Previous Frame
    (Shift-F directly copies the seeds from the previous frame)
 g: Gaussian Filter
 h: Sharpen Filter
-i: Invert Image
+i: Invert Image (Display purposes only - underlying data does not change)
 j: Join selected seeds (after lasso)
 k: Median Filter
 l: Change to lasso mode
@@ -551,6 +551,7 @@ class WatershedData:
         self.rgbM=None # Will hold the data for the map plot...
         self.bgPlot=None
         self.overlayVisible=True
+        self.showInverted=False
         self.colorplot=None
         self.mapPlot=None
         self.mapCentroids=[]
@@ -1050,8 +1051,13 @@ class WatershedData:
     def GoToLastVisitedFrame(self):
         self.MoveToFrame(self.lastFrameVisited)
     def Invert(self):
-        self.filterData[self.index] = self.filterData[self.index].max()-self.filterData[self.index]
-        self.RemoveUndo()
+        '''This only changes how the image is displayed (normal or inverted) - real data is still "white-side-up"
+           This behavior was changed in version 0.5.5.0; '''
+        self.showInverted = not self.showInverted
+        self.ColorPlot()
+        # Old behavior:
+        #self.filterData[self.index] = self.filterData[self.index].max()-self.filterData[self.index]
+        #self.RemoveUndo()
     def Gauss(self,rad):
         '''Apply Gaussian Blur to data'''
         self.gaussSigma=rad
@@ -1267,6 +1273,8 @@ class WatershedData:
     def ColorPlot(self):
         plt.figure(1)
         im = self.filterData[self.index] # NOT 8- bit!!!
+        if self.showInverted:
+            im = im.max()-im
         seed = (self.seedArray!=0).astype(np.uint8)
         outl = self.woutline.astype(np.uint8)
         seedORoutl = np.array(np.array(seed+outl)>0,np.uint8)
@@ -2505,6 +2513,7 @@ class SegmenterFrame(wx.Frame):
         self.FrameNumber = wx.SpinCtrl(self.MainPanel, -1, "", min=0, max=1)
         self.FrameNumberText = wx.StaticText(self.MainPanel, -1, "Frame Number")
         self.ToggleViewCheckbox = wx.CheckBox(self.MainPanel, -1, "Show Segmentation Overlays?")
+        self.InvertViewCheckbox = wx.CheckBox(self.MainPanel, -1, "Show Image Inverted?")
         self.NotesTextBox = wx.TextCtrl(self.MainPanel, -1, "Type Notes Here (per frame)",
                                         style=wx.TE_PROCESS_ENTER|wx.TE_MULTILINE)
         self.ReSaveAllFramesButton = wx.Button(self.MainPanel, -1, "Re-Save All Frames")
@@ -2583,6 +2592,8 @@ Arrow Keys: Move selected seeds (after lasso)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(self.ToggleViewCheckbox, 0, 0, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
+        controlsVSizer.Add(self.InvertViewCheckbox, 0, 0, 0)
+        controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(self.NotesTextBox, 0, wx.EXPAND, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(reHSizer, 0, 0, 0)
@@ -2613,7 +2624,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.shiftDown=False
         for i in [self,self.MainPanel,self.FilenameText,self.MouseModeRadioBox,
                   self.MouseModeHelpText,self.FrameNumber,self.FrameNumberText,
-                  self.ToggleViewCheckbox,self.NotesTextBox,
+                  self.ToggleViewCheckbox,self.InvertViewCheckbox,self.NotesTextBox,
                   self.ReSaveAllFramesButton,self.ReRunAllWatershedsButton,
                   self.CompressSeedValuesButton,self.AutoCenterWoundButton,
                   self.RunCalculationsButton,self.RunCalculations2Button,
@@ -2625,6 +2636,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.Bind(wx.EVT_RADIOBOX, self.MouseModeRadioBoxCallback, self.MouseModeRadioBox)
         self.Bind(wx.EVT_SPINCTRL, self.FrameNumberCallback, self.FrameNumber)
         self.Bind(wx.EVT_CHECKBOX, self.ToggleViewCheckBoxCallback, self.ToggleViewCheckbox)
+        self.Bind(wx.EVT_CHECKBOX, self.InvertViewCheckBoxCallback, self.InvertViewCheckbox)
         #self.Bind(wx.EVT_TEXT, self.NotesTextBoxCallback, self.NotesTextBox)
         self.Bind(wx.EVT_BUTTON, self.ReSaveAllFramesCallback, self.ReSaveAllFramesButton)
         self.Bind(wx.EVT_BUTTON, self.ReRunAllWatershedsCallback, self.ReRunAllWatershedsButton)
@@ -2663,6 +2675,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.FrameNumber.SetRange(0,self.wd.length)
         self.FrameNumberText.SetLabel("Frame Number (last - "+str(self.wd.length-1)+")\n(last active - 0)")
         self.ToggleViewCheckbox.SetValue(self.wd.overlayVisible)
+        self.InvertViewCheckbox.SetValue(self.wd.showInverted)
         
         #self.wd.DrawOrigImage()
         plt.figure(1); plt.imshow(self.wd.filterData[self.wd.index],cmap=plt.cm.gray)
@@ -2752,8 +2765,11 @@ Arrow Keys: Move selected seeds (after lasso)
         self.SetStatus('Ready')
     def ToggleViewCheckBoxCallback(self,event):
         self.wd.ToggleOverlaysVisible()
+    def InvertViewCheckBoxCallback(self,event):
+        self.wd.Invert()
     #def NotesTextBoxCallback(self,event):
     #    self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
+    
     def ReSaveAllFramesCallback(self,event):
         for i in range(self.wd.length):
             if self.wd.sparseList[i]!=None:
@@ -3043,7 +3059,7 @@ Arrow Keys: Move selected seeds (after lasso)
         elif ckey=='i': # Invert for watershed and MinFinder
             self.SetStatus('Inverting Image')
             self.wd.Invert() # NEEDS UNDO_RESET
-            self.wd.ColorPlot()
+            self.InvertViewCheckbox.SetValue(self.wd.showInverted)
         elif ckey=='g': # Gauss blur for MinFinder
             self.SetStatus('Checking for Gaussian')
             dlg = wx.TextEntryDialog(None, 'Sigma Value?',
