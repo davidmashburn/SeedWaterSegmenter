@@ -415,7 +415,8 @@ def GetXYListAndPolyListFromCVLS(cVLS,allValsByFrame,orderOfSCsByValueByFrame):
             subContours = [ ( cVLS[t][-index][2][::-1] if index<0 else cVLS[t][index][2] )
                            for index in orderOfSCsByValueByFrame[t][v] ] # reconstruct the sc's, flipping if index is negative
             polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContours for pt in sc[:-1] ]
-            polyList[-1][v] = polyList[-1][v]+[polyList[-1][v][0]] # Tack on the first point at the end to close the loop
+            #polyList[-1][v] = polyList[-1][v]+[polyList[-1][v][0]] # Tack on the first point at the end to close the loop -- Actually, don't do this anymore!
+            #                                                                                                                 VFMin doesn't like this...
             #polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
     return xyList,polyList
 
