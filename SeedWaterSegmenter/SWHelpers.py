@@ -415,8 +415,8 @@ def GetXYListAndPolyListFromCVLS(cVLS,allValsByFrame,orderOfSCsByValueByFrame):
             subContours = [ ( cVLS[t][-index][2][::-1] if index<0 else cVLS[t][index][2] )
                            for index in orderOfSCsByValueByFrame[t][v] ] # reconstruct the sc's, flipping if index is negative
             polyList[-1][v] = [ xyList[t].index(totuple(pt)) for sc in subContours for pt in sc[:-1] ]
-            #polyList[-1][v] = polyList[-1][v]+[polyList[-1][v][0]] # Tack on the first point at the end to close the loop -- Actually, don't do this anymore!
-            #                                                                                                                 VFMin doesn't like this...
+            polyList[-1][v] = polyList[-1][v]+[polyList[-1][v][0]] # Tack on the first point at the end to close the loop
+                                                                   # VFMin doesn't like this format; make sure to remove this last point before saving to a file or passing to VFM...
             #polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
     return xyList,polyList
 
@@ -442,6 +442,31 @@ def GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength=1,fixed
 def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderOfSCsByValueByFrame,splitLength=1,fixedNumInteriorPoints=None):
     cVLS2 = GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength,fixedNumInteriorPoints)
     return GetXYListAndPolyListFromCVLS(cVLS2,allValsByFrame,orderOfSCsByValueByFrame)
+
+def SavexyListAndPolyListToMMAFormat(xyList,polyList,filename,bumpIndsUp1=True,removeLastPoint=True):
+    '''xyList: nested list of xy pairs for each time point.
+       polyList: nested list of dictionaries for each time point where
+                 each entry is like: {cellID: [ <indexes into xyList> ]}
+       Exports a MMA compatible dataStructure also called "polyList" which looks like:
+           {xyList,{{k,listOfIndicesTopointXYList}...}}
+           where listOfIndicesTopointXYList is of course 1-indexed'''
+    
+    outputStr='polyList = {'
+    for t,polyDict in enumerate(polyList):
+        outputStr+='\n{\n'
+        outputStr+=repr(xyList[t]).replace('[','{').replace(']','}').replace('(','{').replace(')','}')
+        outputStr+=',\n{'
+        for k in sorted(polyDict.keys()):
+            inds = polyDict[k]
+            if bumpIndsUp1:
+                inds = [i+1 for i in inds]
+            if removeLastPoint:
+                inds=inds[:-1]
+            outputStr+='{'+str(k)+','+repr(inds).replace('[','{').replace(']','}').replace('(','{').replace(')','}')+'}, '
+        outputStr=outputStr[:-2]
+        outputStr+='}\n},'
+    outputStr=outputStr[:-1]+'\n}'
+    open(filename,'w').write(outputStr)
 
 def ContourPlotFromImage(im,neighborPairs):
     _=imshow_vr(im,interpolation='nearest',cmap=plt.cm.gray)
