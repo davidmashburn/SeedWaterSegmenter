@@ -28,6 +28,32 @@ from np_utils import limitInteriorPoints,limitInteriorPointsInterpolating
 #from MyPath import cprint
 #from pylab import *
 
+class SubContour:
+    points=[] # list of (x,y)'s
+    numPoints=0
+    adjusted_length=0 # length as computed by a perimeter-style algorithm
+    values=[None,None] # always 2 values
+    startPointValues=[None,None,None] # 3 or possibly 4 values around the start point ("triple junction")
+    endPointValues=[None,None,None]   # 3 or possibly 4 values around the end point ("triple junction")
+    def __init__(self,**kwds):
+        for k in kwds:
+            self.__dict__[k] = kwds[k]
+    def cVLS(self): # for legacy purposes, returns a list
+        return [self.values,self.adjusted_length,self.points]
+
+def SubContourListfromCVLSList(cVLS_list,startPointValues_List=[],endPointValues_List=[]):
+    if startPointValues_List==[]:
+        startPointValues_List=[[None,None,None] for c in cVLS_List]
+    if endPointValues_List==[]:
+       endPointValues_List=[[None,None,None] for c in cVLS_List]
+    return [ SubContour(points=cvls[2],
+                        numPoints=len(cvls[2]),
+                        adjusted_length=cvls[1],
+                        values=cvls[1],
+                        startPointValues=startPointValues_List[i],
+                        endPointValues=endPointValues_List[i])
+            for i,cvls in enumerate(cVLS_List)]
+
 def norm(a,framesExcludeAfter=None):
     '''Standard norm (divide by the mean). Can ignore frames at the end when computing the mean'''
     if framesExcludeAfter==None:
