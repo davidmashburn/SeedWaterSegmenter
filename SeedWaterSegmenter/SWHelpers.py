@@ -20,7 +20,10 @@ import GifTiffLoader as GTL
 #import SeedWaterSegmenter as SWS # No longer needed; plus SWS imports this (and circluar references are bad)
 import mahotas
 
-from np_utils import flatten,limitInteriorPoints,totuple,removeDuplicates,deletecases,floatIntStringOrNone
+#from list_utils:
+from np_utils import flatten,totuple,removeDuplicates,deletecases,floatIntStringOrNone
+#from np_utils:
+from np_utils import limitInteriorPoints,limitInteriorPointsInterpolating
 
 #from MyPath import cprint
 #from pylab import *
@@ -420,27 +423,72 @@ def GetXYListAndPolyListFromCVLS(cVLS,allValsByFrame,orderOfSCsByValueByFrame):
             #polyList[-1][v] = removeDuplicates(polyList[-1][v])+[polyList[-1][v][0]] # Remove interior duplication...
     return xyList,polyList
 
-def GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength=1,fixedNumInteriorPoints=None):
+def GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     allValues = list(set(tuple(flatten(allValsByFrame))))
-    allPairs = sorted(list(set([tuple(c[0]) for cVLSByFrame in cVLS for c in cVLSByFrame])))
+    allPairs = sorted(list(set([tuple(c[0]) for cVLSByFrame in cVLS for c in cVLSByFrame]))) # Value pairs...
 
     if fixedNumInteriorPoints:
         numInteriorPoints = {p:fixedNumInteriorPoints for p in allPairs}
     else:
         minLength = {}
         for p in allPairs:
+            #minLength is the number of points of the shortest subcountour between cells p[0] and p[1] from all frames
             minLength[p] = min([ len(c[2]) for cVLSByFrame in cVLS for c in cVLSByFrame if tuple(c[0])==p ])
+            #                    length of subcontour
         numInteriorPoints = {}
         for p in allPairs:
             numInteriorPoints[p] = minLength[p]//splitLength
-    cVLS2 = deepcopy(cVLS)
-    for cvlsByValue in cVLS2:
-        for c in cvlsByValue:
-            c[2] = limitInteriorPoints(c[2],numInteriorPoints[tuple(c[0])])
+    
+    cVLS2 = deepcopy(cVLS) # otherwise, we'd also change the input argument cVLS in the outside world!
+    limIntPtsFunc = limitInteriorPointsInterpolating if interpolate else limitInteriorPoints
+    
+    for cvlsByFrame in cVLS2:
+        for c in cvlsByFrame:
+            c[2] = limIntPtsFunc(c[2],numInteriorPoints[tuple(c[0])])
+    
     return cVLS2
 
-def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderOfSCsByValueByFrame,splitLength=1,fixedNumInteriorPoints=None):
-    cVLS2 = GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength,fixedNumInteriorPoints)
+def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,orderOfSCsByValueByFrame,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
+    cVLS2 = GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength,fixedNumInteriorPoints,interpolate=interpolate)
+    return GetXYListAndPolyListFromCVLS(cVLS2,allValsByFrame,orderOfSCsByValueByFrame)
+
+def MakeMatchedCVLSFrames(cVLS,allValsByFrame,orderOfSCsByValueByFrame,frames=[0,1],splitLength=1,fixedNumInteriorPoints=None):
+    # This is still a work in progress!
+    if len(frames)!=2:
+        raise ValueError('Frames needs to have 2 elements!')
+    cVLSPrev,cVLSNext = [ cVLS[f] for f in frames ]
+    valsPrev,valsNext = [ allValsByFrame[f] for f in frames ]
+    
+    # Dump cells not shared between both frames:
+    cVLSPrev = [c for c in cVLSPrev if len(set(c[0]).intersection(valsNext))==2] # keep a cvls if the values are both found in the other frame
+    cVLSNext = [c for c in cVLSNext if len(set(c[0]).intersection(valsPrev))==2] # ""
+    
+    pairsPrev = [tuple(c[0]) for c in cVLSPrev]
+    pairsNext = [tuple(c[0]) for c in cVLSNext]
+    
+    if len(set(pairsPrev))!=len(pairsPrev):
+        print 'Frame',frames[0],'has more than one subcontour between the same cells!'
+        #return
+    if len(set(pairsNext))!=len(pairsNext):
+        print 'Frame',frames[1],'has more than one subcontour between the same cells!'
+        #return
+    
+    differentSCs = set(pairsPrev).difference(pairsNext)
+    if len(differentSCs)>0:
+        print "Different subcontours! The following sc's are not in both frames",tuple(frames),":"
+        print differentSCs
+        #return
+    
+    if orderOfSCsByValueByFrame[frames[0]]!=orderOfSCsByValueByFrame[frames[1]]:
+        print "Subcontours are in a different order between frames",tuple(frames),"!"
+        #return
+    
+    
+    cVLS = [cVLSPrev,cVLSNext]
+    return GetCVLSWithLimitedPointsBetweenNodes(cVLS,allValsByFrame,splitLength,fixedNumInteriorPoints,interpolate=True) # always interpolate
+
+def MakeMatchedXYListPolyListFrames(cVLS,allValsByFrame,orderOfSCsByValueByFrame,frames=[0,1],splitLength=1,fixedNumInteriorPoints=None):
+    cVLS2 = MakeMatchedCVLSFrames(cVLS,allValsByFrame,orderOfSCsByValueByFrame,frames,fixedNumInteriorPoints)
     return GetXYListAndPolyListFromCVLS(cVLS2,allValsByFrame,orderOfSCsByValueByFrame)
 
 def SavexyListAndPolyListToMMAFormat(xyList,polyList,filename,bumpIndsUp1=True,removeLastPoint=True):
