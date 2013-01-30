@@ -10,7 +10,7 @@ import ImageContour
 
 
 #from list_utils:
-from np_utils import flatten,totuple,interpGen
+from np_utils import totuple,interpGen
 #from np_utils:
 from np_utils import limitInteriorPoints,limitInteriorPointsInterpolating
 
@@ -46,23 +46,27 @@ class SubContour:
         if 'numPoints' not in kwds.keys():
             if 'points' in kwds.keys():
                 self.numPoints = len(self.points)
-    def cVLS(self): # for legacy purposes, returns a list
+    def cVLS(self):
+        '''For legacy purposes, returns a list'''
         return [self.values,self.adjusted_length,self.points]
 
 class CellNetwork:
     '''Holds the critical information for a single frame in order to reconstruct any subcontour of full contour'''
     subContours = [] # list of SubContours
-    orderOfSubContoursDict = {} # information about reconstructing full contours; negative values means reverse the contour when inserting
+    orderOfSubContoursDict = {} # information about reconstructing full contours
+                                # negative values means reverse the contour when inserting
     allValues = []
     def __init__(self,**kwds):
         for k in kwds:
             self.__dict__[k] = kwds[k]
     
-    def GetCvlsListAndOrdering(self): # for legacy purposes, returns a list
-        cVLS_List = [ sc.cVLS for sc in subContours ]
-        return cVLS_List,orderOfSubContoursDict
+    def GetCvlsListAndOrdering(self):
+        '''For legacy purposes, returns a list'''
+        cVLS_List = [ sc.cVLS() for sc in self.subContours ]
+        return cVLS_List,self.orderOfSubContoursDict
     
     def UpdateAllValues(self):
+        '''Go through the values in all the subContours and collect a list of all of them'''
         self.allValues = sorted(list(set( [ v for sc in self.subContours for v in sc.values ] )))
     
     def GetAllPoints(self):
@@ -73,14 +77,15 @@ class CellNetwork:
         '''Get a list of points (xyList) and a dictionary of index lists (into xyList) with cellID keys (polyList)
            polyList contains the information that reconstructs each individual contour from points' indices
                (much like orderOfSubContoursDict does but using scs' indices instead)
-           'closeLoops' determines if the first point is also appended to the end of each list to close the loop and makes plotting cleaner, but be cautious of this'''
+           'closeLoops' determines if the first point is also appended to the end of each list to close the loop
+                        and makes plotting cleaner, but be cautious of this'''
         xyList = self.GetAllPoints()
         polyList = {}
         
-        for v in self.allValues
-            scPointsList = [ ( self.subContours[index].points if index>0 else # reconstruct the sc's, flipping if index is negative
+        for v in self.allValues:
+            scPointsList = [ ( self.subContours[index].points if index>0 else # reconstruct sc's, flipping if index is negative
                                self.subContours[-index].points[::-1] )
-                            for index in orderOfSubContoursDict[v] ]
+                            for index in self.orderOfSubContoursDict[v] ]
             polyList[v] = [ xyList.index(totuple(pt)) for scp in scPointsList for pt in scp[:-1] ] # skip each endpoint
             if closeLoops:
                 polyList[v] = polyList[v]+[polyList[v][0]] # Tack on the first point back on at the end to close the loop
@@ -112,38 +117,39 @@ class CellNetwork:
         
         # Now, go in and reindex orderOfSubContoursDict
         for v in self.orderOfSubContoursDict.keys():
-            orderOfSubContoursDict[v] = [ scIndexMap[i] for i in orderOfSubContoursDict[v] ]
+            self.orderOfSubContoursDict[v] = [ scIndexMap[i] for i in self.orderOfSubContoursDict[v] ]
     
     def RemoveValues(self,valuesToRemove):
         '''Remove all the values from all relevant attributes'''
         
-        if 1 in valuesToRemove:
+        if (1 in valuesToRemove):
             raise ValueError("You can't eliminate the background (value=1)!")
-            return
         
         # Collect a list of all SC's to be outright removed:
         scsToRemoveInternal = [ (i,sc) for i,sc in enumerate(self.subContours)
-                               if len(set(sc.values).intersection(valuesToRemove))==2 ] # aka, this sc is is between two values we're removing
+                               if len(set(sc.values).intersection(valuesToRemove))==2 ] # aka, this sc is is between 2 values we're removing
         scsToRemoveByBackground = [ (i,sc) for i,sc in enumerate(self.subContours)
                                    if sc.values in [(1,v) for v in valuesToRemove] ] # aka, this sc is between the background and a value to be removed
         # and remove them...
         for i,sc in (scsToRemoveInternal + scsToRemoveByBackground):
-            scsToRemove[i]=None
+            self.subContours[i]=None
         
         # And now, replace occurrences of valuesToRemove in the sc.values by 1 (background) instead
         for sc in self.subContours:
             if sc!=None:
                 len_intersect = len(set(sc.values).intersection(valuesToRemove))
                 if len_intersect==1:
-                   sc.values = tuple(sorted([ (1 if v in valuesToRemove else v)
-                                             for v in sc.values]))
+                    sc.values = tuple(sorted([ (1 if v in valuesToRemove else v)
+                                              for v in sc.values]))
                 elif len_intersect==2:
                     print 'Now how did that happen? We just filtered those out!'
                     return
         
         # Remove the values from orderOfSubContoursDict and allValues
-        orderOfSubContoursDict = { v:orderOfSubContoursDict[v] for v in orderOfSubContoursDict.keys() if v not in valuesToRemove }
-        allValues = [ v for v in allValues if v not in valuesToRemove ]
+        self.orderOfSubContoursDict = { v:self.orderOfSubContoursDict[v]
+                                       for v in self.orderOfSubContoursDict.keys()
+                                       if v not in valuesToRemove }
+        self.allValues = [ v for v in self.allValues if v not in valuesToRemove ]
         
         # Clean up and we're done!
         self.CleanUpEmptySubContours()
@@ -181,15 +187,17 @@ class CellNetwork:
             
             for scDelPtInd,connectedSCs in ((0,connectedSCsToStart),(-1,connectedSCsToEnd)):
                 for i,s in connectedSCs:
-                    connPtInd = ( 0 if s.points[0]==scDel.points[scDelPtInd] else -1 ) # it has to be either the start or the end of s
+                    connPtInd = ( 0 if s.points[0]==scDel.points[scDelPtInd] else -1 ) # it has to be either the start or the end of a sc
                     self.subContours[i].points[connPtInd] = scDelMidpoint
         else:
             print 'NOT IMPLEMENTED'
-            return
             if leaveTinyFlipFlopContour:
                 pass
             else:
                 pass
+            
+            return
+            
             ########################################################
             ## Can always try something like this if the simple skip-the-contour solution doesn't work...
             ## This is the more complex, but more flexible way to do this:
@@ -206,29 +214,28 @@ class CellNetwork:
             #del scTmp
             ########################################################
             
-        for v in scDel.startPointValues + scDel.endPointValues: # Luckily, we only have to check values that were actually touching the deleted sc
+        for v in scDel.startPointValues + scDel.endPointValues: # Luckily, we only have to check values that were touching the deleted sc
             if index in self.orderOfSubContoursDict[v]:
                 self.orderOfSubContoursDict[v] = [ i for i in self.orderOfSubContoursDict[v] if i!=index ]
         
         self.subContours[index] = None # This saves us from having to reindex orderOfSubContoursDict until later...
                                        # use CleanUpEmptySubContours to clean up
     
-    def RemoveMultipleSubContours(indexList,useSimpleRemoval=True,leaveTinyFlipFlopContour=False):
+    def RemoveMultipleSubContours(self,indexList,useSimpleRemoval=True,leaveTinyFlipFlopContour=False):
         '''Remove a bunch of subcontours and then clean up after ourselves'''
         for i in sorted(list(set(indexList)))[::-1]:
             self.RemoveSubContour(i,useSimpleRemoval,leaveTinyFlipFlopContour)
         self.CleanUpEmptySubContours()
     
-    def FindMatchesAndRemovals(other,searchInds=None): # "other" is a different CellNetwork
+    def FindMatchesAndRemovals(self,other,searchInds=None): # "other" is a different CellNetwork
         '''Check all the subContours to see if they have a match in 'other' and return them
-           Also check for flipped matches; in the event of a flip, both sc's are flagged for removal and these lists are also returned'''
+           Also check for flipped matches; in the event of a flip, both sc's are flagged for
+           removal and these lists are also returned'''
         if not other.__class__!=self.__class__:
             raise TypeError('other must be a CellNetwork!')
-            return
         
         if other==self:
             raise ValueError('other must be a different object!')
-            return
         
         matchedInOther = []
         removeFromSelf = []
@@ -264,7 +271,7 @@ class CellNetwork:
                         print 'More than 1 match!'
                 
             elif len(matches)>1:
-                print "sc in A matches multiple sc's in B:",sca.values,matches
+                print "sc in A matches multiple sc's in B:",sc.values,matches
             else:
                 matchedInOther.append(matchInds[0])
                 
@@ -294,30 +301,30 @@ def SubContourListfromCVLSList(cVLS_List,startPointValues_List=[],endPointValues
                         endPointValues = tuple(endPointValues_List[i]))
             for i,cvls in enumerate(cVLS_List)]
 
-def GetCellNetwork(watershed2D,allValues=None):
+def GetCellNetwork(watershed2d,allValues=None):
     '''Basically a constructor for CellNetwork based on a watershed array'''
     if allValues==None:
-        allValues = np.unique(watershed2D).tolist()
+        allValues = np.unique(watershed2d).tolist()
     identifier=1 # unique id for each subContour -- have to start with 1 b/c we use negatives and 0 can't be negative
     scList = []
     orderOfSCsByValue = {} # For each cellID, an ordered list of indexes to the scList that reconstruct the full contour
                            # (negative values mean the sc needs to be flipped)
-    for v in allValsByFrame[frame]:
-        boundingRect=ImageContour.GetBoundingRect(watershed[frame],v)
+    for v in allValues:
+        boundingRect=ImageContour.GetBoundingRect(watershed2d,v)
         # No longer needed: #contour,turns,vals = ImageContour.GetContour(watershed[0],v,boundingRect=boundingRect,byNeighbor=True)
-        perimeterVals,perimeterList,scPointsList = ImageContour.GetPerimeterByNeighborVal(watershed[frame],v,boundingRect=boundingRect,getSubContours=True)
+        perimeterVals,perimeterList,scPointsList = ImageContour.GetPerimeterByNeighborVal(watershed2d,v,boundingRect=boundingRect,getSubContours=True)
         numSCs=len(perimeterVals)
         scPointsListAdj = [ (np.array(scp)+[boundingRect[0][0],boundingRect[1][0]]).tolist()
                        for scp in scPointsList ] # Will need to - 0.5 to line up on an overlay
         if len(perimeterList)>0:
             orderOfSCsByValue[v] = []
             for i in range(numSCs):
-                newSC = SubContour( points           = scPointsAdjList[i],
+                newSC = SubContour( points           = scPointsListAdj[i],
                                    # numPoints        = len(scPointsAdj[i]), # happens automatically
                                     adjusted_length  = perimeterList[i],
                                     values           = tuple(sorted([v,perimeterVals[i]])),
-                                    startPointValues = GetValuesAroundSCPoint( watershed[frame], scPointsAdj[i][0] ),
-                                    endPointValues   = GetValuesAroundSCPoint( watershed[frame], scPointsAdj[i][-1] ),
+                                    startPointValues = GetValuesAroundSCPoint( watershed2d, scPointsListAdj[i][0] ),
+                                    endPointValues   = GetValuesAroundSCPoint( watershed2d, scPointsListAdj[i][-1] ),
                                     identifier=identifier )
                 matchingSCs = [ sc for sc in scList if sc.values==newSC.values ] # match any subcoutours in cVLS so far that are for the same pair of cells
                 matchingSCs = [ sc for sc in matchingSCs if totuple(sc.points[::-1])==totuple(newSC.points) ] # Only keep subcoutours where the points match the reverse of the points in newSC
@@ -336,7 +343,7 @@ def GetCellNetwork(watershed2D,allValues=None):
         sc.identifier=None
     
     # Reindex after sorting...
-    for v in allValsByFrame[frame]:       #cmp(x,0) -> sign(x) in python
+    for v in allValues:       #cmp(x,0) -> sign(x) in python
         orderOfSCsByValue[v] = [ cmp(ID,0)*IDs.index(abs(ID)) for ID in orderOfSCsByValue[v] ]
     
     return CellNetwork( subContours=scList , orderOfSCsByValue=orderOfSCsByValue , allValues=allValues )
@@ -347,13 +354,16 @@ def GetCellNetworksByFrame(watershed,allValsByFrame):
             for i in range(len(watershed)) ]
 
 def GetXYListAndPolyListFromCellNetworkList(cellNetworkList,closeLoops=True):
-    return [ cn.GetXYListAndPolyList(closeLoops=closeLoops) for cn in cellNetworkList ]
+    '''Get a multi-frame xyList and polyList'''
+    ret = [ cn.GetXYListAndPolyList(closeLoops=closeLoops) for cn in cellNetworkList ]
+    xyList,polyList = zip(*ret) # effectively like transpose...
+    return xyList,polyList
 
 
 def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     '''Based on matching subcontours by value pair, this function defines a fixed number of interior points for each subcontour
-       and then applies this "trimming" procedure equitably to each frame in the cellNetworkList (uses LimitPointsBetweenNodes)'''
-    allValues = sorted(list(set( [ v for cn in cellNetworkList for v in cn.allValues ] )))
+       and then applies this "trimming" procedure equitably to each frame in cellNetworkList (uses LimitPointsBetweenNodes)'''
+    #allValues = sorted(list(set( [ v for cn in cellNetworkList for v in cn.allValues ] ))) # not used...
     allPairs = sorted(list(set( [ tuple(sc.values) for cn in cellNetworkList for sc in cn.subContours ] ))) # Value pairs...
     
     # Build the numInteriorPointsDict:
@@ -368,14 +378,14 @@ def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=
                      for p in allPairs }
         numInteriorPointsDict = { p:(minLength[p]//splitLength) for p in allPairs }
     
-    cellNetworkListNew = deepcopy(cellNetworkList) # otherwise, we'd also change the input argument scListByFrame in the outside world!
+    cellNetworkListNew = deepcopy(cellNetworkList) # otherwise, we'd also change the input argument in the outside world!
     for cn in cellNetworkListNew:
         cn.LimitPointsBetweenNodes(numInteriorPointsDict,interpolate=interpolate)
     
     return cellNetworkListNew
 
 def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
-    '''Get an list of points and a connection network from a cVLS and orderOfSCsByValueByFrame; limit points between triple junctions
+    '''Get a list of points and a set of polygons network from a cellNetwork limit points between triple junctions
        (Applies GetCellNetworkListWithLimitedPointsBetweenNodes and then GetXYListAndPolyListFromCellNetworkList)'''
     return GetXYListAndPolyListFromCellNetworkList(
              GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength,fixedNumInteriorPoints,interpolate) )
@@ -388,7 +398,7 @@ def GetMatchedCellNetworksCollapsing(cnA,cnB):
     if cnA==cnB: # if we got the same object for some reason, just return 2 shallow clones
         return cnA,cnB
     
-    sharedVals = sorted(list(set(cnA.allValues+cnB.allValues)))
+    # sharedVals = sorted(list(set(cnA.allValues+cnB.allValues))) # not used...
     valsNotInA = sorted(list(set(cnB.allValues).difference(cnA.allValues)))
     valsNotInB = sorted(list(set(cnA.allValues).difference(cnB.allValues)))
     
@@ -411,8 +421,9 @@ def GetMatchedCellNetworksCollapsingWithLimitedPoints(cnA,cnB,splitLength=1,fixe
     '''Make 2 simplified cell networks, making sure that there is a 1-to-1 mapping between all points; this function collapses
        pairs of subcontours that do not match but are in between the same 4 cells'''
     
-    cnANew,cnBNew = GetMatchedSubContourListsCollapsing(cnA,cnB)
-    cnALim,cnBLim = GetCellNetworkListWithLimitedPointsBetweenNodes([cnANew,cnBNew],splitLength,fixedNumInteriorPoints,interpolate)
+    cnANew,cnBNew = GetMatchedCellNetworksCollapsing(cnA,cnB)
+    cnALim,cnBLim = GetCellNetworkListWithLimitedPointsBetweenNodes( [cnANew,cnBNew],splitLength,
+                                                                     fixedNumInteriorPoints,interpolate)
     
     return cnALim,cnBLim
 
@@ -442,8 +453,9 @@ def SaveXYListAndPolyListToMMAFormat(xyList,polyList,filename,bumpIndsUp1=True,r
     open(filename,'w').write(outputStr)
 
 def SaveCellNetworkListToMMAFormat(cellNetworkList,filename,bumpIndsUp1=True,removeLastPoint=True):
-    xyAndPolyList = [ cn.GetXYListAndPolyList() for cn cellNetworkList ]
-    xyList,polyList = zip(*xyAndPolyList)
+    '''Save a cellNetwork to the MMA format
+       (basically just GetXYListAndPolyListFromCellNetworkList followed by SaveXYListAndPolyListToMMAFormat)'''
+    xyList,polyList = GetXYListAndPolyListFromCellNetworkList(cellNetworkList)
     SaveXYListAndPolyListToMMAFormat(xyList,polyList,filename,bumpIndsUp1,removeLastPoint)
 
 

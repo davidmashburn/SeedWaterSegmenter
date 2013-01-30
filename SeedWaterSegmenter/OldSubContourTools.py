@@ -1,4 +1,20 @@
-# Just the functions that are being kept for legacy purposes only...
+#!/usr/bin/env python
+'''Just the functions that are being kept for legacy purposes only...
+   A number of the functions also don't work in the state they are in.'''
+
+from copy import deepcopy
+
+import numpy as np
+
+from cmpGen import cmpGen
+import ImageContour
+
+
+#from list_utils:
+from np_utils import flatten,totuple,interpGen
+#from np_utils:
+from np_utils import limitInteriorPoints,limitInteriorPointsInterpolating
+
 
 # a (barely) simpler way of doing this (aka, has no regard for ordering)
 def GetSubContoursByFrame(watershed,allValsByFrame):
