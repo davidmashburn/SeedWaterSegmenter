@@ -128,11 +128,11 @@ def CreateMapPlots(watershed):
     return rgbM
 def CreateDiffImage(arr,targetArr):
     return ((arr - targetArr)!=0).astype(np.uint8)
-def GetTimeAxisAdj():
+def GetTimeAxisAdj(SegmentsDirectory):
     sList = []
     timeAdj = 0
     count=0
-    for i in FS.getSortedListOfFiles(di,'*.tif'):
+    for i in FS.getSortedListOfFiles(SegmentsDirectory,'*.tif'):
         count+=1
         d,h,m,s=map(int,os.path.split(i)[1].split('_')[2:6])
         h += d*24
@@ -143,13 +143,12 @@ def GetTimeAxisAdj():
                 print count
                 timeAdj += sList[-1] - s + 80
                 s = sList[-1] + 80
-            pass
         sList.append(s)
     return sList
 
 def SaveOverlayImages(tifStackData,SeedsPyFile,SegmentsDirectory,red=True):
     # This function is more-or-less just a template right now, has MAJOR issues...
-    r = GTL.LoadFileSequence(di, wildcard='*.tif')
+    r = GTL.LoadFileSequence(SegmentsDirectory, wildcard='*.tif')
     rgbM = CreateMapPlots(r)
     
     for i in range(len(Files)):
@@ -226,8 +225,8 @@ def polyArea(vertexList):
 
 def ConvertOutlinesToWatershed(origArr,outlines,useDilate=False,structure=[[0,1,0],[1,1,1],[0,1,0]]):
     if useDilate:
-        outlines=scipy.ndimage.morphology.binary_dilation(a,structure=[[0,1,0],[1,1,1],[0,1,0]])
-    labels = scipy.ndimage.label(1-outlines)[0]
+        outlines=ndimage.morphology.binary_dilation(origArr,structure=structure)
+    labels = ndimage.label(1-outlines)[0]
     wh=np.where(labels==0)
     labels[wh]=-1
     labels+=1
@@ -384,8 +383,8 @@ def OutlineMasksPlot(arr,waterArr,cellID,t=0):
     plt.imshow(bright,cmap=plt.cm.gray)
     
     for i in range(1,5):
-        wo = ndimage.binary_dilation(wv,iterations=i) -  \
-             ndimage.binary_erosion(wv,iterations=i)
+        wo = ( ndimage.binary_dilation(wv,iterations=i) -
+               ndimage.binary_erosion(wv,iterations=i)  )
         wh=np.where(wo)
         bright = np.zeros_like(arr[t])
         bright[wh]=arr[t][wh]
@@ -398,8 +397,8 @@ def DilateMinusErode(binaryArr,structure=None,iterations=1):
         print 'You must specify at least one iteration!!!'
         return
     else:
-        return ndimage.binary_dilation(binaryArr,structure=structure,iterations=iterations) -  \
-                ndimage.binary_erosion(binaryArr,structure=structure,iterations=iterations)
+        return ( ndimage.binary_dilation(binaryArr,structure=structure,iterations=iterations) -
+                 ndimage.binary_erosion(binaryArr,structure=structure,iterations=iterations)  )
 
 def GetCellVolume(waterArr,cellID,structure=None,iterations=0):
     sums = []
@@ -425,7 +424,8 @@ def GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=None,iterations=0
     return np.array(sums)
 
 def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBottom=False):
-    '''Sum the brightness of the original image under the edges of the final segmented region, with a specificed thickness (even integers only) (2D+time or 3D+time)'''
+    '''Sum the brightness of the original image under the edges of the final segmented region,
+       with a specificed thickness (even integers only) (2D+time or 3D+time)'''
     if thickness%2==1 or thickness<2:
         print 'thickness parameter must be an even integer > 0!'
         return
@@ -436,7 +436,7 @@ def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBott
         structure = np.array([ [[0,1,0],[1,1,1],[0,1,0]] ],np.bool)
         return GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=structure,iterations=iterations)
     else:
-        'You can only use skip3DTopAndBottom=True on a 4D array!'
+        print 'You can only use skip3DTopAndBottom=True on a 4D array!'
         return
 
 def GetVolumesAndIntegratedBrightnesses(testArrays,waterArr,cellID,thickness,skip3DBottomAndTop=True):
@@ -460,6 +460,7 @@ def GetVolumesAndIntegratedBrightnesses(testArrays,waterArr,cellID,thickness,ski
 # An old function from CellFunctions.py for plotting some weird gradient angles...
 # Just put it here to keep from losing the code
 #####################################################################
+'''
 def GradientAnglePlot(f='/media/sda1/Documents and Settings/Owner/My Documents/VIIBRE--ScarHealing/ActiveData/Stack_Zproject_GBR_DC.gif'):
     r=VolumeGif.LoadMonolithicGif(f)[0]
     
@@ -479,4 +480,4 @@ def GradientAnglePlot(f='/media/sda1/Documents and Settings/Owner/My Documents/V
     imshow(n.arctan(pdy/pdx))
     subplot(1,numSub,5)
     imshow(ndimage.convolve(test,n.array([[-1,0,1],[0,0,0],[1,0,-1]])))
-
+'''
