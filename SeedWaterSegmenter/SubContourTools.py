@@ -49,21 +49,39 @@ class SubContour:
     def cVLS(self):
         '''For legacy purposes, returns a list'''
         return [self.values,self.adjusted_length,self.points]
+    
+    def plot(self,*args,**kwds):
+        x = [ p[0]-0.5 for p in self.points ]
+        y = [ p[1]-0.5 for p in self.points ]
+        return plt.plot( y,x, *args, **kwds )
 
 class CellNetwork:
     '''Holds the critical information for a single frame in order to reconstruct any subcontour of full contour'''
     subContours = [] # list of SubContours
-    orderOfSubContoursDict = {} # information about reconstructing full contours
-                                # negative values means reverse the contour when inserting
+    contourOrderingByValue = {} # information about reconstructing full contours; these should each be a tuple like:
+                                # (<index into subContours>,<boolean that determines if this is forward (True) or backwards (False)>)
+                                # Don't use this directly, use the GetContourPoints method instead
+                                # no more negative values... (used to mean reverse the contour when inserting)
     allValues = []
     def __init__(self,**kwds):
         for k in kwds:
             self.__dict__[k] = kwds[k]
     
+    def GetContourPoints(self,v,closeLoop=True):
+        # I know I'm abusing the list comprehension syntax to get a local variables... so shoot me...
+        def reverseIfFalse(l,direction):
+            return ( l if direction else l[::-1] )
+        scPointsList = [ reverseIfFalse( self.subContours[index].points, direction ) # reconstruct sc's, flipping if direction is False
+                        for index,direction in self.contourOrderingByValue[v] ] # for each index & direction tuple
+        contourPoints = [ totuple(pt) for scp in scPointsList for pt in scp[:-1] ] # start point is not end point; assumed to be cyclical...
+        if closeLoop:
+            contourPoints.append(contourPoints[0]) # Tack on the first point back on at the end to close the loop
+        return contourPoints
+    
     def GetCvlsListAndOrdering(self):
         '''For legacy purposes, returns a list'''
         cVLS_List = [ sc.cVLS() for sc in self.subContours ]
-        return cVLS_List,self.orderOfSubContoursDict
+        return cVLS_List,self.contourOrderingByValue
     
     def UpdateAllValues(self):
         '''Go through the values in all the subContours and collect a list of all of them'''
@@ -76,17 +94,15 @@ class CellNetwork:
     def GetXYListAndPolyList(self,closeLoops=True):
         '''Get a list of points (xyList) and a dictionary of index lists (into xyList) with cellID keys (polyList)
            polyList contains the information that reconstructs each individual contour from points' indices
-               (much like orderOfSubContoursDict does but using scs' indices instead)
+               (much like contourOrderingByValue does using scs' indices)
            'closeLoops' determines if the first point is also appended to the end of each list to close the loop
                         and makes plotting cleaner, but be cautious of this'''
         xyList = self.GetAllPoints()
         polyList = {}
         
         for v in self.allValues:
-            scPointsList = [ ( self.subContours[index].points if index>0 else # reconstruct sc's, flipping if index is negative
-                               self.subContours[-index].points[::-1] )
-                            for index in self.orderOfSubContoursDict[v] ]
-            polyList[v] = [ xyList.index(totuple(pt)) for scp in scPointsList for pt in scp[:-1] ] # skip each endpoint
+            contourPoints = self.GetContourPoints(v,closeLoop=False)
+            polyList[v] = [ xyList.index(totuple(pt)) for pt in contourPoints ] # skip each endpoint
             if closeLoops:
                 polyList[v] = polyList[v]+[polyList[v][0]] # Tack on the first point back on at the end to close the loop
                                                            # VFMin doesn't like this format; make sure to remove this last
@@ -115,9 +131,9 @@ class CellNetwork:
         # Now go through and delete all the dead sc's
         self.subContours = [ sc for sc in self.subContours if sc!=None ]
         
-        # Now, go in and reindex orderOfSubContoursDict
-        for v in self.orderOfSubContoursDict.keys():
-            self.orderOfSubContoursDict[v] = [ scIndexMap[i] for i in self.orderOfSubContoursDict[v] ]
+        # Now, go in and reindex contourOrderingByValue
+        for v in self.contourOrderingByValue.keys():
+            self.contourOrderingByValue[v] = [ (scIndexMap[i],d) for i,d in self.contourOrderingByValue[v] ]
     
     def RemoveValues(self,valuesToRemove):
         '''Remove all the values from all relevant attributes'''
@@ -145,10 +161,10 @@ class CellNetwork:
                     print 'Now how did that happen? We just filtered those out!'
                     return
         
-        # Remove the values from orderOfSubContoursDict and allValues
-        self.orderOfSubContoursDict = { v:self.orderOfSubContoursDict[v]
-                                       for v in self.orderOfSubContoursDict.keys()
-                                       if v not in valuesToRemove }
+        # Remove the values from contourOrderingByValue and allValues
+        for v in valuesToRemove:
+            del(self.contourOrderingByValue[v])
+        
         self.allValues = [ v for v in self.allValues if v not in valuesToRemove ]
         
         # Clean up and we're done!
@@ -215,10 +231,11 @@ class CellNetwork:
             ########################################################
             
         for v in scDel.startPointValues + scDel.endPointValues: # Luckily, we only have to check values that were touching the deleted sc
-            if index in self.orderOfSubContoursDict[v]:
-                self.orderOfSubContoursDict[v] = [ i for i in self.orderOfSubContoursDict[v] if i!=index ]
+            contourIndices = [ i for i,d in self.contourOrderingByValue[v] ]
+            if index in contourIndices:
+                self.contourOrderingByValue[v] = [ (i,d) for i,d in self.contourOrderingByValue[v] if i!=index ]
         
-        self.subContours[index] = None # This saves us from having to reindex orderOfSubContoursDict until later...
+        self.subContours[index] = None # This saves us from having to reindex contourOrderingByValue until later...
                                        # use CleanUpEmptySubContours to clean up
     
     def RemoveMultipleSubContours(self,indexList,useSimpleRemoval=True,leaveTinyFlipFlopContour=False):
@@ -285,7 +302,16 @@ class CellNetwork:
                     print "end points don't match",ep1,ep2
         
         return matchedInOther,removeFromSelf,removeFromOther
-
+    def scPlot(self,*args,**kwds):
+        for sc in self.subContours:
+            _=sc.plot(*args,**kwds)
+    def cellPlot(self,*args,**kwds):
+        contourPoints = { v:self.GetContourPoints(v) for v in self.contourOrderingByValue.keys() }
+        for v in contourPoints.keys():
+            x = [ p[0]-0.5 for p in contourPoints[v] ]
+            y = [ p[1]-0.5 for p in contourPoints[v] ]
+            _=plt.plot( y,x, *args, **kwds )
+        
 
 def SubContourListfromCVLSList(cVLS_List,startPointValues_List=[],endPointValues_List=[]):
     '''Get a list of SubContour objects from an old list of cVLS's'''
@@ -304,11 +330,10 @@ def SubContourListfromCVLSList(cVLS_List,startPointValues_List=[],endPointValues
 def GetCellNetwork(watershed2d,allValues=None):
     '''Basically a constructor for CellNetwork based on a watershed array'''
     if allValues==None:
-        allValues = np.unique(watershed2d).tolist()
-    identifier=1 # unique id for each subContour -- have to start with 1 b/c we use negatives and 0 can't be negative
+        allValues = np.unique(watershed2d)[1:].tolist() # skip the background...
+    identifier=0 # unique id for each subContour
     scList = []
-    orderOfSCsByValue = {} # For each cellID, an ordered list of indexes to the scList that reconstruct the full contour
-                           # (negative values mean the sc needs to be flipped)
+    contourOrderingByValue = {} # For each cellID, an ordered list of index to the scList/direction pairs that reconstruct the full contour
     for v in allValues:
         boundingRect=ImageContour.GetBoundingRect(watershed2d,v)
         # No longer needed: #contour,turns,vals = ImageContour.GetContour(watershed[0],v,boundingRect=boundingRect,byNeighbor=True)
@@ -317,7 +342,7 @@ def GetCellNetwork(watershed2d,allValues=None):
         scPointsListAdj = [ (np.array(scp)+[boundingRect[0][0],boundingRect[1][0]]).tolist()
                        for scp in scPointsList ] # Will need to - 0.5 to line up on an overlay
         if len(perimeterList)>0:
-            orderOfSCsByValue[v] = []
+            contourOrderingByValue[v] = []
             for i in range(numSCs):
                 newSC = SubContour( points           = scPointsListAdj[i],
                                    # numPoints        = len(scPointsAdj[i]), # happens automatically
@@ -331,22 +356,22 @@ def GetCellNetwork(watershed2d,allValues=None):
                                 #sorted([newSC.points[0],newSC.points[-1]]) == sorted([sc.points[0],sc.points[-1]]) ] # Should only possibly find 1 match...
                 if matchingSCs==[]: # This is a new subContour, not a duplicate!
                     scList.append(newSC)
-                    orderOfSCsByValue[v].append(identifier)
+                    contourOrderingByValue[v].append( (identifier,True) )
                     identifier+=1
                 else:
                     matchingSCs[0].adjusted_length = min( matchingSCs[0].adjusted_length,
                                                           newSC.adjusted_length ) # keep the minimum perimeter length...
-                    orderOfSCsByValue[v].append(-matchingSCs[0].identifier) # Negative identifier means the subcountour is backwards for this cell!
+                    contourOrderingByValue[v].append( (matchingSCs[0].identifier,False) ) # False means the subcountour is backwards for this cell!
     scList.sort(cmpGen(lambda x: x.values)) # was just cVLS.sort()... this works, I hope?
     IDs = [sc.identifier for sc in scList]
     for sc in scList:      # scrub the id's, probably not necessary... 
         sc.identifier=None
     
     # Reindex after sorting...
-    for v in allValues:       #cmp(x,0) -> sign(x) in python
-        orderOfSCsByValue[v] = [ cmp(ID,0)*IDs.index(abs(ID)) for ID in orderOfSCsByValue[v] ]
+    for v in allValues:
+        contourOrderingByValue[v] = [ (IDs.index(i),d) for i,d in contourOrderingByValue[v] ]
     
-    return CellNetwork( subContours=scList , orderOfSCsByValue=orderOfSCsByValue , allValues=allValues )
+    return CellNetwork( subContours=scList , contourOrderingByValue=contourOrderingByValue , allValues=allValues )
 
 def GetCellNetworksByFrame(watershed,allValsByFrame):
     '''Get a list of CellNetworks based on a watershed segmentation'''
