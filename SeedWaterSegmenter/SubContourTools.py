@@ -54,6 +54,10 @@ class SubContour:
         x = [ p[0]-0.5 for p in self.points ]
         y = [ p[1]-0.5 for p in self.points ]
         return plt.plot( y,x, *args, **kwds )
+    def plotT(self,*args,**kwds):
+        x = [ p[0]-0.5 for p in self.points ]
+        y = [ p[1]-0.5 for p in self.points ]
+        return plt.plot( x,y, *args, **kwds )
 
 class CellNetwork:
     '''Holds the critical information for a single frame in order to reconstruct any subcontour of full contour'''
@@ -83,6 +87,27 @@ class CellNetwork:
         cVLS_List = [ sc.cVLS() for sc in self.subContours ]
         return cVLS_List,self.contourOrderingByValue
     
+    def GetCellularVoronoiDiagram(self):
+        '''Creates a VFMin frame input structure (CellularVoronoiDiagram (cvd)), of the form:
+           [
+              [(x1,y1),(x2,y2)...],                      # xyList
+              [
+                [v,[<list of indexes into xyList...>]],  # polygon
+                [v,[<list of indexes into xyList...>]],
+                ...
+              ]
+           ]
+           This is really, really similar to GetXYListAndPolyList except that here polyList is a tuple and not a dict...'''
+        xyList = self.GetAllPoints()
+        indexMap = { tuple(pt):i for i,pt in enumerate(xyList) } # This should massively speed this up over calling xyList.index over and over
+        polyList = []
+        for v in self.allValues:
+            contourList = self.GetContourPoints(v,closeLoop=False)
+            #indexList = [ xyList.index(totuple(pt)) + 1 for pt in contourList ] # THIS IS 1-INDEXED! # this is really slow
+            indexList = [ indexMap[totuple(pt)] + 1 for pt in contourList ] # THIS IS 1-INDEXED!
+            polyList.append( [ v,indexList ] )
+        return [xyList,polyList]
+        
     def UpdateAllValues(self):
         '''Go through the values in all the subContours and collect a list of all of them'''
         self.allValues = sorted(list(set( [ v for sc in self.subContours for v in sc.values ] )))
@@ -231,10 +256,11 @@ class CellNetwork:
             ########################################################
             
         for v in scDel.startPointValues + scDel.endPointValues: # Luckily, we only have to check values that were touching the deleted sc
-            contourIndices = [ i for i,d in self.contourOrderingByValue[v] ]
-            if index in contourIndices:
-                self.contourOrderingByValue[v] = [ (i,d) for i,d in self.contourOrderingByValue[v] if i!=index ]
-        
+            if v!=1: # as usual, skip the background...
+                contourIndices = [ i for i,d in self.contourOrderingByValue[v] ]
+                if index in contourIndices:
+                    self.contourOrderingByValue[v] = [ (i,d) for i,d in self.contourOrderingByValue[v] if i!=index ]
+            
         self.subContours[index] = None # This saves us from having to reindex contourOrderingByValue until later...
                                        # use CleanUpEmptySubContours to clean up
     
@@ -248,7 +274,7 @@ class CellNetwork:
         '''Check all the subContours to see if they have a match in 'other' and return them
            Also check for flipped matches; in the event of a flip, both sc's are flagged for
            removal and these lists are also returned'''
-        if not other.__class__!=self.__class__:
+        if other.__class__!=self.__class__:
             raise TypeError('other must be a CellNetwork!')
         
         if other==self:
@@ -265,7 +291,7 @@ class CellNetwork:
             sc = self.subContours[ind]
             # Look for each sc from A in B:
             matchTuples = [(i,scOther) for i,scOther in enumerate(other.subContours) if sc.values==scOther.values]
-            matchInds,matches = zip(*matchTuples)
+            matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
             
             if len(matches)==0:
                 print 'sc in self but not in other:', sc.values, matches
@@ -311,6 +337,15 @@ class CellNetwork:
             x = [ p[0]-0.5 for p in contourPoints[v] ]
             y = [ p[1]-0.5 for p in contourPoints[v] ]
             _=plt.plot( y,x, *args, **kwds )
+    def scPlotT(self,*args,**kwds):
+        for sc in self.subContours:
+            _=sc.plotT(*args,**kwds)
+    def cellPlotT(self,*args,**kwds):
+        contourPoints = { v:self.GetContourPoints(v) for v in self.contourOrderingByValue.keys() }
+        for v in contourPoints.keys():
+            x = [ p[0]-0.5 for p in contourPoints[v] ]
+            y = [ p[1]-0.5 for p in contourPoints[v] ]
+            _=plt.plot( x,y, *args, **kwds )
         
 
 def SubContourListfromCVLSList(cVLS_List,startPointValues_List=[],endPointValues_List=[]):
@@ -384,6 +419,8 @@ def GetXYListAndPolyListFromCellNetworkList(cellNetworkList,closeLoops=True):
     xyList,polyList = zip(*ret) # effectively like transpose...
     return xyList,polyList
 
+def GetCVDListFromCellNetworkList(cellNetworkList):
+    return [ cn.GetCellularVoronoiDiagram() for cn in cellNetworkList ]
 
 def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     '''Based on matching subcontours by value pair, this function defines a fixed number of interior points for each subcontour
@@ -393,13 +430,13 @@ def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=
     
     # Build the numInteriorPointsDict:
     if fixedNumInteriorPoints:
-        numInteriorPointsDict = {p:fixedNumInteriorPoints for p in allPairs}
+        numInteriorPointsDict = { p:fixedNumInteriorPoints for p in allPairs }
     else:
         # minLength is the number of points of the shortest subcountour between cells p[0] and p[1] from all frames
         minLength = { p : min( [ sc.numPoints
                                 for cn in cellNetworkList
                                 for sc in cn.subContours
-                                if tuple(sc.points)==p ] )
+                                if tuple(sc.values)==p ] )
                      for p in allPairs }
         numInteriorPointsDict = { p:(minLength[p]//splitLength) for p in allPairs }
     
@@ -433,7 +470,7 @@ def GetMatchedCellNetworksCollapsing(cnA,cnB):
     cnB.RemoveValues(valsNotInA)
     
     matchedInB,removeFromA_a,removeFromB_a = cnA.FindMatchesAndRemovals(cnB)
-    unMatchedInB = [ i for i in range(len(cnB)) if i not in matchedInB ] # This lets us skip the indexes that already matched
+    unMatchedInB = [ i for i in range(len(cnB.subContours)) if i not in matchedInB ] # This lets us skip the indexes that already matched
     
     _,removeFromB_b,removeFromA_b = cnB.FindMatchesAndRemovals(cnA,searchInds = unMatchedInB) # FLIP
     
@@ -456,7 +493,7 @@ def SaveXYListAndPolyListToMMAFormat(xyList,polyList,filename,bumpIndsUp1=True,r
     '''xyList: nested list of xy pairs for each time point.
        polyList: nested list of dictionaries for each time point where
                  each entry is like: {cellID: [ <indexes into xyList> ]}
-       Exports a MMA compatible dataStructure also called "polyList" which looks like:
+       Exports a MMA compatible dataStructure also called "polyList" which looks like lists of:
            {xyList,{{k,listOfIndicesTopointXYList}...}}
            where listOfIndicesTopointXYList is of course 1-indexed'''
     
