@@ -59,9 +59,21 @@ class SubContour:
         y = [ p[1]-0.5 for p in self.points ]
         return plt.plot( x,y, *args, **kwds )
 
+class QuadPoint:
+    values = None
+    point = None
+    def __init__(self,values,point):
+        if values.__class__!=tuple:
+            raise TypeError('values must be a tuple')
+        if not len(values)==4:
+            raise TypeError('values must be a 4-tuple')
+        self.values=values
+        self.point=point
+
 class CellNetwork:
     '''Holds the critical information for a single frame in order to reconstruct any subcontour of full contour'''
     subContours = [] # list of SubContours
+    quadPoints = [] # list of QuadPoints
     contourOrderingByValue = {} # information about reconstructing full contours; these should each be a tuple like:
                                 # (<index into subContours>,<boolean that determines if this is forward (True) or backwards (False)>)
                                 # Don't use this directly, use the GetContourPoints method instead
@@ -70,7 +82,17 @@ class CellNetwork:
     def __init__(self,**kwds):
         for k in kwds:
             self.__dict__[k] = kwds[k]
+        if 'quadPoints' not in kwds.keys():
+            if 'subContours' in kwds.keys():
+                self.UpdateQuadPoints()
     
+    def UpdateQuadPoints(self):
+        self.quadPoints = sorted(set( [ QuadPoint(sc.startPointValues,sc.points[0]) 
+                                       for sc in self.subContours
+                                       if len(sc.startPointValues)==4 ] +
+                                      [ QuadPoint(sc.endPointValues,sc.points[-1])
+                                       for sc in self.subContours
+                                       if len(sc.endPointValues)==4 ] ))
     def GetContourPoints(self,v,closeLoop=True):
         # I know I'm abusing the list comprehension syntax to get a local variables... so shoot me...
         def reverseIfFalse(l,direction):
@@ -110,11 +132,11 @@ class CellNetwork:
         
     def UpdateAllValues(self):
         '''Go through the values in all the subContours and collect a list of all of them'''
-        self.allValues = sorted(list(set( [ v for sc in self.subContours for v in sc.values ] )))
+        self.allValues = sorted(set( [ v for sc in self.subContours for v in sc.values ] ))
     
     def GetAllPoints(self):
         '''Get a sorted set of all points in the subContours'''
-        return sorted(list(set( [ tuple(pt) for sc in self.subContours for pt in sc.points ] )))
+        return sorted(set( [ tuple(pt) for sc in self.subContours for pt in sc.points ] ))
     
     def GetXYListAndPolyList(self,closeLoops=True):
         '''Get a list of points (xyList) and a dictionary of index lists (into xyList) with cellID keys (polyList)
@@ -159,6 +181,9 @@ class CellNetwork:
         # Now, go in and reindex contourOrderingByValue
         for v in self.contourOrderingByValue.keys():
             self.contourOrderingByValue[v] = [ (scIndexMap[i],d) for i,d in self.contourOrderingByValue[v] ]
+        
+        # And, last-but not least, update the quad points
+        self.UpdateQuadPoints()
     
     def RemoveValues(self,valuesToRemove):
         '''Remove all the values from all relevant attributes'''
@@ -255,18 +280,18 @@ class CellNetwork:
             #del scTmp
             ########################################################
             
-        for v in scDel.startPointValues + scDel.endPointValues: # Luckily, we only have to check values that were touching the deleted sc
+        for v in sorted(set(scDel.startPointValues + scDel.endPointValues)): # Luckily, we only have to check values that were touching the deleted sc
             if v!=1: # as usual, skip the background...
                 contourIndices = [ i for i,d in self.contourOrderingByValue[v] ]
                 if index in contourIndices:
                     self.contourOrderingByValue[v] = [ (i,d) for i,d in self.contourOrderingByValue[v] if i!=index ]
-            
+        
         self.subContours[index] = None # This saves us from having to reindex contourOrderingByValue until later...
                                        # use CleanUpEmptySubContours to clean up
     
     def RemoveMultipleSubContours(self,indexList,useSimpleRemoval=True,leaveTinyFlipFlopContour=False):
         '''Remove a bunch of subcontours and then clean up after ourselves'''
-        for i in sorted(list(set(indexList)))[::-1]:
+        for i in sorted(set(indexList))[::-1]:
             self.RemoveSubContour(i,useSimpleRemoval,leaveTinyFlipFlopContour)
         self.CleanUpEmptySubContours()
     
@@ -283,6 +308,7 @@ class CellNetwork:
         matchedInOther = []
         removeFromSelf = []
         removeFromOther = []
+        notRecoverable = []
         
         if searchInds==None:
             searchInds = range(len(self.subContours))
@@ -296,13 +322,24 @@ class CellNetwork:
             if len(matches)==0:
                 print 'sc in self but not in other:', sc.values, matches
                 # get the values connected to the subcontour only at the corners
-                opposingValues = tuple(sorted(list( set(sc.startPointValues+sc.endPointValues).difference(sc.values) )))
+                opposingValues = tuple(sorted( set(sc.startPointValues+sc.endPointValues).difference(sc.values) ))
                 # get the sc's from other that have these values as their main values (aka, sc switched to this/these)
                 matchOppTuples = [ (i,scOther) for i,scOther in enumerate(other.subContours) if scOther.values==opposingValues ]
-                matchOppInds,matchesOpp = zip(*matchOppTuples)
+                matchOppInds,matchesOpp = ([],[]) if matchOppTuples==[] else zip(*matchOppTuples)
                 
                 if matchesOpp==[]:
-                    print 'Not Recoverable!'
+                    allValuesAroundSC = tuple(sorted(set(sc.startPointValues+sc.endPointValues)))
+                    quadPointMatches = [ q for q in other.quadPoints
+                                           if q.values in allValuesAroundSC ] # Check to see if this sc collapsed into a 4-junction
+                    if len(quadPointMatches)==1:
+                        print 'Recoverable: sc in A at index',ind,sc.values,'collapsed into a 4-junction with values',quadPointMatches[0].values,'at',quadPointMatches[0].point
+                        removeFromSelf.append(ind)        # actually DO the removals later so we don't muck up the indexing!
+                    elif len(quadPointMatches)>1:
+                        print 'Not Recoverable! SC collapses into multiple quad-points! (Should be very rare...)'
+                        notRecoverable.append(sc.values)
+                    else:
+                        print 'Not Recoverable! No matches found'
+                        notRecoverable.append(sc.values)
                 else:
                     print 'Recoverable: sc in A at index',ind,sc.values,'matches to sc in B at index',matchOppInds[0],matchesOpp[0].values
                     print self.subContours[ind]
@@ -327,7 +364,7 @@ class CellNetwork:
                 if ep1!=ep2:
                     print "end points don't match",ep1,ep2
         
-        return matchedInOther,removeFromSelf,removeFromOther
+        return matchedInOther,removeFromSelf,removeFromOther,notRecoverable
     def scPlot(self,*args,**kwds):
         for sc in self.subContours:
             _=sc.plot(*args,**kwds)
@@ -425,8 +462,8 @@ def GetCVDListFromCellNetworkList(cellNetworkList):
 def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     '''Based on matching subcontours by value pair, this function defines a fixed number of interior points for each subcontour
        and then applies this "trimming" procedure equitably to each frame in cellNetworkList (uses LimitPointsBetweenNodes)'''
-    #allValues = sorted(list(set( [ v for cn in cellNetworkList for v in cn.allValues ] ))) # not used...
-    allPairs = sorted(list(set( [ tuple(sc.values) for cn in cellNetworkList for sc in cn.subContours ] ))) # Value pairs...
+    #allValues = sorted(set( [ v for cn in cellNetworkList for v in cn.allValues ] )) # not used...
+    allPairs = sorted(set( [ tuple(sc.values) for cn in cellNetworkList for sc in cn.subContours ] )) # Value pairs...
     
     # Build the numInteriorPointsDict:
     if fixedNumInteriorPoints:
@@ -460,19 +497,22 @@ def GetMatchedCellNetworksCollapsing(cnA,cnB):
     if cnA==cnB: # if we got the same object for some reason, just return 2 shallow clones
         return cnA,cnB
     
-    # sharedVals = sorted(list(set(cnA.allValues+cnB.allValues))) # not used...
-    valsNotInA = sorted(list(set(cnB.allValues).difference(cnA.allValues)))
-    valsNotInB = sorted(list(set(cnA.allValues).difference(cnB.allValues)))
+    # sharedVals = sorted(set(cnA.allValues+cnB.allValues)) # not used...
+    valsNotInA = sorted(set(cnB.allValues).difference(cnA.allValues))
+    valsNotInB = sorted(set(cnA.allValues).difference(cnB.allValues))
     
     # Delete any values that are not in both, replacing with background...
     cnA,cnB = deepcopy(cnA),deepcopy(cnB) # Make copies so we don't modify the originals
     cnA.RemoveValues(valsNotInB)
     cnB.RemoveValues(valsNotInA)
     
-    matchedInB,removeFromA_a,removeFromB_a = cnA.FindMatchesAndRemovals(cnB)
+    matchedInB,removeFromA_a,removeFromB_a,notRecoverableInA = cnA.FindMatchesAndRemovals(cnB)
     unMatchedInB = [ i for i in range(len(cnB.subContours)) if i not in matchedInB ] # This lets us skip the indexes that already matched
     
-    _,removeFromB_b,removeFromA_b = cnB.FindMatchesAndRemovals(cnA,searchInds = unMatchedInB) # FLIP
+    _,removeFromB_b,removeFromA_b,notRecoverableInB = cnB.FindMatchesAndRemovals(cnA,searchInds = unMatchedInB) # FLIP
+    
+    print 'Summary of pairs that are not recoverable from A:',notRecoverableInA
+    print 'Summary of pairs that are not recoverable from B:',notRecoverableInB
     
     cnA.RemoveMultipleSubContours(removeFromA_a + removeFromA_b)
     cnB.RemoveMultipleSubContours(removeFromB_a + removeFromB_b)
