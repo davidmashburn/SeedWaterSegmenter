@@ -50,6 +50,10 @@ class SubContour:
         '''For legacy purposes, returns a list'''
         return [self.values,self.adjusted_length,self.points]
     
+    def cornerConnections(self):
+        '''Returns connection values at the endpoints that are not one of the 2 main values'''
+        return tuple(sorted( set(self.startPointValues+self.endPointValues).difference(self.values) ))
+    
     def plot(self,*args,**kwds):
         x = [ p[0]-0.5 for p in self.points ]
         y = [ p[1]-0.5 for p in self.points ]
@@ -315,56 +319,127 @@ class CellNetwork:
         
         for ind in searchInds:
             sc = self.subContours[ind]
-            # Look for each sc from A in B:
-            matchTuples = [(i,scOther) for i,scOther in enumerate(other.subContours) if sc.values==scOther.values]
-            matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
+            # get the values connected to the subcontour only at the corners
+            opposingValues = sc.cornerConnections()
             
-            if len(matches)==0:
-                print 'sc in self but not in other:', sc.values, matches
-                # get the values connected to the subcontour only at the corners
-                opposingValues = tuple(sorted( set(sc.startPointValues+sc.endPointValues).difference(sc.values) ))
-                # get the sc's from other that have these values as their main values (aka, sc switched to this/these)
-                matchOppTuples = [ (i,scOther) for i,scOther in enumerate(other.subContours) if scOther.values==opposingValues ]
-                matchOppInds,matchesOpp = ([],[]) if matchOppTuples==[] else zip(*matchOppTuples)
-                
-                if matchesOpp==[]:
-                    allValuesAroundSC = tuple(sorted(set(sc.startPointValues+sc.endPointValues)))
-                    quadPointMatches = [ q for q in other.quadPoints
-                                           if q.values in allValuesAroundSC ] # Check to see if this sc collapsed into a 4-junction
-                    if len(quadPointMatches)==1:
-                        print 'Recoverable: sc in A at index',ind,sc.values,'collapsed into a 4-junction with values',quadPointMatches[0].values,'at',quadPointMatches[0].point
-                        removeFromSelf.append(ind)        # actually DO the removals later so we don't muck up the indexing!
-                    elif len(quadPointMatches)>1:
-                        print 'Not Recoverable! SC collapses into multiple quad-points! (Should be very rare...)'
-                        notRecoverable.append(sc.values)
-                    else:
-                        print 'Not Recoverable! No matches found'
-                        notRecoverable.append(sc.values)
-                else:
-                    print 'Recoverable: sc in A at index',ind,sc.values,'matches to sc in B at index',matchOppInds[0],matchesOpp[0].values
-                    print self.subContours[ind]
-                    removeFromSelf.append(ind)            # actually DO the removals later so we don't muck up the indexing!
-                    removeFromOther.append(matchOppInds[0])
-                    matchedInOther.append(matchOppInds[0])
-                    
-                    if len(matchesOpp)>1:
-                        print 'More than 1 match!'
-                
-            elif len(matches)>1:
-                print "sc in A matches multiple sc's in B:",sc.values,matches
-            else:
-                matchedInOther.append(matchInds[0])
-                
-                # Also check all the start and end points:
-                # This stuff isn't really being used right now...
-                sp1, sp2 = sc.startPointValues, matches[0].startPointValues
-                if sp1!=sp2:
-                    print "start points don't match",sp1,sp2
-                ep1, ep2 = sc.endPointValues, matches[0].endPointValues
-                if ep1!=ep2:
-                    print "end points don't match",ep1,ep2
+            # Look for matches between this sc in A and a sc (or possibly a 4-junction) in B with various properties...
+            keepSearching = True
+            collapse = False
+            
+            # 1: look for a subContour that has the same values and the same start/end point values
+            if keepSearching:
+                matchTuples = [ (i,scOther)
+                               for i,scOther in enumerate(other.subContours)
+                               if ( sc.values==scOther.values and
+                                    ( [sc.startPointValues,sc.endPointValues]==[scOther.startPointValues,scOther.endPointValues] or
+                                      [sc.startPointValues,sc.endPointValues]==[scOther.endPointValues,scOther.startPointValues] ) ) ]
+                matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
+                if len(matches)==1:
+                    # silent match
+                    matchedInOther.append(matchInds[0])
+                    keepSearching = False
+                elif len(matches)>1:
+                    print 'Not recoverable'
+                    print "sc in A matches multiple sc's in B with the same start/end point values:",sc.values,matches
+                    keepSearching = False
+            # 2: look for a subContour that has the same values and either one or the other same start/end point values
+            if keepSearching:
+                matchTuples = [ (i,scOther)
+                               for i,scOther in enumerate(other.subContours)
+                               if ( sc.values==scOther.values and
+                                    ( (sc.startPointValues in [scOther.startPointValues,scOther.endPointValues]) or
+                                      (sc.endPointValues in [scOther.endPointValues,scOther.startPointValues]) ) ) ]
+                matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
+                if len(matches)==1:
+                    # silent match
+                    matchedInOther.append(matchInds[0])
+                    keepSearching = False
+                elif len(matches)>1:
+                    print 'Not recoverable'
+                    print "sc in A matches multiple sc's in B with one common endpoint:",sc.values,matches
+                    keepSearching = False
+            # 3: look for a subContour that has the same values without the same start/endpoints
+            if keepSearching:
+                matchTuples = [ (i,scOther)
+                               for i,scOther in enumerate(other.subContours)
+                               if sc.values==scOther.values ]
+                matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
+                if len(matches)==1:
+                    # silent match
+                    matchedInOther.append(matchInds[0])
+                    keepSearching = False
+                elif len(matches)>1:
+                    print 'Not recoverable'
+                    print "sc in A matches multiple sc's in B without common start/endpoints:",sc.values,matches
+                    keepSearching = False
+            
+            # 4: look for a subContour that has opposing values (values = other's cornerValues and vice versa)
+            if keepSearching:
+                matchTuples = [ (i,scOther)
+                               for i,scOther in enumerate(other.subContours)
+                               if sc.values==scOther.cornerConnections() and opposingValues==scOther.values ]
+                matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
+                if len(matches)==1:
+                    print 'Recoverable: sc in A at index',ind,sc.values,'matches to sc in B at index',matchInds[0],matches[0].values
+                    matchedInOther.append(matchInds[0])
+                    removeFromSelf.append(ind)        # actually DO the removals later so we don't muck up the indexing!
+                    removeFromOther.append(matchInds[0])
+                    keepSearching = False
+                    collapse=True
+                elif len(matches)>1:
+                    print 'Not recoverable'
+                    print "sc in A matches multiple sc's in B with flip-flopped values:",sc.values,matches
+                    keepSearching = False
+            
+            # 5: look for a subContour that has either of the opposing values (values = other cornerValues OR vice versa)
+            if keepSearching:
+                matchTuples = [ (i,scOther)
+                               for i,scOther in enumerate(other.subContours)
+                               if sc.values==scOther.cornerConnections() or opposingValues==scOther.values ]
+                matchInds,matches = ([],[]) if matchTuples==[] else zip(*matchTuples)
+                if len(matches)==1:
+                    print 'Recoverable: sc in A at index',ind,sc.values,'matches to sc in B at index',matchInds[0],matches[0].values
+                    matchedInOther.append(matchInds[0])
+                    removeFromSelf.append(ind)        # actually DO the removals later so we don't muck up the indexing!
+                    removeFromOther.append(matchInds[0])
+                    keepSearching = False
+                    collapse=True
+                elif len(matches)>1:
+                    print 'Not recoverable'
+                    print "sc in A matches multiple sc's in B with flip-flopped values (OR):",sc.values,matches
+                    keepSearching = False
+            
+            # 6: look for a subContour that collapsed to a 4-junction
+            if keepSearching:
+                allValuesAroundSC = tuple(sorted(set(sc.startPointValues+sc.endPointValues)))
+                matches = [ q for q in other.quadPoints
+                              if q.values in allValuesAroundSC ] # Check to see if this sc collapsed into a 4-junction
+                if len(matches)==1:
+                    #print 'Recoverable: sc in A at index',ind,sc.values,'collapsed into a 4-junction with values',quadPointMatches[0].values,'at',quadPointMatches[0].point
+                    removeFromSelf.append(ind)        # actually DO the removals later so we don't muck up the indexing!
+                    keepSearching = False
+                    collapse=True
+                elif len(matches)>1:
+                    print 'Not recoverable'
+                    print "sc in A matches multiple 4-junctions in B:",sc.values,matches
+                    keepSearching = False
+            
+            # We failed to find the sc in B
+            if keepSearching:
+                print 'Not Recoverable! No matches found'
+                notRecoverable.append(sc.values)
+            
+            # Also check all the start and end points:
+            # This stuff isn't really being used right now...
+            #sp1, sp2 = sc.startPointValues, matches[0].startPointValues
+            #if sp1!=sp2:
+            #    print "start points don't match",sp1,sp2
+            #ep1, ep2 = sc.endPointValues, matches[0].endPointValues
+            #if ep1!=ep2:
+            #    print "end points don't match",ep1,ep2
         
         return matchedInOther,removeFromSelf,removeFromOther,notRecoverable
+    
     def scPlot(self,*args,**kwds):
         for sc in self.subContours:
             _=sc.plot(*args,**kwds)
