@@ -135,7 +135,7 @@ class CellNetwork:
         
     def UpdateAllValues(self):
         '''Go through the values in all the subContours and collect a list of all of them'''
-        self.allValues = sorted(set( [ v for sc in self.subContours for v in sc.values ] ))
+        self.allValues = sorted(set( [ v for sc in self.subContours for v in sc.values if v!=1 ] ))
     
     def GetAllPoints(self):
         '''Get a sorted set of all points in the subContours'''
@@ -189,7 +189,22 @@ class CellNetwork:
         self.UpdateQuadPoints()
     
     def RemoveValues(self,valuesToRemove):
-        '''Remove all the values from all relevant attributes'''
+        '''Remove all the values from all relevant attributes -- until further notice, don't use this;
+           just go back to the raw array and remake a network with fewer values...'''
+        ### THIS NEEDS SERIOUS RETHINKING! When you leave segments behind, two or more may become part of a single loop:
+        # The steps to remedy this:
+        # ID ordered groups of sc's with like value pairs (after cell removal)
+        # ID all the places that the sc's are used in contourOrderingByValue
+        # join these all together in the correct order:
+        #      add the points to end of the first segment, set the other to None
+        # remove links to the dead sc and ensure that the remaining one is in the places it should be
+        # do the standard cleanup; remove the None's from subContours and reindex conourOrderingByValue
+        
+        # So, the real key is ID'ing segs that are linked:
+        #  * must have same value pair
+        #  * must have an end-to-end linkage (end or start) = (end or start) = ...
+        #  * must be following one another in the same (or reverse) order in ALL contourOrderings
+        #  * connecting points have to be singly-connected; no internal triple junctions
         
         if (1 in valuesToRemove):
             raise ValueError("You can't eliminate the background (value=1)!")
@@ -213,12 +228,64 @@ class CellNetwork:
                 elif len_intersect==2:
                     print 'Now how did that happen? We just filtered those out!'
                     return
+                
+                startNew = set(sc.startPointValues).difference(valuesToRemove)
+                endNew = set(sc.endPointValues).difference(valuesToRemove)
+                
+                if len(startNew) < len(sc.startPointValues): startNew.add(1)
+                if len(endNew) < len(sc.endPointValues):     endNew.add(1)
+                
+                sc.startPointValues = tuple(sorted(startNew))
+                sc.endPointValues = tuple(sorted(endNew))
+        
+        '''
+        # Now, go through and make a list of the junctions and the number of connections for each:
+        junctions = [] # list of tuples; format: ( pt , [(scInd,True if startPt or False if endPt), ...] )
+        for scInd,sc in enumerate(self.subContours):
+            start,end = sc.points[0],sc.points[-1]
+            jpts = [ pt for pt,connSCList in junctions ]
+            tup = (scInd,True)
+            if start in jpts:
+                junctions[jpts.index(start)].append(tup)
+            else:
+                junctions.append( (start,[tup]) )
+            jpts = [ pt for pt,connSCList in junctions ]
+            tup = (scInd,False)
+            if end in jpts:
+                junctions[jpts.index(end)].append(tup)
+            else:
+                junctions.append( (end,[tup]) )
+        singleJunctions = [ j for j in junctions if len(j[1])==1] # Shouldn't occur
+        selfJunctions = [ j for j in junctions if len(j[1])==2 and j[1][0][0] == j[1][1][0]] # same scInd
+        doubleJunctions = [ j for j in junctions if len(j[1])==2 and j[1][0][0] != j[1][1][0]] # diff scInd
+        tripleJunctions = [ j for j in junctions if len(j[1])==3 ]
+        quadJunctions = [ j for j in junctions if len(j[1])==4 ]
+        
+        doubleJunctionsByValuePair = {}
+        for pt,scIndTupleList in doubleJunctions:
+            scInds = [ scInd for scInd,startOrEnd in scIndTupleList ]
+            
+            if self.subContours[scInds[0]].values == self.subContours[scInds[1]].values:
+                # this means the 2 sc's are between the same 2 values; should always be the case
+                doubleJunctionsByValuePair[self.subContours[scInds[0]].values].append( scIndTupleList )
+            else:
+                print "Something went wrong; double junction between sc's with different values!!"
+        
+        for vals in doubleJunctionsByValuePair:
+            djs_v = doubleJunctionsByValues[vals] # All the double junctions between pairs of values
+                                                  # Aka, what should be internal points in a single subContour
+            for scIndTuple0,scIndTuple1 in djs:
+                pass # now somehow order the djs based on start and end points with the same scInd
+        
+        # update quad points from the quadJunctions instead??
+        
+        '''
         
         # Remove the values from contourOrderingByValue and allValues
         for v in valuesToRemove:
             del(self.contourOrderingByValue[v])
         
-        self.allValues = [ v for v in self.allValues if v not in valuesToRemove ]
+        self.allValues = [ v for v in self.allValues if v not in [1]+valuesToRemove ]
         
         # Clean up and we're done!
         self.CleanUpEmptySubContours()
@@ -476,7 +543,8 @@ def SubContourListfromCVLSList(cVLS_List,startPointValues_List=[],endPointValues
 def GetCellNetwork(watershed2d,allValues=None):
     '''Basically a constructor for CellNetwork based on a watershed array'''
     if allValues==None:
-        allValues = np.unique(watershed2d)[1:].tolist() # skip the background...
+        allValues = np.unique(watershed2d).tolist()
+        allValues = [ v for v in allValues if v!=1 ] # skip the background...
     identifier=0 # unique id for each subContour
     scList = []
     contourOrderingByValue = {} # For each cellID, an ordered list of index to the scList/direction pairs that reconstruct the full contour
