@@ -91,12 +91,11 @@ class CellNetwork:
                 self.UpdateQuadPoints()
     
     def UpdateQuadPoints(self):
-        self.quadPoints = sorted(set( [ QuadPoint(sc.startPointValues,sc.points[0]) 
-                                       for sc in self.subContours
-                                       if len(sc.startPointValues)==4 ] +
-                                      [ QuadPoint(sc.endPointValues,sc.points[-1])
-                                       for sc in self.subContours
-                                       if len(sc.endPointValues)==4 ] ))
+        quadPoints = sorted(set( [ (sc.startPointValues,tuple(sc.points[0])) for sc in self.subContours
+                                                                             if len(sc.startPointValues)==4 ] +
+                                 [ (sc.endPointValues,tuple(sc.points[-1])) for sc in self.subContours
+                                                                            if len(sc.endPointValues)==4 ] ))
+        self.quadPoints = [ QuadPoint(vals,pt) for vals,pt in quadPoints ]
     def GetContourPoints(self,v,closeLoop=True):
         # I know I'm abusing the list comprehension syntax to get a local variables... so shoot me...
         def reverseIfFalse(l,direction):
@@ -413,7 +412,7 @@ class CellNetwork:
             if keepSearching:
                 allValuesAroundSC = tuple(sorted(set(sc.startPointValues+sc.endPointValues)))
                 matches = [ q for q in other.quadPoints
-                              if q.values in allValuesAroundSC ] # Check to see if this sc collapsed into a 4-junction
+                              if q.values==allValuesAroundSC ] # Check to see if this sc collapsed into a 4-junction
                 if len(matches)==1:
                     #print 'Recoverable: sc in A at index',ind,sc.values,'collapsed into a 4-junction with values',quadPointMatches[0].values,'at',quadPointMatches[0].point
                     removeFromSelf.append(ind)        # actually DO the removals later so we don't muck up the indexing!
