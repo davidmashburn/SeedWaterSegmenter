@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 ''''A useful collection of helper functions for SWS'''
+import os
 from copy import deepcopy
+import cPickle
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -708,6 +710,67 @@ def GetMatchedCellNetworksCollapsingWithLimitedPoints(cnA,cnB,splitLength=1,fixe
                                                                      fixedNumInteriorPoints,interpolate)
     
     return cnALim,cnBLim
+
+def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
+                               extraRemoveValsByFrame=[],splitLength=20, fixedNumInteriorPoints=None,
+                               usePlot=False,forceRemake=False ):
+    '''Get matched before and after cvdLists from a waterArr. This function:
+        * removes values in extraRemoveValsByFrame,
+        * matches subContours between CellNetworks
+            - since this is the slowest step, these 2 matched networks are saved to a file in d and reloaded if this is run again
+              (with the caveat that save/load will not occur if extraRemoveValsByFrame are specified)
+              load can be overridden with forceRemake
+        * limits points between nodes
+        * compresses cellID's to begin at 1 (excludes background)
+        * returns 2 cvdLists'''
+    
+    allValsByFrame = [ np.unique(i)[1:] for i in waterArr ] # Skip background
+    
+    # Ensure we got a list-of-lists for extraRemovalsByFrame
+    assert all([ hasattr(vals,'__iter__') for vals in extraRemoveValsByFrame ])
+    # Ensure that this has enough elements, if not, add more empty lists
+    extraRemoveValsByFrame += [[] for i in range(len(waterArr)-1-len(extraRemoveValsByFrame))]
+    
+    cnListPrevAndNextFile = os.path.join(d,'cellNetworksListPrevAndNext.pickle') # Saved cellNetworks file
+    if os.path.exists(cnListPrevAndNextFile) and not any(extraRemoveValsByFrame) and not forceRemake:
+        cnListPrev,cnListNext = cPickle.load(open(cnListPrevAndNextFile,'r'))
+    else:
+        cnListPrev = []
+        cnListNext = []
+        for i in range(len(waterArr)-1):
+            # create matched arrays first:
+            waterA,waterB = np.array(waterArr[i]) , np.array(waterArr[i+1])
+            allVals = sorted( set(allValsByFrame[i]).intersection(allValsByFrame[i+1]) )
+            valsRemoveA = set(allValsByFrame[i]).difference(allValsByFrame[i+1]).union()
+            valsRemoveB = set(allValsByFrame[i+1]).difference(allValsByFrame[i]).union()
+            for v in sorted(valsRemoveA):
+                waterA[np.where(waterA==v)] = 1
+            for v in sorted(valsRemoveB):
+                waterB[np.where(waterB==v)] = 1
+            
+            # next, create matched CellNetworks:
+            cnA = GetCellNetwork(waterA,allVals)
+            cnB = GetCellNetwork(waterB,allVals)
+            
+            cnA,cnB = GetMatchedCellNetworksCollapsing(cnA,cnB)
+            cnListPrev.append(cnA)
+            cnListNext.append(cnB)
+        # Only save this if we're using all the values; otherwise it gets confusing!
+        if not any(extraRemoveValsByFrame):
+            cPickle.dump([cnListPrev,cnListNext],open(cnListPrevAndNextFile,'w'))
+    
+    cnListPrevLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnListPrev,splitLength,fixedNumInteriorPoints)
+    cnListNextLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnListNext,splitLength,fixedNumInteriorPoints)
+    cvdListPrev = GetCVDListFromCellNetworkList(cnListPrevLim)
+    cvdListNext = GetCVDListFromCellNetworkList(cnListNextLim)
+    
+    if usePlot:
+        cnListPrev[0].scPlotT('r-')
+        cnListNext[0].scPlotT('b-')
+        cnListPrevLim[0].scPlotT('ro-')
+        cnListNextLim[0].scPlotT('bo-')
+    
+    return cvdListPrev,cvdListNext
 
 def SaveXYListAndPolyListToMMAFormat(xyList,polyList,filename,bumpIndsUp1=True,removeLastPoint=True):
     '''xyList: nested list of xy pairs for each time point.
