@@ -733,6 +733,7 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
     
     cnListPrevAndNextFile = os.path.join(d,'cellNetworksListPrevAndNext.pickle') # Saved cellNetworks file
     if os.path.exists(cnListPrevAndNextFile) and not any(extraRemoveValsByFrame) and not forceRemake:
+        print 'Reloading cnLists from file:',cnListPrevAndNextFile
         cnListPrev,cnListNext = cPickle.load(open(cnListPrevAndNextFile,'r'))
     else:
         cnListPrev = []
@@ -757,10 +758,12 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
             cnListNext.append(cnB)
         # Only save this if we're using all the values; otherwise it gets confusing!
         if not any(extraRemoveValsByFrame):
+            print 'Saving cnLists to file:',cnListPrevAndNextFile
             cPickle.dump([cnListPrev,cnListNext],open(cnListPrevAndNextFile,'w'))
     
     cnListPrevLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnListPrev,splitLength,fixedNumInteriorPoints)
     cnListNextLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnListNext,splitLength,fixedNumInteriorPoints)
+    
     cvdListPrev = GetCVDListFromCellNetworkList(cnListPrevLim)
     cvdListNext = GetCVDListFromCellNetworkList(cnListNextLim)
     
