@@ -665,6 +665,17 @@ def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=
     
     return cellNetworkListNew
 
+def GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cellNetworkListPrev,cellNetworkListNext,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
+    '''Uses GetCellNetworkListWithLimitedPointsBetweenNodes to match each pair between cellNetworkListPrev and cellNetworkListNext'''
+    cnListPrevNew = []
+    cnListNextNew = []
+    for i in range(len(cellNetworkListPrev)):
+        cnl = GetCellNetworkListWithLimitedPointsBetweenNodes([cellNetworkListPrev[i],cellNetworkListNext[i]],splitLength,fixedNumInteriorPoints,interpolate)
+        cnListPrevNew.append(cnl[0])
+        cnListNextNew.append(cnl[1])
+    return cnListPrevNew,cnListNextNew
+
+
 def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     '''Get a list of points and a set of polygons network from a cellNetwork limit points between triple junctions
        (Applies GetCellNetworkListWithLimitedPointsBetweenNodes and then GetXYListAndPolyListFromCellNetworkList)'''
@@ -732,10 +743,17 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
     extraRemoveValsByFrame += [[] for i in range(len(waterArr)-1-len(extraRemoveValsByFrame))]
     
     cnListPrevAndNextFile = os.path.join(d,'cellNetworksListPrevAndNext.pickle') # Saved cellNetworks file
-    if os.path.exists(cnListPrevAndNextFile) and not any(extraRemoveValsByFrame) and not forceRemake:
+    
+    loadCnListFromFile = os.path.exists(cnListPrevAndNextFile) and not any(extraRemoveValsByFrame) and not forceRemake
+    
+    if loadCnListFromFile:
         print 'Reloading cnLists from file:',cnListPrevAndNextFile
         cnListPrev,cnListNext = cPickle.load(open(cnListPrevAndNextFile,'r'))
-    else:
+        if len(cnListPrev)!=len(waterArr):
+            print 'cnLists are the wrong length in the file:',cnListPrevAndNextFile
+            print 'Will remake them'
+            loadCnListFromFile=False
+    if not loadCnListFromFile:
         cnListPrev = []
         cnListNext = []
         for i in range(len(waterArr)-1):
@@ -761,8 +779,7 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
             print 'Saving cnLists to file:',cnListPrevAndNextFile
             cPickle.dump([cnListPrev,cnListNext],open(cnListPrevAndNextFile,'w'))
     
-    cnListPrevLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnListPrev,splitLength,fixedNumInteriorPoints)
-    cnListNextLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnListNext,splitLength,fixedNumInteriorPoints)
+    cnListPrevLim,cnListNextLim = GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cnListPrev,cnListNext,splitLength,fixedNumInteriorPoints,interpolate=True)
     
     cvdListPrev = GetCVDListFromCellNetworkList(cnListPrevLim)
     cvdListNext = GetCVDListFromCellNetworkList(cnListNextLim)
