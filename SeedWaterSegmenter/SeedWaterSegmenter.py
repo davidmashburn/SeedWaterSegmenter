@@ -489,6 +489,62 @@ def GetMapPlotRandomArray():
     mapPlotRandomArray[:,1]=255
     return mapPlotRandomArray
 
+def LoadSeedPointsFile(seedPointsFile):
+    # use python's load_module function to get the data instead...
+    fid=open(seedPointsFile,'U')
+    try:
+        Seeds = imp.load_module('Seeds',fid,'Seeds.py',('.py','U',1))
+    except:
+        wx.MessageBox('Bad Seeds.py file!')
+    fid.close()
+    
+    for attr in ('seedList','seedVals'):
+        if not hasattr(Seeds,attr):
+            wx.MessageBox(attr+' is not defined in this Seeds.py!')
+            return
+    
+    return Seeds
+    
+    # A clunkier way to do it...
+    #oldPath=sys.path
+    #sys.path = [os.path.split(seedPointsFile)[0]]
+    #imp.reload(Seeds)
+    #sys.path=oldPath
+    
+    #Really old method:
+    #fid = open(seedPointsFile)
+    #try:
+    #    exec(fid.read().replace('\r','')) # Loads seedList and seedVals from the file...
+    #except SyntaxError:
+    #    print 'Invalid Syntax in Seeds.py'
+    #fid.close()
+    #Seeds.seedList = seedList
+    #Seeds.seedVals = seedVals
+
+def WriteSeedPointsFile(seedPointsFile,seedList,seedVals,walgorithm,woundCenters):
+    seedListStr = repr(seedList)#.replace('[[[','['+os.linesep+'[[') \
+                                     #.replace('[[','[ [') \
+                                     #.replace(']]]','] ]'+os.linesep+']') \
+                                     #.replace(']], ','] ],'+os.linesep) \
+                                     #.replace('], ','],'+os.linesep+'  ')
+    seedValsStr = repr(seedVals)#.replace('[[','['+os.linesep+'[') \
+                                     #.replace(']',']'+os.linesep+']') \
+                                     #.replace(', ',','+os.linesep+'  ')
+    walgorithmStr = repr(walgorithm)
+    woundCentersStr = repr(woundCenters)
+    
+    fid=open(seedPointsFile,'w')
+    fid.write('seedList = '+seedListStr.replace('\r','').replace('\n',''))
+    fid.write('\r\n')
+    fid.write('seedVals = '+seedValsStr.replace('\r','').replace('\n',''))
+    fid.write('\r\n')
+    fid.write('walgorithm = '+walgorithmStr.replace('\r','').replace('\n',''))
+    fid.write('\r\n')
+    fid.write('woundCenters = '+woundCentersStr.replace('\r','').replace('\n',''))
+    fid.write('\r\n')
+    fid.close()
+    print 'Saving seeds for '+str(len(seedList))+' frames:'
+
 #def MakeCmapFromArray(a):
 #    r,b,g = [],[],[]
 #    for i in range(len(a[0])):
@@ -651,7 +707,7 @@ class WatershedData:
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
         print 'Saving To ',d
         # TODO: FOR SOME WEIRD REASON, SAVE/LOAD only recreates the seeds
-        #       for the first and last saved frame...
+        #       for the first and last saved frame... FIXED I THINK?
         # TODO: I need a simple indicator to show whether or not a frame
         #       has been initiated...
         if not os.path.exists(d):
@@ -688,28 +744,8 @@ class WatershedData:
         seedList = [  ( None if i==None else np.array([i.row,i.col]).T.tolist())  for i in cooList  ]
         seedVals = [  ( None if i==None else i.data.astype(np.int).tolist() ) for i in cooList  ]
         
-        seedListStr = repr(seedList)#.replace('[[[','['+os.linesep+'[[') \
-                                         #.replace('[[','[ [') \
-                                         #.replace(']]]','] ]'+os.linesep+']') \
-                                         #.replace(']], ','] ],'+os.linesep) \
-                                         #.replace('], ','],'+os.linesep+'  ')
-        seedValsStr = repr(seedVals)#.replace('[[','['+os.linesep+'[') \
-                                         #.replace(']',']'+os.linesep+']') \
-                                         #.replace(', ',','+os.linesep+'  ')
-        walgorithmStr = repr(self.walgorithm)
-        woundCentersStr = repr(self.woundCenters)
+        WriteSeedPointsFile(seedPointsFile,seedList,seedVals,self.walgorithm,self.woundCenters)
         
-        fid=open(seedPointsFile,'w')
-        fid.write('seedList = '+seedListStr.replace('\r','').replace('\n',''))
-        fid.write('\r\n')
-        fid.write('seedVals = '+seedValsStr.replace('\r','').replace('\n',''))
-        fid.write('\r\n')
-        fid.write('walgorithm = '+walgorithmStr.replace('\r','').replace('\n',''))
-        fid.write('\r\n')
-        fid.write('woundCenters = '+woundCentersStr.replace('\r','').replace('\n',''))
-        fid.write('\r\n')
-        fid.close()
-        print 'Saving seeds for '+str(self.length)+' frames:'
         for i,s in enumerate(self.sparseList):
             if s==None:
                 print i,'--'
@@ -756,26 +792,7 @@ class WatershedData:
         print self.shape
         print self.watershed[0].max()
         
-        #fid = open(seedPointsFile)
-        #try:
-        #    exec(fid.read().replace('\r','')) # Loads seedList and seedVals from the file...
-        #except SyntaxError:
-        #    print 'Invalid Syntax in Seeds.py'
-        #fid.close()
-        #Seeds.seedList = seedList
-        #Seeds.seedVals = seedVals
-        
-        
-        # use python's load_module function to get the data instead...
-        fid=open(seedPointsFile,'U')
-        Seeds = imp.load_module('Seeds',fid,'Seeds.py',('.py','U',1))
-        fid.close()
-        
-        # A clunkier way to do it...
-        #oldPath=sys.path
-        #sys.path = [os.path.split(seedPointsFile)[0]]
-        #imp.reload(Seeds)
-        #sys.path=oldPath
+        Seeds = LoadSeedPointsFile(seedPointsFile)
         
         if len(Seeds.seedList)==self.length:
             for i in range(self.length):
