@@ -184,6 +184,16 @@ class CellNetwork:
             sc.points = limIntPtsFunc(sc.points,numInteriorPointsDict[tuple(sc.values)])
             sc.numPoints = len(sc.points)
     
+    def CheckForDegenerateContours(self):
+        '''Get a list off subcontours (indexes) that belong to degenerate contours (either points or lines)'''
+        problemSCs = set()
+        for scInds in self.contourOrderingByValue:
+            if len(scInds)<3:
+                if sum([ len(self.subContours[i])-1 for i in scInds ]) < 3:
+                    problemSCs.update(scInds)
+        return sorted(problemSCs)
+        
+    
     def CleanUpEmptySubContours(self):
         '''If we deleted a bunch of contours, this reindexes everything.
            State: Changes the variables subContours,numPoints,contourOrderingByValue
@@ -643,7 +653,8 @@ def GetCVDListFromCellNetworkList(cellNetworkList):
 
 def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     '''Based on matching subcontours by value pair, this function defines a fixed number of interior points for each subcontour
-       and then applies this "trimming" procedure equitably to each frame in cellNetworkList (uses LimitPointsBetweenNodes)'''
+       and then applies this "trimming" procedure equitably to each frame in cellNetworkList (uses LimitPointsBetweenNodes)
+       Returns "None" if the resulting network has any degenerate regions'''
     #allValues = sorted(set( [ v for cn in cellNetworkList for v in cn.allValues ] )) # not used...
     allPairs = sorted(set( [ tuple(sc.values) for cn in cellNetworkList for sc in cn.subContours ] )) # Value pairs...
     
@@ -660,17 +671,23 @@ def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=
         numInteriorPointsDict = { p:(minLength[p]//splitLength) for p in allPairs }
     
     cellNetworkListNew = deepcopy(cellNetworkList) # otherwise, we'd also change the input argument in the outside world!
-    for cn in cellNetworkListNew:
+    for i,cn in enumerate(cellNetworkListNew):
         cn.LimitPointsBetweenNodes(numInteriorPointsDict,interpolate=interpolate)
+        problemSubContours = CheckForDegenerateContours(cn)
+        if len(problemSubContours)>0:
+            return None
     
     return cellNetworkListNew
 
 def GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cellNetworkListPrev,cellNetworkListNext,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
-    '''Uses GetCellNetworkListWithLimitedPointsBetweenNodes to match each pair between cellNetworkListPrev and cellNetworkListNext'''
+    '''Uses GetCellNetworkListWithLimitedPointsBetweenNodes to match each pair between cellNetworkListPrev and cellNetworkListNext
+       Returns None,None if this results in any degenerate regions'''
     cnListPrevNew = []
     cnListNextNew = []
     for i in range(len(cellNetworkListPrev)):
         cnl = GetCellNetworkListWithLimitedPointsBetweenNodes([cellNetworkListPrev[i],cellNetworkListNext[i]],splitLength,fixedNumInteriorPoints,interpolate)
+        if cn1==None:
+            return None,None
         cnListPrevNew.append(cnl[0])
         cnListNextNew.append(cnl[1])
     return cnListPrevNew,cnListNextNew
@@ -781,10 +798,14 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
     
     cnListPrevLim,cnListNextLim = GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cnListPrev,cnListNext,splitLength,fixedNumInteriorPoints,interpolate=True)
     
+    if None in [cnListPrevLim,cnListNextLim]:
+        return None,None
+    
     cvdListPrev = GetCVDListFromCellNetworkList(cnListPrevLim)
     cvdListNext = GetCVDListFromCellNetworkList(cnListNextLim)
     
     if usePlot:
+        print 'Plotting the subContours:'
         cnListPrev[0].scPlotT('r-')
         cnListNext[0].scPlotT('b-')
         cnListPrevLim[0].scPlotT('ro-')

@@ -251,8 +251,11 @@ def CheckForMalformedRegions(watershed,usePrint=True):
     outputString = ''
     
     for frame in range(len(watershed)):
+        print 'Checking Frame',frame
         if watershed[frame]!=None:
             allVals = np.unique(watershed[frame])
+            if len(allVals)<2:
+                continue # no point in checking if it's empty or just a big solid rectangle...
             for v in allVals:
                 if v==1:
                     # For the background, take the inverse instead
