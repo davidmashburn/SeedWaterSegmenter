@@ -2531,6 +2531,8 @@ class SegmenterFrame(wx.Frame):
         self.FrameNumberText = wx.StaticText(self.MainPanel, -1, "Frame Number")
         self.ToggleViewCheckbox = wx.CheckBox(self.MainPanel, -1, "Show Segmentation Overlays?")
         self.InvertViewCheckbox = wx.CheckBox(self.MainPanel, -1, "Show Image Inverted?")
+        self.CellNumber = wx.SpinCtrl(self.MainPanel, -1, "", min=1, max=(2**16-1))
+        self.CellNumberText = wx.StaticText(self.MainPanel, -1, "Selected Cell ID")
         self.NotesTextBox = wx.TextCtrl(self.MainPanel, -1, "Type Notes Here (per frame)",
                                         style=wx.TE_PROCESS_ENTER|wx.TE_MULTILINE)
         self.ReSaveAllFramesButton = wx.Button(self.MainPanel, -1, "Re-Save All Frames")
@@ -2588,12 +2590,15 @@ Arrow Keys: Move selected seeds (after lasso)
         splitHSizer = wx.BoxSizer(wx.HORIZONTAL)
         controlsVSizer = wx.BoxSizer(wx.VERTICAL)
         frameNumberHSizer = wx.BoxSizer(wx.HORIZONTAL)
+        cellNumberHSizer = wx.BoxSizer(wx.HORIZONTAL)
         reHSizer = wx.BoxSizer(wx.HORIZONTAL)
         compressCenterHSizer = wx.BoxSizer(wx.HORIZONTAL)
         panelVSizer.Add(self.FilenameText, 0, wx.EXPAND, 0)
         panelVSizer.Add((10,10), 0, 0, 0)
         frameNumberHSizer.Add(self.FrameNumber, 0, 0, 0)
         frameNumberHSizer.Add(self.FrameNumberText, 0, 0, 0)
+        cellNumberHSizer.Add(self.CellNumber, 0, 0, 0)
+        cellNumberHSizer.Add(self.CellNumberText, 0, 0, 0)
         reHSizer.Add(self.ReSaveAllFramesButton, 0, 0, 0)
         reHSizer.Add((10,10), 0, 0, 0)
         reHSizer.Add(self.ReRunAllWatershedsButton, 0, 0, 0)
@@ -2610,6 +2615,8 @@ Arrow Keys: Move selected seeds (after lasso)
         controlsVSizer.Add(self.ToggleViewCheckbox, 0, 0, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(self.InvertViewCheckbox, 0, 0, 0)
+        controlsVSizer.Add((10,10), 0, 0, 0)
+        controlsVSizer.Add(cellNumberHSizer, 0, 0, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(self.NotesTextBox, 0, wx.EXPAND, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
@@ -2641,7 +2648,8 @@ Arrow Keys: Move selected seeds (after lasso)
         self.shiftDown=False
         for i in [self,self.MainPanel,self.FilenameText,self.MouseModeRadioBox,
                   self.MouseModeHelpText,self.FrameNumber,self.FrameNumberText,
-                  self.ToggleViewCheckbox,self.InvertViewCheckbox,self.NotesTextBox,
+                  self.ToggleViewCheckbox,self.InvertViewCheckbox,self.CellNumber,
+                  self.CellNumberText,self.NotesTextBox,
                   self.ReSaveAllFramesButton,self.ReRunAllWatershedsButton,
                   self.CompressSeedValuesButton,self.AutoCenterWoundButton,
                   self.RunCalculationsButton,self.RunCalculations2Button,
@@ -2654,6 +2662,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.Bind(wx.EVT_SPINCTRL, self.FrameNumberCallback, self.FrameNumber)
         self.Bind(wx.EVT_CHECKBOX, self.ToggleViewCheckBoxCallback, self.ToggleViewCheckbox)
         self.Bind(wx.EVT_CHECKBOX, self.InvertViewCheckBoxCallback, self.InvertViewCheckbox)
+        self.Bind(wx.EVT_SPINCTRL, self.CellNumberCallback, self.CellNumber)
         #self.Bind(wx.EVT_TEXT, self.NotesTextBoxCallback, self.NotesTextBox)
         self.Bind(wx.EVT_BUTTON, self.ReSaveAllFramesCallback, self.ReSaveAllFramesButton)
         self.Bind(wx.EVT_BUTTON, self.ReRunAllWatershedsCallback, self.ReRunAllWatershedsButton)
@@ -2693,6 +2702,9 @@ Arrow Keys: Move selected seeds (after lasso)
         self.FrameNumberText.SetLabel("Frame Number (last - "+str(self.wd.length-1)+")\n(last active - 0)")
         self.ToggleViewCheckbox.SetValue(self.wd.overlayVisible)
         self.InvertViewCheckbox.SetValue(self.wd.showInverted)
+        self.CellNumber.SetValue(2)
+        self.CellNumber.SetRange(1,2**16-1)
+        self.CellNumberText.SetLabel("Selected Cell ID")
         
         #self.wd.DrawOrigImage()
         plt.figure(1); plt.imshow(self.wd.filterData[self.wd.index],cmap=plt.cm.gray)
@@ -2784,6 +2796,12 @@ Arrow Keys: Move selected seeds (after lasso)
         self.wd.ToggleOverlaysVisible()
     def InvertViewCheckBoxCallback(self,event):
         self.wd.Invert()
+    def CellNumberCallback(self,event):
+        cellid=event.GetInt()
+        print 'CellNumber Callback with value', cellid
+        self.wd.selectionVals = [cellid]
+        self.wd.previousDrawPoint=None
+        self.wd.ColorPlot()
     #def NotesTextBoxCallback(self,event):
     #    self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
     
@@ -2998,6 +3016,7 @@ Arrow Keys: Move selected seeds (after lasso)
                         plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
+                            self.CellNumber.SetValue(self.wd.selectionVals[0])
                             self.wd.previousDrawPoint=None
                             self.wd.ColorPlot()
                         elif event.button == 2 and len(self.wd.selectionVals)==1:
