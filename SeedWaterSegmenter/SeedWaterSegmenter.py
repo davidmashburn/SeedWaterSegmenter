@@ -2806,6 +2806,18 @@ Arrow Keys: Move selected seeds (after lasso)
         self.wd.selectionVals = [cellid]
         self.wd.previousDrawPoint=None
         self.wd.ColorPlot()
+    def PlotListOfCellIDs(self,selectedCellIDs):
+        '''Plots a list of cellIDs to help in quickly identifying sets of cells
+           (usually that are having problems...)
+           Uses figure 3'''
+        fn = plt.gcf().number
+        plt.figure(3);plt.clf()
+        plt.gca().format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
+        plt.imshow( sum([ (self.wd.watershed[self.wd.index]==v)*v
+                         for v in selectedCellIDs ])
+                    ,interpolation='nearest',cmap=self.wd.mapPlotCmap
+                    ,norm=matplotlib.colors.NoNorm() )
+        plt.figure(fn)
     def HighlightLisOfCellIDsCallback(self,event):
         self.SetStatus('Getting a list of Cell IDs to plot...')
         print 'Asking for a list of Cell IDs'
@@ -2816,21 +2828,14 @@ Arrow Keys: Move selected seeds (after lasso)
             print 'Plot Cell IDs'
             val = dlg.GetValue()
             try:
-                selectedVals=map(int,val.split(','))
+                selectedCellIDs=map(int,val.split(','))
             except:
                 print 'Invalid Entry!!'
                 self.SetStatus('Ready')
                 return
             
-            if None not in selectedVals:
-                fn = plt.gcf().number
-                plt.figure(3);plt.clf()
-                plt.gca().format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
-                plt.imshow( sum([ (self.wd.watershed[self.wd.index]==v)*v
-                                 for v in selectedVals ])
-                            ,interpolation='nearest',cmap=self.wd.mapPlotCmap
-                            ,norm=matplotlib.colors.NoNorm() )
-                plt.figure(fn)
+            if None not in selectedCellIDs:
+                self.PlotListOfCellIDs(selectedCellIDs)
         self.SetStatus('Ready')
     #def NotesTextBoxCallback(self,event):
     #    self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
