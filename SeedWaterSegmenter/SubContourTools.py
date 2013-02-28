@@ -12,7 +12,7 @@ import ImageContour
 
 
 #from list_utils:
-from np_utils import totuple,interpGen
+from np_utils import totuple,interpGen,flatten,ziptranspose
 #from np_utils:
 from np_utils import limitInteriorPoints,limitInteriorPointsInterpolating
 
@@ -76,6 +76,9 @@ class QuadPoint:
             raise TypeError('values must be a 4-tuple')
         self.values=values
         self.point=point
+
+class DegenerateNetworkException(Exception):
+    pass
 
 class CellNetwork:
     '''Holds the critical information for a single frame in order to reconstruct any subcontour of full contour
@@ -175,7 +178,21 @@ class CellNetwork:
         
         return xyList,polyList
     
-    def LimitPointsBetweenNodes(self,numInteriorPointsDict,interpolate=True):
+    def CheckForDegenerateContours(self):
+        '''Get a list off subcontours (indexes) that belong to degenerate contours (either points or lines)'''
+        problemSCs = set()
+        problemVals = set()
+        for v,scInds in self.contourOrderingByValue.iteritems():
+            if len(scInds)<3:
+                scInds = [i[0] for i in scInds] # before, this also contained subcontour direction information
+                if sum([ self.subContours[i].numPoints-1 for i in scInds ]) < 3:
+                    # Aka, there are not enough points to make a triangle...
+                    problemVals.add(v)
+                    problemSCs.update(scInds)
+        problemValuePairs = [self.subContours[i].values for i in problemSCs]
+        return sorted(problemVals),sorted(problemValuePairs)
+    
+    def LimitPointsBetweenNodes(self,numInteriorPointsDict,interpolate=True,checkForDegeneracy=True):
         '''Operates IN-PLACE, so use cautiously...
            State: Changes subContours and numPoints; leaves quadPoints in an improper state
                   (allValues and contourOrderingByValue are unaffected) '''
@@ -183,16 +200,12 @@ class CellNetwork:
         for sc in self.subContours:
             sc.points = limIntPtsFunc(sc.points,numInteriorPointsDict[tuple(sc.values)])
             sc.numPoints = len(sc.points)
-    
-    def CheckForDegenerateContours(self):
-        '''Get a list off subcontours (indexes) that belong to degenerate contours (either points or lines)'''
-        problemSCs = set()
-        for scInds in self.contourOrderingByValue:
-            if len(scInds)<3:
-                if sum([ len(self.subContours[i])-1 for i in scInds ]) < 3:
-                    problemSCs.update(scInds)
-        return sorted(problemSCs)
         
+        if checkForDegeneracy:
+            problemVals,problemValuePairs = self.CheckForDegenerateContours()
+            if problemVals!=[]:
+                print 'Values with degenerate contours:',problemVals
+                raise DegenerateNetworkException('Degenerate contours (zero area) found between these cellIDs!'+repr(problemValuePairs))
     
     def CleanUpEmptySubContours(self):
         '''If we deleted a bunch of contours, this reindexes everything.
@@ -651,10 +664,9 @@ def GetXYListAndPolyListFromCellNetworkList(cellNetworkList,closeLoops=True):
 def GetCVDListFromCellNetworkList(cellNetworkList):
     return [ cn.GetCellularVoronoiDiagram() for cn in cellNetworkList ]
 
-def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
+def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True,checkForDegeneracy=True):
     '''Based on matching subcontours by value pair, this function defines a fixed number of interior points for each subcontour
-       and then applies this "trimming" procedure equitably to each frame in cellNetworkList (uses LimitPointsBetweenNodes)
-       Returns "None" if the resulting network has any degenerate regions'''
+       and then applies this "trimming" procedure equitably to each frame in cellNetworkList (uses LimitPointsBetweenNodes)'''
     #allValues = sorted(set( [ v for cn in cellNetworkList for v in cn.allValues ] )) # not used...
     allPairs = sorted(set( [ tuple(sc.values) for cn in cellNetworkList for sc in cn.subContours ] )) # Value pairs...
     
@@ -671,27 +683,64 @@ def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=
         numInteriorPointsDict = { p:(minLength[p]//splitLength) for p in allPairs }
     
     cellNetworkListNew = deepcopy(cellNetworkList) # otherwise, we'd also change the input argument in the outside world!
-    for i,cn in enumerate(cellNetworkListNew):
-        cn.LimitPointsBetweenNodes(numInteriorPointsDict,interpolate=interpolate)
-        problemSubContours = CheckForDegenerateContours(cn)
-        if len(problemSubContours)>0:
-            return None
+    for cn in cellNetworkListNew:
+        cn.LimitPointsBetweenNodes(numInteriorPointsDict,interpolate=interpolate,checkForDegeneracy=False)
+    
+    if checkForDegeneracy:
+        problemValsList,problemValuePairsList = ziptranspose([ cn.CheckForDegenerateContours() for cn in cellNetworkListNew ])
+        if flatten(problemValsList)!=[]:
+            print 'All degenerate values:',sorted(set(flatten(problemValsList)))
+            print 'Degenerate values by frame:'
+            for i,problemVals in enumerate(problemValsList):
+                if problemVals!=[]:
+                    print ' ',i,':',problemVals
+            print 'Degenerate contours (zero area) found between these cellIDs on these frames!'
+            for i,problemValuePairs in enumerate(problemValuePairsList):
+                if problemValuePairs!=[]:
+                    print ' ',i,':',problemValuePairs
+            raise DegenerateNetworkException('Degeneracy check failed!')
     
     return cellNetworkListNew
 
-def GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cellNetworkListPrev,cellNetworkListNext,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
-    '''Uses GetCellNetworkListWithLimitedPointsBetweenNodes to match each pair between cellNetworkListPrev and cellNetworkListNext
-       Returns None,None if this results in any degenerate regions'''
+def collectPreviousNextResults(prv,nxt):
+    '''A generic function that joins elements from prv and nxt like so: [prv[0],...,prv[i]+nxt[i-1],...,nxt[-1]]
+       prv and nxt are lists of lists and were mapped (with some function)
+       from elements of an original list (length n) with this relation:
+           prv[0 -> n-1]  maps to  original[0 -> n-1]
+           nxt[0 -> n-1]  maps to  original[1 -> n]
+       again, prv and nxt must be lists of lists'''
+    return [prv[0]] + [prv[i]+nxt[i-1] for i in range(1,len(prv))] + [nxt[-1]]
+
+def GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cellNetworkListPrev,cellNetworkListNext,splitLength=1,fixedNumInteriorPoints=None,interpolate=True,checkForDegeneracy=True):
+    '''Uses GetCellNetworkListWithLimitedPointsBetweenNodes to match each pair between cellNetworkListPrev and cellNetworkListNext'''
     cnListPrevNew = []
     cnListNextNew = []
     for i in range(len(cellNetworkListPrev)):
-        cnl = GetCellNetworkListWithLimitedPointsBetweenNodes([cellNetworkListPrev[i],cellNetworkListNext[i]],splitLength,fixedNumInteriorPoints,interpolate)
-        if cn1==None:
-            return None,None
+        cnl = GetCellNetworkListWithLimitedPointsBetweenNodes([cellNetworkListPrev[i],cellNetworkListNext[i]],splitLength,fixedNumInteriorPoints,interpolate,checkForDegeneracy=False)
         cnListPrevNew.append(cnl[0])
         cnListNextNew.append(cnl[1])
+    
+    if checkForDegeneracy:
+        problemValsListPrev,problemValuePairsListPrev = ziptranspose([ cn.CheckForDegenerateContours() for cn in cnListPrevNew ])
+        problemValsListNext,problemValuePairsListNext = ziptranspose([ cn.CheckForDegenerateContours() for cn in cnListNextNew ])
+        problemValsList = [ sorted(set(i))
+                           for i in collectPreviousNextResults(problemValsListPrev,problemValsListNext) ]
+        problemValuePairsList = [ sorted(set(i))
+                                 for i in collectPreviousNextResults(problemValuePairsListPrev,problemValuePairsListNext) ]
+        
+        if flatten(problemValsList)!=[]:
+            print 'All degenerate values:',sorted(set(flatten(problemValsList)))
+            print 'Degenerate values by frame:'
+            for i,problemVals in enumerate(problemValsList):
+                if problemVals!=[]:
+                    print ' ',i,':',problemVals
+            print 'Degenerate contours (zero area) found between these cellIDs on these frames!'
+            for i,problemValuePairs in enumerate(problemValuePairsList):
+                if problemValuePairs!=[]:
+                    print ' ',i,':',problemValuePairs
+            raise DegenerateNetworkException('Degeneracy check failed!')
+    
     return cnListPrevNew,cnListNextNew
-
 
 def GetXYListAndPolyListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=1,fixedNumInteriorPoints=None,interpolate=True):
     '''Get a list of points and a set of polygons network from a cellNetwork limit points between triple junctions
@@ -766,7 +815,8 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
     if loadCnListFromFile:
         print 'Reloading cnLists from file:',cnListPrevAndNextFile
         cnListPrev,cnListNext = cPickle.load(open(cnListPrevAndNextFile,'r'))
-        if len(cnListPrev)!=len(waterArr):
+        
+        if len(cnListPrev)!=len(waterArr)-1:
             print 'cnLists are the wrong length in the file:',cnListPrevAndNextFile
             print 'Will remake them'
             loadCnListFromFile=False
@@ -797,9 +847,6 @@ def GetMatchedCVDListPrevNext( waterArr,d,vfmParameters,
             cPickle.dump([cnListPrev,cnListNext],open(cnListPrevAndNextFile,'w'))
     
     cnListPrevLim,cnListNextLim = GetMatchedCellNetworkListsWithLimitedPointsBetweenNodes(cnListPrev,cnListNext,splitLength,fixedNumInteriorPoints,interpolate=True)
-    
-    if None in [cnListPrevLim,cnListNextLim]:
-        return None,None
     
     cvdListPrev = GetCVDListFromCellNetworkList(cnListPrevLim)
     cvdListNext = GetCVDListFromCellNetworkList(cnListNextLim)
