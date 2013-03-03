@@ -443,6 +443,12 @@ def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBott
         return
 
 def GetVolumesAndIntegratedBrightnesses(testArrays,waterArr,cellID,thickness,skip3DBottomAndTop=True):
+    '''Takes testArrays (one or more sets of raw data), waterArr (segmentation data), and cellID to make measurements of a cell
+       Returns the volume under the cell and the volume of the xy-rim around the cell with a certain thicknes
+           and for each of these for each testArray: the integrated intensity and average intensity per pixel of the raw array under these same regions
+       again, testArrays is a list of arrays and the return values: "intensities","edgeIntensities","intensitiesPerPixel","edgeIntensitiesPerPixel"
+           all return lists of measurements for each testArray
+       Uses GetCellVolume in both direct mode (iterations=0) and edge mode (runs dilate-erode <iterations> times) to get a band around the edge'''
     volume = GetCellVolume(waterArr,cellID)
     volumeEdge = GetCellVolume(waterArr,cellID,structure=[[[0,1,0],[1,1,1],[0,1,0]]],iterations=thickness//2)
     
