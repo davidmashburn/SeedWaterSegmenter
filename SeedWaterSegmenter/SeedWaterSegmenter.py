@@ -1968,9 +1968,9 @@ class WatershedData:
         dprint(wm2)
         while True:
             bins.append([])
-            iter = (wm2 if len(bins)<2 else bins[-2])
-            dprint(iter)
-            for w in iter:
+            i = (wm2 if len(bins)<2 else bins[-2])
+            dprint(i)
+            for w in i:
                 dprint(nei[w])
                 if nei[w]!=None:
                     for v in nei[w]:
