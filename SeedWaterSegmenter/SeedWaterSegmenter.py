@@ -1477,6 +1477,8 @@ class WatershedData:
                 test = (wi==newWVal)
                 if np.any(test):
                     self.woundCenters[self.index] = center_of_mass(test.astype(np.float))[::-1]
+                #else:
+                #    self.woundCenters[self.index] = (0,0) # just define something so the thing doesn't fail all the time?
         self.index=oldIndex
     def GetBoundingRectangles(self,doUpdate=True):
         if doUpdate:
@@ -1579,6 +1581,9 @@ class WatershedData:
         oldIndex=self.index
         adjLength = self.GetLastActiveFrame()+1
         for index in range(adjLength):
+            if self.watershed[index].max()<2:
+                print 'frame',index,'has only background seeds'
+                break
             self.index=index
             
             print 'Calculating for Frame',index
@@ -2950,13 +2955,18 @@ Arrow Keys: Move selected seeds (after lasso)
         self.SetStatus('Running Calculations')
         for index in range(self.wd.length):
             if self.wd.sparseList[index]==None:
+                print 'frame',index,'is not initialized'
                 break
             elif self.wd.sparseList[index].nnz==0:
+                print 'frame',index,'has no seeds'
+                break
+            elif self.wd.watershed[index].max()<2:
+                print 'frame',index,'only has background seeds'
                 break
             
             if self.wd.woundCenters[index]==None:
-                s = 'You must use Center Mode to define a' + os.linesep + \
-                    'center for all initialized frames!'
+                s = ( 'You must use Center Mode to define a' + os.linesep +
+                      'center for all initialized frames (failed on frame'+str(index)+')!' )
                 wx.MessageBox(s)
                 print s
                 return
