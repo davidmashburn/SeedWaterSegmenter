@@ -11,7 +11,7 @@ setup(
     scripts = ['postinstall.py'],
     url='http://pypi.python.org/pypi/SeedWaterSegmenter/',
     license='LICENSE.txt',
-    description='',
+    description='graphical program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines)',
     long_description=open('README.rst').read(),
     install_requires=[
 # Adding install requirements may make this quirk out on a new system
