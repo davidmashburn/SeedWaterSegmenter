@@ -2164,6 +2164,7 @@ class WatershedData:
                                     'timeIntervals=[]\n'
                                     'numberFramesPerSeries=[]\n'
                                     'gapIntervals=[]\n',style=wx.TE_MULTILINE)
+            te.SetInitialSize(size=(-1,250)) # set initial size of the window to be 300
             te.ShowModal()
             fid = open(ManualInputs,'w')
             fid.write(te.GetValue())
@@ -2565,6 +2566,7 @@ Arrow Keys: Move selected seeds (after lasso)
 
         self.SetTitle("SeedWater Segmenter")
         self.MouseModeRadioBox.SetSelection(0)
+        self.NotesTextBox.SetInitialSize((-1, 100)) # Set the initial height to be 100px
         
         self.menuBar = wx.MenuBar()
         self.FileMenu = wx.Menu()
