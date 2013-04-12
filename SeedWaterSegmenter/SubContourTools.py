@@ -702,6 +702,15 @@ def GetCellNetworkListWithLimitedPointsBetweenNodes(cellNetworkList,splitLength=
     
     return cellNetworkListNew
 
+def GetCellNetworkWithLimitedPointsBetweenNodes(cellNetwork,splitLength=1,fixedNumInteriorPoints=None,interpolate=True,checkForDegeneracy=True):
+    '''Run GetCellNetworkListWithLimitedPointsBetweenNodes, but only for a single CellNetwork
+       Useful if we don't want to limit points based on other frames
+       To get a list of independent nets, just use a list comprehension
+       (Makes a copy)'''
+    
+    # Pack and unpack the cn into/out of a list
+    return GetCellNetworkListWithLimitedPointsBetweenNodes([cellNetwork],splitLength,fixedNumInteriorPoints,interpolate,checkForDegeneracy)[0]
+
 def collectPreviousNextResults(prv,nxt):
     '''A generic function that joins elements from prv and nxt like so: [prv[0],...,prv[i]+nxt[i-1],...,nxt[-1]]
        prv and nxt are lists of lists and were mapped (with some function)
@@ -837,7 +846,12 @@ def GetCVDListStatic( waterArr,d,vfmParameters,
             print 'Saving cnList to file:',cnListStaticFile
             cPickle.dump(cnList,open(cnListStaticFile,'w'))
     
-    cnListLim = GetCellNetworkListWithLimitedPointsBetweenNodes(cnList,splitLength,fixedNumInteriorPoints,interpolate=True)
+    # Run GetCellNetworkWithLimitedPointsBetweenNodes for each individual CellNetwork;
+    #   we don't want GetCellNetworkListWithLimitedPointsBetweenNodes(cnList,splitLength,fixedNumInteriorPoints,interpolate=True)
+    #   because it limits the points based on other frames which is not right for static runs
+    
+    cnListLim = [ GetCellNetworkWithLimitedPointsBetweenNodes(cn,splitLength,fixedNumInteriorPoints,interpolate=True)
+                 for cn in cnList ]
     cvdList = GetCVDListFromCellNetworkList(cnListLim)
     
     if usePlot:
