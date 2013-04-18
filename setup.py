@@ -1,8 +1,12 @@
 from distutils.core import setup
 
+# Read the version number
+with open("SeedWaterSegmenter/_version.py") as f:
+    exec(f.read())
+
 setup(
     name='SeedWaterSegmenter',
-    version='0.5.5.0',
+    version=__version__, # use the same version that's in _version.py
     author='David N. Mashburn',
     author_email='david.n.mashburn@gmail.com',
     packages=['SeedWaterSegmenter'],
@@ -25,7 +29,6 @@ setup(
                       'xlwt>=0.7',
                       'mahotas>=0.5',
 #                      # Projects that used to be internal
-                      'cmpGen>=0.1',
                       'EllipseFitter>=0.1',
                       'FilenameSort>=0.1.3',
                       'GifTiffLoader>=0.1.4',

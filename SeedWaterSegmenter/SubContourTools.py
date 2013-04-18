@@ -7,7 +7,6 @@ import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
 
-from cmpGen import cmpGen
 import ImageContour
 
 
@@ -639,7 +638,7 @@ def GetCellNetwork(watershed2d,allValues=None):
                     matchingSCs[0].adjusted_length = min( matchingSCs[0].adjusted_length,
                                                           newSC.adjusted_length ) # keep the minimum perimeter length...
                     contourOrderingByValue[v].append( (matchingSCs[0].identifier,False) ) # False means the subcountour is backwards for this cell!
-    scList.sort(cmpGen(lambda x: x.values)) # was just cVLS.sort()... this works, I hope?
+    scList.sort( key = lambda x: x.values ) # was just cVLS.sort()... this works, I hope?
     IDs = [sc.identifier for sc in scList]
     for sc in scList:      # scrub the id's, probably not necessary... 
         sc.identifier=None

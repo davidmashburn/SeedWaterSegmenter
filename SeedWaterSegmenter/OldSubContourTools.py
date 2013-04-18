@@ -6,7 +6,6 @@ from copy import deepcopy
 
 import numpy as np
 
-from cmpGen import cmpGen
 import ImageContour
 
 
@@ -36,7 +35,7 @@ def GetSubContoursByFrame(watershed,allValsByFrame):
                                         startPointValues = GetValuesAroundSCPoint( watershed[frame], scPointsAdj[i][0] ),
                                         endPointValues   = GetValuesAroundSCPoint( watershed[frame], scPointsAdj[i][-1] ) )
                            for i in range(len(perimeterVals)) ]
-        scList.sort(cmpGen(lambda x: x.values))
+        scList.sort( key = lambda x: x.values )
         for i in range(len(scList)-1,0,-1):
             # if 2 subcoutours are the same, keep only the one with the minimum length computation
             if scList[i-1].values==scList[i].values:

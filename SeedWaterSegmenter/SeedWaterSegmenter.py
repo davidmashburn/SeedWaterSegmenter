@@ -9,7 +9,7 @@ frame.
 
 Also, GifTiffLoader is a wrapper to automatically load Tiff and Gif
 files as numpy arrays using PIL.
-GifTiffLoader also relies on FilenameSort and cmpGen.
+GifTiffLoader also relies on FilenameSort.
 
 Sponsored by the NSF and HFSP through the Shane Hutson Laboratory, part of
 Vanderbilt Institute of Integrative Biosystems Research (VIIBRE)."""
@@ -43,7 +43,6 @@ import scipy.ndimage
 import scipy.sparse
 import Image
 import GifTiffLoader as GTL
-from cmpGen import cmpGen
 
 import wx
 import math
@@ -1799,7 +1798,7 @@ class WatershedData:
                 subContoursAdj = [(np.array(sc)+[boundingRect[0][0],boundingRect[1][0]]).tolist() for sc in subContours] # Will need to - 0.5 to line up on an overlay
                 if len(perimeterList)>0:
                     cVLS += [ [sorted([v,perimeterVals[i]]),perimeterList[i],subContoursAdj[i]] for i in range(len(perimeterVals))]
-            cVLS.sort(cmpGen(lambda x: x[0]))
+            cVLS.sort( key = lambda x: x[0] )
             for i in range(len(cVLS)-1,0,-1):
                 if cVLS[i-1][0]==cVLS[i][0]:                    # if 2 subcoutours are the same,
                     cVLS[i-1][1] = min(cVLS[i-1][1],cVLS[i][1]) # keep only the one with the minimum length computation
@@ -1946,7 +1945,7 @@ class WatershedData:
         dBm = np.mean(dB,0)
         d_comp = d[frameToCompare] # pick a frame to use in sorting
         l = range(len(dBm))
-        l.sort(cmpGen(lambda x: d_comp[x]))
+        l.sort( key = lambda x: d_comp[x] )
         # create bins of equal size...
         # bins will each contain an index list
         nbins=int( np.ceil( (d_comp.max()-initR) / binSize ) )

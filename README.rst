@@ -45,7 +45,7 @@ Ubuntu/Debian:
     sudo apt-get install python-setuptools python-wxtools python-numpy python-scipy python-matplotlib python-imaging python-xlrd python-xlwt
 
 In a cmd window (must run as Administrator under Windows Vista/7) or Terminal (Mac/Linux), run:
-    easy_install mahotas cmpGen EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
+    easy_install mahotas EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
 
 Detailed Instructions:
 ^^^^^^^^^^^^^^^^^^^^^^
