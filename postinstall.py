@@ -13,17 +13,47 @@ name = 'SeedWaterSegmenter'
 modulePath = imp.find_module(name)[1]
 
 if sys.platform == "win32":
-    # This is apparently wrong... import happens by magic instead...
-    #from postinstall import get_special_folder_path
-    DESKTOP_FOLDER = get_special_folder_path("CSIDL_DESKTOPDIRECTORY")
-
+    try:
+        # When running a binary installer, special functions like
+        # get_special_folder_path, create_shortcut, and file_created
+        # are "magically" available; see
+        # http://docs.python.org/2/distutils/builtdist.html
+        DESKTOP_FOLDER = get_special_folder_path("CSIDL_DESKTOPDIRECTORY")
+    except:
+        # but if we are not running it through the binary installer, we need to make calls to PyWin instead
+        import win32com.client
+        from win32com.shell import shell, shellcon
+        
+        DESKTOP_FOLDER = shell.SHGetFolderPath( 0,
+                                                shellcon.CSIDL_DESKTOPDIRECTORY,
+                                                None,0 )
+        
+        def create_shortcut( target, description, filename,
+                             arguments, workdir, iconpath ):
+            '''Make a shortcut with direct calls to Windows'''
+            shell = win32com.client.Dispatch('WScript.Shell')
+            shortcut = shell.CreateShortCut(filename)
+            shortcut.TargetPath = target
+            shortcut.Description = description
+            shortcut.Arguments = arguments
+            shortcut.WorkingDirectory = workdir
+            shortcut.IconLocation = iconpath
+            #shortcut.FullName
+            # shortcut.Hotkey
+            # shortcut.WindowStyle
+            shortcut.Save()
+        def file_created(filename):
+            '''This is only used for uninstallation, and this will never run during installation'''
+            pass
+    
     if sys.argv[1] == '-install':
         lnkName = name+'.lnk'
+        pythonw = os.path.join( os.path.split(sys.executable)[0], 'pythonw.exe')
         create_shortcut(
-            os.path.join(sys.prefix, 'pythonw.exe'), # program
+            os.path.join(pythonw), # target
             name, # description
             lnkName, # filename
-            os.path.join(modulePath, name+'.py'), # parameters
+            os.path.join(modulePath, name+'.py'), # arguments
             '', # workdir
             os.path.join(modulePath,'icons',name+'.ico'), # iconpath
         )
@@ -37,4 +67,3 @@ if sys.platform == "win32":
     if sys.argv[1] == '-remove':
         pass
         # This will be run on uninstallation. Nothing to do.
-
