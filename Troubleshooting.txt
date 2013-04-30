@@ -1,0 +1,134 @@
+Full list of dependencies:
+--------------------------------------
+Standard scientific packages:
+Python 2.7, numpy, scipy, matplotlib, wyPython, xlrd, xlwt, Python Imaging Library
+
+Other compiled packages:
+mahotas
+
+Pure-python packages:
+FilenameSort, GifTiffLoader, ImageContour, EllipseFitter
+
+
+
+Troubleshooting:
+--------------------------------------
+
+0. Contents
+-----------
+1. Python versions
+2. Testing modules
+3. Mahotas, binary packages and C compilers
+4. Running SeedWater from the command line (for if something is not working)
+5. Old school binary packages on Windows
+6. Getting to Environment Variables without searching
+7. Setting up a matplotlibrc file (for interactive plotting)
+
+
+
+1. Python versions
+------------------
+First of all, the most likely source of problems is having more than one version of python installed. There are a number of resources available on the internet to help with this on verious OS's, but it is definitely helpful to uninstall all versions of Python that are not being used. You can usually uninstall most versions through "Add/Remove Programs" on Windows. It also helps when this completes to actually delete the old directories:
+Enthought Canopy installs a per-user Python in C:\Users\<yourname>\AppData\... ; standard Python installations on Windows live in a directory like C:\Python27\. Deleting anything related to Python after uninstallation can cut down on cross-talk between modules, scripts, and tools with the different versions.
+
+You also may want to verify which version of python is actually installed. On Linux/Unix systems this is easy with the "which python" command. On Windows, the best way is to (a) type python in a cmd window an see that it says or (b) look at the Path environment variable to see what directories it points to.
+
+
+2. Testing modules
+------------------
+Once you know you are using the right version of Python, the next thing to troubleshoot is modules;
+As an example, to see if numpy is installed, run python in a shell and type:
+
+import numpy
+
+It works if it pops up with the ">>>" below and does not genetate a large error message.
+
+If you can verify that all the dependencies work, then SeedWater should have no trouble running
+
+
+3. Mahotas, binary packages and C compilers
+-------------------------------------------
+
+There are a number of ways to get the majority of the SeedWater dependencies; you can use Enthought, PythonXY, individual binary installers, ActiveState Python, and the list goes on and on.
+
+mahotas is another story...
+
+IF your Python install is in the standard location, these binary packages can usually do the trick:
+
+http://www.lfd.uci.edu/~gohlke/pythonlibs/
+
+If not, or if those don't work, you may need a compiler.
+
+On Mac, use the fake gcc that comes from XCode; on linux systems, use gcc from your package manager.
+
+On Windows, you can either install MinGW (gcc compiler) or VisualStuio Express (msvc compiler). There lots of instructions on the web about installing these on different versions of Windows an using them with python, so if you need to go this route and can't use Canopy or the binary packages from the link above, please refer to those. The main thing for MinGW is that you will need to update the system path so the "gcc" will run at the command line and create a "distutils.cfg" file somewhere so that python will know to use MinGW and not just look for keep looking for MSVC.
+
+
+4. Running SeedWater from the command line (for if something is not working)
+----------------------------------------------------------------------------
+In the event that SeedWater installs but does not work (or it crashes during a process), the best way to help me fix it for you is to run the program in a cmd / Terminal window instead of with a launcher or icon.
+
+To do this, open a command line window and run this:
+
+python -m SeedWaterSegmenter.SeedWaterSegmenter
+
+Alternatively, you can specify the full path to SeedWaterSegmenter.py:
+
+python <full path to>/SeedWaterSegmenter.py
+
+Any error messages that print here can help to identify what the problem is.
+
+On Windows, if Python is not registered in the system Path, you may need to use something like:
+
+C:\Python27\python.exe
+
+instead of just "python" to run these commands.
+
+You can often also run SeedWaterSegmenter.py in IDE's like geany or IDLE as well.
+
+
+5. Old school binary packages on Windows
+----------------------------------------
+If for whatever reason, you want the "vanilla" version of Python 2.7 on Windows, you can install everything manually as follows (choose the proper version of each package from these links; python27 and either win32 or amd64):
+
+ * Python 2.7
+     http://www.python.org/download/
+ * Python Windows extensions
+     http://sourceforge.net/projects/pywin32/files/pywin32/Build%20218/
+ * WxPython, the GUI toolkit
+     http://sourceforge.net/projects/wxpython/files/wxPython/2.9.4.0/
+ * Numpy, the array library
+     http://sourceforge.net/projects/numpy/files/NumPy/1.7.0/
+ * Matplotlib, the plotting library
+     http://matplotlib.org/downloads.html
+ * Scipy, a great collection of numerical routines
+     http://sourceforge.net/projects/scipy/files/scipy/0.12.0/
+ * Python Imaging Library
+     http://effbot.org/downloads/PIL-1.1.7.win32-py2.7.exe
+ * Setuptools
+     http://pypi.python.org/packages/2.7/s/setuptools/
+ * Mahotas
+     http://www.lfd.uci.edu/~gohlke/pythonlibs/
+     (Choose mahotas-0.9.8.win32-py2.7.‌exe or mahotas-0.9.8.win-amd64-py3.2.‌exe
+
+
+6. Getting to Environment Variables without searching
+-----------------------------------------------------
+Right-click My Computer, and then click Properties.
+Click the Advanced tab.
+Click Environment variables.
+Find "PATH" and click "Edit"
+
+If commands like "python" or "easy_install" are not working, add this to the end of the line:
+     ;C:\Python27;C:\Python27\Scripts;
+
+If "gcc" is not working, try adding this line (depending on where MinGW is installed)
+     ;C:\MinGW\bin;
+
+
+7. Setting up a matplotlibrc file (for interactive plotting)
+-------------------------------------------------------------
+Download this zip file and unpack this matplitlibrc file into the folder "C:\Users\<yourname>\.matplotlib\"
+      http://seedwater.googlecode.com/files/matplotlibrc.zip
+   This makes matplotlib use wxPython (necessary for SWS to work)
+   (In XP and earlier it is "C:\Documents and Settings\YOURNAME\.matplotlib" instead)

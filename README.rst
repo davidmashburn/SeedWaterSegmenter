@@ -3,7 +3,7 @@ SeedWater Segmenter
 
 Seedwater Segmenter (SWS) is a graphical Python program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines). The interactions are entirely based on the editing of seeds, which in turn are expanded by a watershed algorithm. The major difference between SWS and other tools is that you can place more than one seed per cell which can help you adjust the boundaries of difficult cells.
 
-SWS is built on top of wxPython, matplotlib, numpy, scipy, and mahotas.
+SWS is built on top of wxPython, matplotlib, numpy, scipy, PIL, and mahotas.
 
 At its core, it uses a lightning-fast watershed algorithm (thanks to the mahotas project) and allows real-time updates. It has a simple (if cluttered) UI and is fully interactive, even including 1-level undo.
 
@@ -23,37 +23,138 @@ Source code is mirrored to four repositories and to PyPI:
 
 - PyPI:        http://pypi.python.org/pypi/SeedWaterSegmenter
 
-The Google Code page also has some binary releases (http://code.google.com/p/seedwater/) that should work on 32-bit Windows or 64-bit Linux, but these are now old. Please use the "easy_install" method now.
+The Google Code page also has some binary releases (http://code.google.com/p/seedwater/) that should work on 32-bit Windows and 64-bit Windows (and these will also generate desktop icons).
 
-For more details, see Python Install Instructions 20XX.txt
-You may also want to read the manual: SeedWater Segmenter V x.x Manual.txt
+You may also want to read the manual: "SeedWaterSegmenter V x.x Manual.txt"
 
 ----
 
 Installing and Running
 ----------------------
-Installing is FINALLY easy!
+SeedWater is now pure-python. In fact, with just python and setuptools installed, you could install it with just:
 
-In fact, you can now "easy_install SeedWaterSegmenter"
+easy_install SeedWaterSegmenter
 
-Quick instructions:
-^^^^^^^^^^^^^^^^^^^
-Windows/Mac:
-    Install Enthought Python Distribution
+The big caveat to this is that SeedWater also depends on a number of binary/compiled dependencies which must be installed separately, the trickiest usually being mahotas.
+It also depends on the standard scientific python packages (like numpy, scipy, matplotlib, PIL, etc), so those must also be installed; pretty much any method of obtaining those should work.
+
+In short, you will need to install all of these dependencies either with binary installers, package managers, or by compiling from source.
+
+Many great Python Distributions exist for installing Python and most of these dependencies all at once. My favorite is Enthought Canopy (formerly Enthought Python Distribution) which is free for academic use and works on both Windows and Mac. SeedWater has been tested on 32-bit Windows (XP,Vista,7) with Enthought Canopy 1.0 and on Mac OS X running on EPD 7 (and a special thanks to Cody Narciso for ironing out the last few details of Mac installation).
+
+One other important point is that SeedWater does NOT run on Python 3.x at this time because not all of these dependencies have been ported over. For the near future, please use Python 2.7 only.
+
+Windows:
+^^^^^^^^
+Download and install Enthought Canopy:
+    Go here and sign up for an account with an academic email address:
+    
     http://www.enthought.com/products/edudownload.php
+    
+    Download and install, making sure to install this as the default python environment; then click "Start Using Canopy".
+    
+    Click "Login" and put in your academic license information.
+    
+    Click on the package manager; update all the installed packages and find and install "mingw" and "libpython 1.2"
+
+Configure Windows to find MinGW's C compiler:
+    Go to "Environment Variables" under System properties (on Windows 7, just find this by typing "environment" in the start menu search bar)
+    
+    Add the following to the end of "PATH", inserting your actual username (if you used 64-bit Canopy, adjust the name of the Canopy32 folder according to your system):
+
+::
+    
+    C:\Users\<yourname>\AppData\Local\Enthought\Canopy32\User\EGG-INFO\mingw\usr\bin\;
+
+Configure Python to find MinGW's C compiler:
+    Create a file called "pydistutils.cfg" in your home folder, C:\\Users\\<yourname>\\
+    
+    (make sure it is actually .cfg and not .txt)
+    
+    Open it in Notepad, put in the following text, and then save it:
+    
+::
+    
+    [build]
+    compiler=mingw32
+
+Install pip and configure it to find the gcc compiler from Enthought's mingw package:
+    Open a cmd window and type "easy_install pip"
+    
+    (grant it permission if a security window pops up)
+    
+    close the cmd window when this is done
+
+Install SeedWater and the rest of the dependencies:
+    Open a new cmd window and type:
+
+::
+    
+    pip SeedWaterSegmenter
+
+Install desktop icons with the postinstall script:
+    Open a cmd window and type:
+
+::
+    
+    python C:\Users\<yourname>\AppData\Local\Enthought\Canopy32\User\Scripts\postinstall.py
+
+That's it!
+
+Mac OS X:
+^^^^^^^^^
+Install Enthought Python Distribution:
+    Go here and sign up for an account with an academic email address:
+    
+    http://www.enthought.com/products/edudownload.php
+    
+    Download and install.
+    
+    (SeedWater has not been tested yet with Canopy on Mac, but precedure should be similar to the one for Windows)
+
+Obtain a C compiler:
+    Download XCode from the Mac App Store or from https://developer.apple.com/xcode/
+    
+    Install it and run it
+    
+    To get gcc, you must install command line tools, a package for XCode. You can access this from: XCode menu > Preferences > Downloads. Check "command line tools" and install.
+    
+    Reboot your system to make sure everything is loaded.
+
+Install SeedWater and its dependencies:
+    In the Terminal, run the following code and then type your password to continue:
+
+::
+
+    sudo easy_install mahotas EllipseFitter FilenameSort GifTiffLoader ImageContour np_utils SeedWaterSegmenter
+    
+
+Find "SeedWaterSegmenter.py" in the Finder and double-click run it.
+
 Ubuntu/Debian:
+^^^^^^^^^^^^^^
+Install:
+    Run these two commands in the terminal:
+
+::
+
     sudo apt-get install python-setuptools python-wxtools python-numpy python-scipy python-matplotlib python-imaging python-xlrd python-xlwt
+    sudo easy_install -U mahotas EllipseFitter FilenameSort GifTiffLoader ImageContour np_utils SeedWaterSegmenter
 
-In a cmd window (must run as Administrator under Windows Vista/7) or Terminal (Mac/Linux), run:
-    easy_install mahotas EllipseFitter FilenameSort GifTiffLoader ImageContour SeedWaterSegmenter
+Run SeedWater:
+    In the terminal, run:
 
-Detailed Instructions:
-^^^^^^^^^^^^^^^^^^^^^^
-The latest version is called:
+::
 
-"Python Install Instructions August 2012.txt"
+    python2.7 -m SeedWaterSegmenter.SeedWaterSegmenter
 
-https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/Python%20Install%20Instructions%20August%202012.txt
+(just "python" may also work, depending on your system)
+
+Make a desktop launcher:
+    Look at this to get you started:
+    
+    https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/desktop/SeedWaterSegmenter.desktop
+
 
 ----
 
@@ -62,7 +163,4 @@ Screenshots
 
 .. image:: http://seedwater.googlecode.com/svn/SeedwaterScreenshot.png
 
-(This summary is still a work in progress...)
 
-...
-===
