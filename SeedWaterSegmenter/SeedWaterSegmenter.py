@@ -2287,7 +2287,7 @@ class WatershedData:
         for frame in range(self.length):
             if self.sparseList[frame]==None:
                 break
-            elif self.sparseList[index].nnz==0:
+            elif self.sparseList[frame].nnz==0:
                 break
             
             if i>=len(self.woundCenters):
