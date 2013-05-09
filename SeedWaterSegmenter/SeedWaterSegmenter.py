@@ -1615,30 +1615,29 @@ class WatershedData:
             print 'Get Neighbors'
             self.neighbors.append(self.CalculateNeighbors(boundsList=boundsList))
             
-            print 'Fix Offsets'
-            # Make it so that there is an entry for every value, regardless of whether that cell was
-            # in that frame or not
-            # This makes all the quantities line up...
-            for v in range(2,maxSeedVal+1): # This can get ugly if there is too much deleting and what-not...
-                                            # Use the CompressSeedVals Button to remedy the situation...
-                for i in range(len(self.valuesByFrame)):
-                    if not v in self.valuesByFrame[i]:
-                        self.valuesByFrame[i].insert(v-2,v)
-                        self.centroidX[i].insert(v-2,None)
-                        self.centroidY[i].insert(v-2,None)
-                        self.xmin[i].insert(v-2,None)
-                        self.xmax[i].insert(v-2,None)
-                        self.ymin[i].insert(v-2,None)
-                        self.ymax[i].insert(v-2,None)
-                        self.area[i].insert(v-2,None)
-                        self.perimeter[i].insert(v-2,None)
-                        self.major[i].insert(v-2,None)
-                        self.minor[i].insert(v-2,None)
-                        self.angle[i].insert(v-2,None)
-                        self.woundDistance[i].insert(v-2,None)
-                        self.woundAngle[i].insert(v-2,None)
-                        self.neighbors[i].insert(v-2,None)
-        
+        print 'Fix Offsets'
+        # Make it so that there is an entry for every value, regardless of whether that cell was
+        # in that frame or not
+        # This makes all the quantities line up...
+        for v in range(2,maxSeedVal+1): # This can get ugly if there is too much deleting and what-not...
+                                        # Use the CompressSeedVals Button to remedy the situation...
+            for i in range(len(self.valuesByFrame)):
+                if not v in self.valuesByFrame[i]:
+                    #self.valuesByFrame[i].insert(v-2,v) # um... this made this measure totally worthless and confusing
+                    self.centroidX[i].insert(v-2,None)
+                    self.centroidY[i].insert(v-2,None)
+                    self.xmin[i].insert(v-2,None)
+                    self.xmax[i].insert(v-2,None)
+                    self.ymin[i].insert(v-2,None)
+                    self.ymax[i].insert(v-2,None)
+                    self.area[i].insert(v-2,None)
+                    self.perimeter[i].insert(v-2,None)
+                    self.major[i].insert(v-2,None)
+                    self.minor[i].insert(v-2,None)
+                    self.angle[i].insert(v-2,None)
+                    self.woundDistance[i].insert(v-2,None)
+                    self.woundAngle[i].insert(v-2,None)
+                    self.neighbors[i].insert(v-2,None)
         print 'Done Collecting!'
         self.index=oldIndex
     def SaveCSV(self,name,directory,data):
