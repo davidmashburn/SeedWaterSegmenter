@@ -61,7 +61,7 @@ import ExcelHelper
 
 import SWHelpers
 
-class Timer:
+class Timer(object):
     def __init__(self):
         self.timeStart=time()
     def test(self):
@@ -449,7 +449,7 @@ def GetAllValsByFrame(neighborPairsByFrame):
 
 
 # Implement these later... a partially-changed version is in Python folder...
-class WoundContours:
+class WoundContours(object):
     WNv=[]
     WNl=[]
     NNv=[]
@@ -555,7 +555,7 @@ def WriteSeedPointsFile(seedPointsFile,seedList,seedVals,walgorithm,woundCenters
 #    return matplotlib.colors.LinearSegmentedColormap('rand4SW',segmentdata)
 
 # This class now deals with image stacks as well as images...
-class WatershedData:
+class WatershedData(object):
     def __init__(self,arrayIn,previousSeeds=None):
         # Change this to allow orig, min-max filtered, and sharpened data
         # Need a way to mark the "Un-seeds" that exist in the background only...
