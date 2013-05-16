@@ -241,12 +241,8 @@ def ConvertOutlinesToWatershed(origArr,outlines,useDilate=False,structure=[[0,1,
 
 
 def CheckForMalformedRegions(watershed,usePrint=True):
-    '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
-    
-    ### THIS FUNCTION IMPORTS SHAPELY DIRECTLY ... DO NOT LINK TO IT!
-    ### NO NEED TO ADD ANOTHER DEPENDENCY FOR EVERYONE ELSE!
-    #import shapely.geometry
-    # Actually, shapely is not needed for this operation after all (now uses polyArea)
+    '''This goes through all frames and values and uses a poylogon area
+       algorithm to test if regions are disjoint in any way.'''
     
     outputString = ''
     
@@ -263,12 +259,10 @@ def CheckForMalformedRegions(watershed,usePrint=True):
                 else:
                     filledRegion = (watershed[frame]==v).astype(np.int)
                 ic = ImageContour.GetContourInPlace(filledRegion,1)
-                #p=shapely.geometry.asPolygon(ic.tolist())
-                if filledRegion.sum() != polyArea(ic): #p.area:
+                if filledRegion.sum() != polyArea(ic):
                     s = ' '.join(['frame:',str(frame),', value:',str(v)])
                     outputString = outputString + ' ' + s + '\n'
-                #if not p.is_valid: # (temporarily?) removed
-                #    print 'frame:',frame,'value:',v,'--Value has regions connected by point only!'
+    
     if outputString=='':
         outputString = 'No malformed regions found!'
     
@@ -276,7 +270,16 @@ def CheckForMalformedRegions(watershed,usePrint=True):
         print outputString
     else:
         return outputString
+        
 
+def MakeCellNetworkPickleFiles(waterArr,d):
+    print 'Making static (simple networks) pickle file:'
+    ImageContour.SubContourTools.GetCellNetworkListStatic(waterArr,d,forceRemake=True)
+    print 'Made static pickle file!'
+    
+    print 'Making matched networks pickle file:'
+    ImageContour.SubContourTools.GetMatchedCellNetworkListsPrevNext(waterArr,d,forceRemake=True)
+    print 'Made matched networks pickle file!'
 
 def GetNeighborPairsByFrame(neighbors,woundVals): # pass Neighbors.neighbors
     neighborPairsByFrame = []

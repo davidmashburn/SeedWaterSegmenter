@@ -1731,7 +1731,8 @@ class WatershedData(object):
     def CheckForMalformedRegions(self):
         '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
         ### Deprecated... just use the one in SWHelpers directly!
-        SWHelpers.CheckForMalformedRegions(self.wd.watershed)
+        SWHelpers.CheckForMalformedRegions(self.wd.watershed,usePrint=True)
+    
     def SaveTripleJunctions(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory==None:
@@ -2981,8 +2982,9 @@ Arrow Keys: Move selected seeds (after lasso)
         self.wd.RunCalculations2(self.saveDir)
         self.SetStatus('Ready')
     def CheckForMalformedRegionsCallback(self,event):
-        print 'Checking for malformed regions!'
-        self.SetStatus('Checking for malformed regions')
+        statusStr = 'Checking for malformed regions'
+        print statusStr
+        self.SetStatus(statusStr)
         s = SWHelpers.CheckForMalformedRegions(self.wd.watershed,usePrint=False)
         print s
         
@@ -2991,6 +2993,13 @@ Arrow Keys: Move selected seeds (after lasso)
         wx.TextCtrl(dia,-1,s,style=wx.TE_MULTILINE|wx.TE_READONLY) # add the text to the Dialog
         dia.Show()
         #wx.MessageBox(s,'Malformed Regions')
+        
+        if s=='No malformed regions found!':
+            statusStr = 'Attempting to make static and matched CellNetwork pickle files...'
+            print statusStr
+            self.SetStatus(statusStr)
+            
+            SWHelpers.MakeCellNetworkPickleFiles(self.wd.watershed,self.saveDir)
         
         self.SetStatus('Ready')
     
