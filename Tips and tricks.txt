@@ -1,0 +1,154 @@
+SeedWaterSegmenter's main tools are well explained in the tutorial, but having used it a lot (and knowing the codebase), there a bunch of tricks that I've found myself using that are not at all obvious.
+
+Likewise, if you find any other good/useful tricks, please email me (david.n.mashburn@gmail.com) and I'll post them here as well!
+
+
+-----------------------------
+Cut seeds in half with lasso:
+-----------------------------
+
+Seeds are just pixels, so even those little squares or circles can usually be cut in half if they are too close to an edge or something:
+
+1. Go into "L" mode
+2. Loop around the offensive portion of the extended seed
+3. Hit delete
+
+
+-------------
+"Fly" a seed:
+-------------
+Lasso selecting is useful to move seeds around a little (and is great for moving big groups of seeds), but if you need to move one seed a long distance, this is a better procedure:
+
+1. Go into "E" mode
+2. Left-click the region with the seed you are moving
+3. Right-click a new point where you want it to go
+4. Go back to lasso mode ("L"), then circle and delete the old seed
+
+
+----------------------
+Work without overlays:
+----------------------
+Overlays are great to give you a sense of the segmentation and where the seeds are, but when segmenting for detailed accuracy using draw mode, it's better to just use the yellow highlighted region. Hit "T" to get rid of the overlays.
+
+
+--------------------
+Fix a terrible edge:
+--------------------
+
+I'll be honest; some edges will just not segment... and it seems like anything you do just makes it worse!
+Luckily, there's a simple solution to this: just draw it in by hand!
+
+1. Lasso and delete any seeds near the edge
+2. Toggle off the overlays with "T"
+3. Set draw mode ("D")
+4. Select the first region (left click)
+5. Draw as close to the center line as you can, but staying on the correct side of the region.
+6. Repeat for the other region
+7. Left-click back and forth between the 2 regions and make sure they look good. You might even click to a different region to just look at the raw image again.
+8. If necessary, start over
+9. When you are done, also hit "W" and go look at the cell map (Figure 2) to make sure it looks good.
+10. Go back to Figure 1 and hit "T" - it will probably look like a big green blob, but you'll know better ;)
+
+
+--------------------
+Use matched windows:
+--------------------
+SWS is built out of loose windows which gives a lot of flexibility, but it can also help to quickly compare the main view and the map view (Figures 1 and 2).
+
+1. Place the windows for Figure 1 and Figure 2 EXACTLY on top of each other. Snapping windows and maximizing can help with this, but however you do it is fine.
+2. Flip back and forth with your window manager ( Alt-Tab on Windows | Command-~ on Mac | Alt-Tab or Alt-~ on Linux... usually )
+
+
+This might be obvious to some people, but it's really useful!
+
+
+-------------------
+Blackout highlight:
+-------------------
+I have lately found myself hunting for seeds, and while toggle the overlays does a lot to cut down on visual noise, sometimes I want to just see the highlight region and nothing else (when in draw mode).
+It took me a minute to figure this out, but it's really easy:
+
+1. Hit "H", type 1,1 (this erases all the data in the local frame)
+2. Flip around by clicking or with the "Selected Cell ID" number box in the main window
+3. When you are done, hit reset ("R") to get the image back
+
+
+If you don't reset and you run watershed ("W") this blackout view will show you a voronoi tesselation of the seeds, which might also be interesting...
+
+
+------------------------
+Use Zoom, Pan, and Home:
+------------------------
+
+That toolbar at the bottom of the Figure windows is the Matplotlib Toolbar. It is your friend.
+The safe way to use this is:
+
+1. Switching to Move Mode ("M")
+2. Click either Pan or Zoom in the toolbar
+3. Move the view to where you want it
+4. Uncheck the toolbar mode you are in
+5. Go back to the mode you were in before
+6. Repeat as necessary
+
+It can also be useful to zoom the Map to the same point if you are flipping windows as mentioned above; the best way to do this is to use the zoom tool and keep track of the starting and ending coordinates for the zoom box in the bottom right corner of the window.
+
+If you are brave and you can deal with many things at once, you can also pan or zoom while using Draw or Extra Mode, but just be careful because every click does 2 things at once! I actually work using Draw+Pan a lot but it does get confusing at times...
+DO NOT USE THIS TRICK WITH LASSO MODE, though, or lasso mode may break! If this happens, it can only be fixed by restarting SWS, but thankfully you can still save when this happens.
+
+
+-----------
+Using blur:
+-----------
+
+Gaussian ("G") is used to auto-generate seeds, but what if you want to use gaussian to affect the watershed image? The secret is to use the sharpen filter. It's just the subtraction of two gaussian blurs! By setting the bottom gaussian big enough, it essentially becomes 0; 100 is a good middle ground so processing isn't too slow.
+
+1. Hit "H" and put in <your blur sigma value>,100
+
+This is not "highly recommended", but it might be useful to you. A better way to do this is to save filtered version of the raw data using something like ImageJ or Phatch and then open that with SWS.
+
+
+==================================
+Other information and suggestions:
+==================================
+
+-----------------------
+Lasso clicking options:
+-----------------------
+
+In lasso mode, you can either click and hold to free-hand draw, or click and let go to draw polygons. Finish with right click.
+
+
+---------------------------------
+Delete whole regions vs. partial:
+---------------------------------
+
+Use right-click in "A" mode to delete whole regions that really shouldn't be there.
+Don't do this when you are just cleaning up stray seeds, though. Use lasso mode instead.
+
+
+------------------------
+Be careful in Draw Mode:
+------------------------
+
+Draw mode is great, but be careful where you click; if you want to "pick up your pen" left click the region again and go back to right clicking
+
+
+----------------------
+Seeds are just pixels:
+----------------------
+
+Seeds are just pixels with ID values; they are all shown green for consistency, but they really all have different values.
+
+
+----------------------
+Back up Seeds.py!
+----------------------
+
+I highly recomment saving old versions of Seeds.py files; it's all SWS needs to rebuild all your hard work!
+Backing up Seeds.py is easy and can protect you from accidents either due to unforseen power failures at the wrong moment, glitches or bugs in SWS I don't know about, or user error (and yes, I've defintely done this, too).
+
+
+----------------------------------
+----------------------------------
+
+This is in no way an exaustive list, and there is a TON of other things that you can do related to SWS (motably post-processing) using the Python APIs that are installed as part of SWS, especially the ImageContour package. Feel free to email me for help getting started with this!
