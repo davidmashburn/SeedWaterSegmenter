@@ -278,8 +278,10 @@ def MakeCellNetworkPickleFiles(waterArr,d):
     print 'Made static pickle file!'
     
     print 'Making matched networks pickle file:'
-    ImageContour.SubContourTools.GetMatchedCellNetworkListsPrevNext(waterArr,d,forceRemake=True)
+    _,_,allMatched = ImageContour.SubContourTools.GetMatchedCellNetworkListsPrevNext(waterArr,d,forceRemake=True)
     print 'Made matched networks pickle file!'
+    
+    return allMatched
 
 def GetNeighborPairsByFrame(neighbors,woundVals): # pass Neighbors.neighbors
     neighborPairsByFrame = []

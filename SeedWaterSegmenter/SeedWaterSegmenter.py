@@ -2999,7 +2999,10 @@ Arrow Keys: Move selected seeds (after lasso)
             print statusStr
             self.SetStatus(statusStr)
             
-            SWHelpers.MakeCellNetworkPickleFiles(self.wd.watershed,self.saveDir)
+            allMatched = SWHelpers.MakeCellNetworkPickleFiles(self.wd.watershed,self.saveDir)
+            wx.MessageBox( 'Made matched and non-matched pickle files!'
+                           if allMatched else
+                           'Matching failed on some frames! Made pickle files anyway.' )
         
         self.SetStatus('Ready')
     
