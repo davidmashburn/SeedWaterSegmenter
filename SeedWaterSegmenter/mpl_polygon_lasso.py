@@ -1,10 +1,11 @@
 # Original code from: http://www.mail-archive.com/matplotlib-devel@lists.sourceforge.net/msg03637.html
 # Original author, Eric Bruning
-# Modified by David Mashburn to allow draw-drawing as well as click to form polygon
+# Modified by David Mashburn to allow free-drawing as well as click to form polygon
 
 # A modified version of Eric Bruning lasso example
 # (just made the callback compatible with standard lasso tool)
 # and fiddled with some other stuff...
+import numpy
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
 
@@ -180,9 +181,7 @@ class manager(object):
     
 if __name__ == '__main__':
     import wx
-    #import numpy
-    #from matplotlib.nxutils import points_inside_poly
-    #from matplotlib.pyplot import figure, show
+    
     m = manager()
     show()
     
