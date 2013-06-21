@@ -1232,7 +1232,7 @@ class WatershedData(object):
             f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
             
             if self.rgbM==None:
-                self.rgbM = np.array([f1(wi),f2(wi),f3(wi)]).transpose(1,2,0)
+                self.rgbM = np.ascontiguousarray( np.array([f1(wi),f2(wi),f3(wi)],dtype=np.uint8).transpose(1,2,0) )
             else:
                 # No more dependence on cython function; save will be a little slower, but whatever...
                 #convToRandColors(self.mapPlotRandomArray,self.rgbM,
@@ -1241,6 +1241,7 @@ class WatershedData(object):
                 self.rgbM[:,:,0] = f1(self.watershed[self.index])
                 self.rgbM[:,:,1] = f2(self.watershed[self.index])
                 self.rgbM[:,:,2] = f3(self.watershed[self.index])
+            
             
             im = Image.fromarray(self.rgbM)
             im.save(saveFile)
