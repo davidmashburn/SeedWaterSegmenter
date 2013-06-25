@@ -800,9 +800,17 @@ class WatershedData(object):
                 elif [] in [Seeds.seedList[i],Seeds.seedVals[i]]:
                     self.sparseList[i] = scipy.sparse.lil_matrix(self.shape[1:], dtype=np.uint16)
                 else:
-                    row,col = np.array(Seeds.seedList[i]).T
-                    vals = Seeds.seedVals[i]
-                    self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil() # I guess I could change the dtype later if I need to...
+                    # Older, but more straightforward, more robust, and equally fast way to do this;
+                    # Prevents glitches caused by loading older Seeds.py files...
+                    tempArray = np.zeros(self.shape[1:],np.uint16)
+                    for j,s in enumerate(Seeds.seedList[i]):
+                        tempArray[s[0],s[1]]=Seeds.seedVals[i][j]
+                    self.sparseList[i] = scipy.sparse.lil_matrix(tempArray,dtype=np.uint16)
+                    
+                    # Newer way to do this, but less robust, and surprisingly not any faster... go figure!
+                    ## row,col = np.array(Seeds.seedList[i]).T
+                    ## vals = Seeds.seedVals[i]
+                    ## self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil() # I guess I could change the dtype later if I need to...
                 
                 if i==0 and self.sparseList[i]==None:
                     self.sparseList[i] = scipy.sparse.lil_matrix(self.shape[1:], dtype=np.uint16)
