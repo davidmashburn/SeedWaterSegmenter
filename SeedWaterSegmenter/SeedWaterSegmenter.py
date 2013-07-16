@@ -3004,14 +3004,14 @@ Arrow Keys: Move selected seeds (after lasso)
         #wx.MessageBox(s,'Malformed Regions')
         
         if s=='No malformed regions found!':
-            statusStr = 'Attempting to make static and matched CellNetwork pickle files...'
+            statusStr = 'Attempting to make static and matched CellNetwork json files...'
             print statusStr
             self.SetStatus(statusStr)
             
-            allMatched = SWHelpers.MakeCellNetworkPickleFiles(self.wd.watershed,self.saveDir)
-            wx.MessageBox( 'Made matched and non-matched pickle files!'
+            allMatched = SWHelpers.MakeCellNetworkJsonFiles(self.wd.watershed,self.saveDir)
+            wx.MessageBox( 'Made matched and non-matched json files!'
                            if allMatched else
-                           'Matching failed on some frames! Made pickle files anyway.' )
+                           'Matching failed on some frames! Made json files anyway.' )
         
         self.SetStatus('Ready')
     

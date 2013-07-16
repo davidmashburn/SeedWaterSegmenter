@@ -272,14 +272,14 @@ def CheckForMalformedRegions(watershed,usePrint=True):
         return outputString
         
 
-def MakeCellNetworkPickleFiles(waterArr,d):
-    print 'Making static (simple networks) pickle file:'
+def MakeCellNetworkJsonFiles(waterArr,d):
+    print 'Making static (simple networks) json file:'
     ImageContour.SubContourTools.GetCellNetworkListStatic(waterArr,d,forceRemake=True)
-    print 'Made static pickle file!'
+    print 'Made static json file!'
     
-    print 'Making matched networks pickle file:'
+    print 'Making matched networks json file:'
     _,_,allMatched = ImageContour.SubContourTools.GetMatchedCellNetworkListsPrevNext(waterArr,d,forceRemake=True)
-    print 'Made matched networks pickle file!'
+    print 'Made matched networks json file!'
     
     return allMatched
 
