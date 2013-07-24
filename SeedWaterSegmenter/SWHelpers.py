@@ -15,7 +15,7 @@ import GifTiffLoader as GTL
 import mahotas
 
 #from list_utils:
-from np_utils import deletecases,floatIntStringOrNone
+from np_utils import deletecases,floatIntStringOrNone,ziptranspose,shape_multiply
 
 #from MyPath import cprint
 #from pylab import *
@@ -371,6 +371,50 @@ def GetNeighborValues(d,wv,ind):
         return allVals
     else:
         print 'Neighbors.py does not exist!'
+
+#####################################################################
+# Functions for converting an outline array to a watershed array:
+#####################################################################
+def getAllConnectedPoints(arr,point):
+    '''Get a list of all simply connected points (2D)'''
+    val = arr[point[0],point[1]]
+    if val==0:
+        raise Exception('At least for my purposes today, a zero value is really bad!!')
+    newPtSet = set( [ (point[0],point[1]) ] ) # just to be sure it's a tuple
+    oldPtSet = set() # Nothing yet...
+    
+    for i in xrange(10000): # that's a pretty huge image... (more or less a while loop)
+        onlyNew = newPtSet.difference(oldPtSet)
+        oldPtSet.update(newPtSet)
+        if len(onlyNew)==0:
+            return sorted(newPtSet)
+        for y,x in onlyNew:
+            neighborPts = [ (y-1,x), (y,x-1), (y+1,x), (y,x+1) ]
+            newPtSet.update([ (y,x) for y,x in neighborPts
+                                    if 0<=y<arr.shape[0]
+                                    if 0<=x<arr.shape[1]
+                                    if arr[y,x]==val ])
+    raise Exception("pointSerach failed to complete after 10000 iterations. Either this was a very large image or it's some kind of maze...")
+
+def FillOutlinedCellsWithUniqueIDs(arrIn):
+    arr = np.array(arrIn)
+    for i in range(100000): # make this bigger for more cells...
+        wh = np.where(arr==1)
+        if len(wh[0])==0:
+            return arr
+        pt = wh[0][0],wh[1][0]
+        arr[ ziptranspose(getAllConnectedPoints(arr,pt)) ] = 2+i
+    raise Exception('Cell Filling failed to complete after 100000 iterations. Too many discrete cells found!')
+
+def WatershedFillDoubleSizedOutlineArray(arr):
+    '''Take an image array similar to the "Outlines"
+       (but with lines=0, cells=1 instead)
+       and turn it into a (double-sized) fully segmented image'''
+    arrEdit = FillOutlinedCellsWithUniqueIDs(arr)
+    arrDouble = shape_multiply(arrEdit,[2,2]).astype(np.uint16)
+    arrInvDouble = (1-shape_multiply(arr,[2,2])).astype(np.uint16)
+    waterArr = mahotas.cwatershed(arrInvDouble,arrDouble)
+    return waterArr
 
 #####################################################################
 # Integrated intensity functions:
