@@ -1865,13 +1865,13 @@ class WatershedData(object):
                 fid.close()
                 
                 # Remove all the '\r' first
-                data = data.replace('\r','')
+                data = data.replace('\r\n','\n')
                 
-                if '\n' in data:
-                    data = data.split('\n')
-                else:
-                    print 'File must have either \r\n (Windows) or \n (Unix) file endings!'
+                if '\r' in data: # Fail for unknown/unusual lineseps
+                    print 'File must have either \\r\\n (Windows) or \\n (Unix) file endings!'
                     continue
+                else:
+                    data = data.split('\n')
                 if name in ['CellValuesByFrame','Xmin','Xmax','Ymin','Ymax']:
                     data = [map(IorN,d.replace(' ','').split(',')) for d in data]
                 else:
