@@ -2547,7 +2547,7 @@ class SegmenterFrame(wx.Frame):
         self.InvertViewCheckbox = wx.CheckBox(self.MainPanel, -1, "Show Image Inverted?")
         self.CellNumber = wx.SpinCtrl(self.MainPanel, -1, "", min=1, max=(2**16-1))
         self.CellNumberText = wx.StaticText(self.MainPanel, -1, "Selected Cell ID")
-        self.HighlightLisOfCellIDsButton = wx.Button(self.MainPanel, -1, "Highlight a List of Cell IDs")
+        self.HighlightListOfCellIDsButton = wx.Button(self.MainPanel, -1, "Highlight a List of Cell IDs")
         self.NotesTextBox = wx.TextCtrl(self.MainPanel, -1, "Type Notes Here (per frame)",
                                         style=wx.TE_PROCESS_ENTER|wx.TE_MULTILINE)
         self.ReSaveAllFramesButton = wx.Button(self.MainPanel, -1, "Re-Save All Frames")
@@ -2634,7 +2634,7 @@ Arrow Keys: Move selected seeds (after lasso)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(cellNumberHSizer, 0, 0, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
-        controlsVSizer.Add(self.HighlightLisOfCellIDsButton, 0, 0, 0)
+        controlsVSizer.Add(self.HighlightListOfCellIDsButton, 0, 0, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
         controlsVSizer.Add(self.NotesTextBox, 0, wx.EXPAND, 0)
         controlsVSizer.Add((10,10), 0, 0, 0)
@@ -2667,7 +2667,7 @@ Arrow Keys: Move selected seeds (after lasso)
         for i in [self,self.MainPanel,self.FilenameText,self.MouseModeRadioBox,
                   self.MouseModeHelpText,self.FrameNumber,self.FrameNumberText,
                   self.ToggleViewCheckbox,self.InvertViewCheckbox,self.CellNumber,
-                  self.CellNumberText,self.HighlightLisOfCellIDsButton,self.NotesTextBox,
+                  self.CellNumberText,self.HighlightListOfCellIDsButton,self.NotesTextBox,
                   self.ReSaveAllFramesButton,self.ReRunAllWatershedsButton,
                   self.CompressSeedValuesButton,self.AutoCenterWoundButton,
                   self.RunCalculationsButton,self.RunCalculations2Button,
@@ -2681,7 +2681,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.Bind(wx.EVT_CHECKBOX, self.ToggleViewCheckBoxCallback, self.ToggleViewCheckbox)
         self.Bind(wx.EVT_CHECKBOX, self.InvertViewCheckBoxCallback, self.InvertViewCheckbox)
         self.Bind(wx.EVT_SPINCTRL, self.CellNumberCallback, self.CellNumber)
-        self.Bind(wx.EVT_BUTTON, self.HighlightLisOfCellIDsCallback, self.HighlightLisOfCellIDsButton)
+        self.Bind(wx.EVT_BUTTON, self.HighlightListOfCellIDsCallback, self.HighlightListOfCellIDsButton)
         #self.Bind(wx.EVT_TEXT, self.NotesTextBoxCallback, self.NotesTextBox)
         self.Bind(wx.EVT_BUTTON, self.ReSaveAllFramesCallback, self.ReSaveAllFramesButton)
         self.Bind(wx.EVT_BUTTON, self.ReRunAllWatershedsCallback, self.ReRunAllWatershedsButton)
@@ -2833,7 +2833,7 @@ Arrow Keys: Move selected seeds (after lasso)
                     ,interpolation='nearest',cmap=self.wd.mapPlotCmap
                     ,norm=matplotlib.colors.NoNorm() )
         plt.figure(fn)
-    def HighlightLisOfCellIDsCallback(self,event):
+    def HighlightListOfCellIDsCallback(self,event):
         self.SetStatus('Getting a list of Cell IDs to plot...')
         print 'Asking for a list of Cell IDs'
         dlg = wx.TextEntryDialog(None, 'Which Cell IDs do you want to plot?',
