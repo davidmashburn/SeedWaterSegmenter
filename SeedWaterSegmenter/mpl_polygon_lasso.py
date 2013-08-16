@@ -8,6 +8,11 @@
 import numpy
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
+from matplotlib.path import Path
+
+def points_inside_poly(points,vertices):
+    '''Replacement for matplotlib.nxutils.points_inside_poly'''
+    return Path(vertices).contains_points(points)
 
 class PolyLasso(Widget):
     """ 
