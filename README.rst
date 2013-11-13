@@ -90,7 +90,7 @@ Install SeedWater and the rest of the dependencies:
 
 ::
     
-    pip SeedWaterSegmenter
+    pip install SeedWaterSegmenter
 
 Install desktop icons with the postinstall script:
     Open a cmd window and type:
@@ -110,7 +110,7 @@ Install Enthought Python Distribution:
     
     Download and install.
     
-    (SeedWater has not been tested yet with Canopy on Mac, but precedure should be similar to the one for Windows)
+    (SeedWater has not been tested yet with Canopy on Mac, but procedure should be similar to the one for Windows)
 
 Obtain a C compiler:
     Download XCode from the Mac App Store or from https://developer.apple.com/xcode/
