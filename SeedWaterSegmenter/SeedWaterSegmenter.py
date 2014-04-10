@@ -49,9 +49,10 @@ import math
 from scipy.ndimage import center_of_mass,gaussian_filter,median_filter
 
 import matplotlib
-import matplotlib.pyplot as plt
+matplotlib.use('WxAgg')
 #from matplotlib.nxutils import points_inside_poly # deprecated, work-around function in mpl_polygon_lasso
 from mpl_polygon_lasso import PolyLasso, points_inside_poly
+import matplotlib.pyplot as plt
 
 import mahotas
 

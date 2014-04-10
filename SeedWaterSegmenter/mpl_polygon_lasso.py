@@ -6,6 +6,10 @@
 # (just made the callback compatible with standard lasso tool)
 # and fiddled with some other stuff...
 import numpy
+
+import matplotlib
+matplotlib.use('WxAgg')
+import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
 from matplotlib.path import Path
