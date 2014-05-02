@@ -46,24 +46,27 @@ if sys.platform == "win32":
             '''This is only used for uninstallation, and this will never run during installation'''
             pass
     
-    if sys.argv[1] == '-install':
-        lnkName = name+'.lnk'
-        pythonw = os.path.join( os.path.split(sys.executable)[0], 'pythonw.exe')
-        create_shortcut(
-            os.path.join(pythonw), # target
-            name, # description
-            lnkName, # filename
-            os.path.join(modulePath, name+'.py'), # arguments
-            '', # workdir
-            os.path.join(modulePath,'icons',name+'.ico'), # iconpath
-        )
-        # move shortcut from current directory to DESKTOP_FOLDER
-        shutil.move(os.path.join(os.getcwd(), lnkName),
-                    os.path.join(DESKTOP_FOLDER, lnkName))
-        # tell windows installer that we created another
-        # file which should be deleted on uninstallation
-        file_created(os.path.join(DESKTOP_FOLDER, lnkName))
+    if len(sys.argv<2):
+        print 'No option specified. Please append either "-install" or "-remove"'
+    else:
+        if sys.argv[1] == '-install':
+            lnkName = name+'.lnk'
+            pythonw = os.path.join( os.path.split(sys.executable)[0], 'pythonw.exe')
+            create_shortcut(
+                os.path.join(pythonw), # target
+                name, # description
+                lnkName, # filename
+                os.path.join(modulePath, name+'.py'), # arguments
+                '', # workdir
+                os.path.join(modulePath,'icons',name+'.ico'), # iconpath
+            )
+            # move shortcut from current directory to DESKTOP_FOLDER
+            shutil.move(os.path.join(os.getcwd(), lnkName),
+                        os.path.join(DESKTOP_FOLDER, lnkName))
+            # tell windows installer that we created another
+            # file which should be deleted on uninstallation
+            file_created(os.path.join(DESKTOP_FOLDER, lnkName))
 
-    if sys.argv[1] == '-remove':
-        pass
-        # This will be run on uninstallation. Nothing to do.
+        if sys.argv[1] == '-remove':
+            pass
+            # This will be run on uninstallation. Nothing to do.

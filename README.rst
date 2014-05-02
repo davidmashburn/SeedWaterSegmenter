@@ -23,9 +23,8 @@ Source code is mirrored to four repositories and to PyPI:
 
 - PyPI:        http://pypi.python.org/pypi/SeedWaterSegmenter
 
-The Google Code page also has some binary releases (http://code.google.com/p/seedwater/) that should work on 32-bit Windows and 64-bit Windows (and these will also generate desktop icons).
 
-You may also want to read the manual: "SeedWaterSegmenter V x.x Manual.txt"
+You may also want to read the manual, but be aware that it needs updating: "SeedWaterSegmenter V x.x Manual.txt"
 
 ----
 
@@ -40,78 +39,47 @@ It also depends on the standard scientific python packages (like numpy, scipy, m
 
 In short, you will need to install all of these dependencies either with binary installers, package managers, or by compiling from source.
 
-Many great Python Distributions exist for installing Python and most of these dependencies all at once. My favorite is Enthought Canopy (formerly Enthought Python Distribution) which is free for academic use and works on both Windows and Mac. SeedWater has been tested on 32-bit Windows (XP,Vista,7) with Enthought Canopy 1.0 and on Mac OS X running on EPD 7 (and a special thanks to Cody Narciso for ironing out the last few details of Mac installation).
+Many great Python Distributions exist for installing Python and most of these dependencies all at once. My current favorite is Anaconda which is free and works on both Windows and Mac.
 
 One other important point is that SeedWater does NOT run on Python 3.x at this time because not all of these dependencies have been ported over. For the near future, please use Python 2.7 only.
 
 Windows:
 ^^^^^^^^
-Download and install Enthought Canopy:
-    Go here and sign up for an account with an academic email address:
+Download and install Anaconda Python Distribution:
+    http://continuum.io/downloads
     
-    http://www.enthought.com/products/edudownload.php
+    Download either 32 or 64 bit (to match your version of Windows).
+    Double-click on the downloaded file and install it (you can choose either single-user of system-wide).
     
-    Download and install, making sure to install this as the default python environment; then click "Start Using Canopy".
-    
-    Click "Login" and put in your academic license information.
-    
-    Click on the package manager; update all the installed packages and find and install "mingw" and "libpython 1.2"
-
-Configure Windows to find MinGW's C compiler:
-    Go to "Environment Variables" under System properties (on Windows 7, just find this by typing "environment" in the start menu search bar)
-    
-    Add the following to the end of "PATH", inserting your actual username (if you used 64-bit Canopy, adjust the name of the Canopy32 folder according to your system):
-
-::
-    
-    C:\Users\<yourname>\AppData\Local\Enthought\Canopy32\User\EGG-INFO\mingw\usr\bin\;
-
-Configure Python to find MinGW's C compiler:
-    Create a file called "pydistutils.cfg" in your home folder, C:\\Users\\<yourname>\\
-    
-    (make sure it is actually .cfg and not .txt)
-    
-    Open it in Notepad, put in the following text, and then save it:
+Install wxPython and SeedWater Segmenter:
+    Now, from the Start Menu (aka, the Windows Button) select the Anaconda Command Prompt inside the Anaconda folder
+    Here, run these two commands:
     
 ::
     
-    [build]
-    compiler=mingw32
-
-Install pip and configure it to find the gcc compiler from Enthought's mingw package:
-    Open a cmd window and type "easy_install pip"
-    
-    (grant it permission if a security window pops up)
-    
-    close the cmd window when this is done
-
-Install SeedWater and the rest of the dependencies:
-    Open a new cmd window and type:
-
-::
-    
+    conda install wxpython
     pip install SeedWaterSegmenter
-
-Install desktop icons with the postinstall script:
-    Open a cmd window and type:
+    
+Run SeedWater:
+    Now, from this same Anaconda command prompt, you can run SeedWater with the following command:
+    
+::
+    
+    python -m SeedWaterSegmenter.SeedWaterSegmenter
+    
+Make a desktop launcher (with an icon):
+    To make running SeedWater easier, you can install a desktop shortcut with the included script.
+    Just run one of these two command from the Anaconda Command Prompt (depending on whether you did a single-user or system-wide install):
 
 ::
     
-    python C:\Users\<yourname>\AppData\Local\Enthought\Canopy32\User\Scripts\postinstall.py
+    python C:\Users\<your username>\Anaconda\Scripts\create_sws_shortcut.py -install
+    python C:\Anaconda\Scripts\create_sws_shortcut.py -install
 
 That's it!
 
 Mac OS X:
 ^^^^^^^^^
-Install Enthought Python Distribution:
-    Go here and sign up for an account with an academic email address:
-    
-    http://www.enthought.com/products/edudownload.php
-    
-    Download and install.
-    
-    (SeedWater has not been tested yet with Canopy on Mac, but procedure should be similar to the one for Windows)
-
 Obtain a C compiler:
     Download XCode from the Mac App Store or from https://developer.apple.com/xcode/
     
@@ -120,32 +88,77 @@ Obtain a C compiler:
     To get gcc, you must install command line tools, a package for XCode. You can access this from: XCode menu > Preferences > Downloads. Check "command line tools" and install.
     
     Reboot your system to make sure everything is loaded.
-
-Install SeedWater and its dependencies:
-    In the Terminal, run the following code and then type your password to continue:
-
-::
-
-    sudo easy_install mahotas EllipseFitter FilenameSort GifTiffLoader ImageContour np_utils SeedWaterSegmenter
     
+Download and install Anaconda Python Distribution:
+    http://continuum.io/downloads
+    
+    Download either the bash installer or the GUI installer.
+    To run the bash installer, download the file to the Downloads folder and run this command in the Terminal:
+    
+::
+    
+    bash Anaconda*.sh
 
-Find "SeedWaterSegmenter.py" in the Finder and double-click run it.
+    If you used the "pkg" download, just double-click it to install. You can then choose either single-user of system-wide.
+
+Install wxPython:
+    Now, open a *new* Terminal window, and run this command to install wxPython:
+    
+::
+    
+    conda install wxpython
+    
+    This failed for me on Mac OS X Snow Leopard, so I had to download this file:
+    http://repo.continuum.io/pkgs/free/osx-64/wxpython-3.0-py27_0.tar.bz2
+    to the Downloads folder, and then run these commands:
+    
+::
+    
+    cd ~/Downloads
+    conda install wxpython-3.0-py27_0.tar.bz2
+
+Install SeedWater Semgnter:
+    In the Terminal, run the following:
+    
+::
+    
+    pip install SeedWaterSegmenter
+
+Run SeedWater:
+    Now, from this same Anaconda command prompt, you can run SeedWater with the following command, noting that you HAVE to use "pythonw" and not just "python":
+    
+::
+    
+    pythonw -m SeedWaterSegmenter.SeedWaterSegmenter
+
+Download the App:
+    Now also, thanks to Sveinbjorn Thordarson's Platypus tool, a packaged app is available for download at:
+    https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/MacOSX/SeedWaterSegmenterApp.zip
+    Just extract the zip file and place the App on the Desktop or in the Applications folder
+    
+    Be aware that this is only a link to the python scripts and will not work by itself without the above installation.
+    
+    There is also a ".command" file that can serve the same purpose if the App does not work:
+    https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/MacOSX/SeedWaterSegementer.command
+
+
+That's it!
 
 Ubuntu/Debian:
 ^^^^^^^^^^^^^^
 Install:
     Run these two commands in the terminal:
-
+    
 ::
-
+    
     sudo apt-get install python-setuptools python-wxtools python-numpy python-scipy python-matplotlib python-imaging python-xlrd python-xlwt
-    sudo easy_install -U mahotas EllipseFitter FilenameSort GifTiffLoader ImageContour np_utils SeedWaterSegmenter
+    sudo easy_install -U SeedWaterSegmenter
 
 Run SeedWater:
     In the terminal, run:
-
+    
 ::
-
+    
     python2.7 -m SeedWaterSegmenter.SeedWaterSegmenter
 
 (just "python" may also work, depending on your system)
@@ -154,13 +167,19 @@ Make a desktop launcher:
     Look at this to get you started:
     
     https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/desktop/SeedWaterSegmenter.desktop
+    
+    This is how I created the symlinks that make this work:
+    
+::
+    
+    ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/SeedWaterSegmenter.py /usr/local/bin/seedwatersegmenter
+    ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/icons/SeedWaterSegmenter.svg /usr/local/share/pixmaps/SeedWaterSegmenter.svg
 
+That's it!
 
 ----
 
 Screenshots
 -----------
 
-.. image:: http://seedwater.googlecode.com/svn/SeedwaterScreenshot.png
-
-
+.. image:: https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/doc/SWS_Screenshot.png

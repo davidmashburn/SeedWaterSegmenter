@@ -164,8 +164,9 @@ class manager(object):
         self.y = self.x**2.0
         self.charge = numpy.zeros_like(self.x)
         
-        self.f = figure()
+        self.f = plt.figure()
         ax = self.f.add_subplot(111)
+        ax.set_axis_bgcolor('gray')
         self.sc = ax.scatter(self.x, self.y, c=self.charge, vmin=-1, vmax=1, edgecolor='none')
         # self.sc.set_clim(-1, 1)
         
@@ -191,7 +192,8 @@ class manager(object):
 if __name__ == '__main__':
     import wx
     
+    plt.ioff()
     m = manager()
-    show()
+    plt.show()
     
     app=wx.App();wx.MessageBox('Close to finish')

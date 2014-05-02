@@ -3557,10 +3557,22 @@ def InitializeMPL():
 if __name__=='__main__':
     InitializeMPL()
     app = SegmenterApp(0)
+    
+    if sys.platform=='darwin':
+        # Workaround for Mac bug
+        # Create and immediately destroy a file dialog to prevent a crash
+        dlg = wx.FileDialog(None,"")
+        wx.FutureCall(1, dlg.Destroy)
+        dlg.ShowModal()
+    
     if len(sys.argv)>1:
         f = ' '.join(sys.argv[1:])
     else:
-        f=wx.FileSelector()
-    if os.path.exists(f):
-        app.frame.OnInit(filename=f)
-        app.MainLoop()
+        f = wx.FileSelector()
+    
+    if not os.path.exists(f):
+        print 'The specified path does not exist.'
+        exit()
+    
+    app.frame.OnInit(filename=f)
+    app.MainLoop()
