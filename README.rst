@@ -175,8 +175,8 @@ Install:
 
 ----
 
-Screenshots
+Screenshot
 -----------
-.. image:: doc/SWS_Screenshot.png
 
 .. image:: http://seedwater.googlecode.com/svn/SeedwaterScreenshot.png
+
