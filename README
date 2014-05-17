@@ -1,10 +1,16 @@
 = SeedWater Segmenter =
 
-Seedwater Segmenter (SWS) is a graphical Python program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines). The interactions are entirely based on the editing of seeds, which in turn are expanded by a watershed algorithm. The major difference between SWS and other tools is that you can place more than one seed per cell which can help you adjust the boundaries of difficult cells.
+Seedwater Segmenter (SWS) is a graphical Python program to interactively segment
+image stacks of cells in tissue with edge-labels (aka. white outlines).
+The interactions are entirely based on the editing of seeds,
+which in turn are expanded by a watershed algorithm.
+The major difference between SWS and other tools is that you can place more than one seed per cell,
+which can help you adjust the boundaries of difficult cells.
 
 SWS is built on top of wxPython, matplotlib, numpy, scipy, PIL, and mahotas.
 
-At its core, it uses a lightning-fast watershed algorithm (thanks to the mahotas project) and allows real-time updates. It has a simple (if cluttered) UI and is fully interactive, even including 1-level undo.
+At its core, it uses a lightning-fast watershed algorithm (thanks to the mahotas project) and allows real-time updates.
+It has a simple (if cluttered) UI and is fully interactive, even including 1-level undo.
 
 The publication about SWS that gives all these details and more in Cytometry Part A:
 
@@ -29,13 +35,16 @@ SeedWater is now pure-python. In fact, with just python and setuptools installed
 easy_install SeedWaterSegmenter
 
 The big caveat to this is that SeedWater also depends on a number of binary/compiled dependencies which must be installed separately, the trickiest usually being mahotas.
-It also depends on the standard scientific python packages (like numpy, scipy, matplotlib, PIL, etc), so those must also be installed; pretty much any method of obtaining those should work.
+It also depends on the standard scientific python packages (like numpy, scipy, matplotlib, PIL, etc), so those must also be installed.
+Pretty much any method of obtaining those should work.
 
 In short, you will need to install all of these dependencies either with binary installers, package managers, or by compiling from source.
 
-Many great Python Distributions exist for installing Python and most of these dependencies all at once. My current favorite is Anaconda which is free and works on both Windows and Mac.
+Many great Python Distributions exist for installing Python and most of these dependencies all at once.
+My current favorite is Anaconda which is free and works on both Windows and Mac.
 
-One other important point is that SeedWater does NOT run on Python 3.x at this time because not all of these dependencies have been ported over. For the near future, please use Python 2.7 only.
+One other important point is that SeedWater does NOT run on Python 3.x at this time, because not all of these dependencies have been ported over.
+For the near future, please use Python 2.7 only.
 
 == Windows: ==
 
@@ -175,5 +184,6 @@ That's it!
 ----
 = Screenshot =
 
+http://seedwater.googlecode.com/svn/SeedwaterScreenshot.png
 https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/doc/SWS_Screenshot.png
 
