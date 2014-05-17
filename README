@@ -43,11 +43,12 @@ Download and install Anaconda Python Distribution:
     http://continuum.io/downloads
     
     Download either 32 or 64 bit (to match your version of Windows).
-    Double-click on the downloaded file and install it (you can choose either single-user of system-wide).
+    Double-click on the downloaded file and install it.
+    I *highly* recommend doing a single-user (non-system-wide) install to save headaches with permissions.
 
 Install wxPython and SeedWater Segmenter:
     Now, from the Start Menu (aka, the Windows Button) select the Anaconda Command Prompt inside the Anaconda folder
-    Here, run these two commands:
+    Here, run these two commands (and you may need to disable your antivirus before proceeding):
 
 {{{
 conda install wxpython
