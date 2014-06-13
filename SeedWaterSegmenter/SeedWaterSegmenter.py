@@ -175,7 +175,11 @@ elif username in ['Aroshan']:
     DEFAULT_SEED_SIZE=3
     USE_DEBUG_PRINT=False
     STEAL_B_KEY = True
-    
+elif username in ['Xena']:
+    DONT_PANIC=False
+    DEFAULT_SEED_SIZE=1
+    USE_DEBUG_PRINT=False
+    STEAL_B_KEY = False   
 else:
     DONT_PANIC=False
     DEFAULT_SEED_SIZE=3
