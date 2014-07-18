@@ -180,3 +180,5 @@ Screenshot
 
 .. image:: http://seedwater.googlecode.com/svn/SeedwaterScreenshot.png
 
+.. image:: https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/doc/SWS_Screenshot.png
+
