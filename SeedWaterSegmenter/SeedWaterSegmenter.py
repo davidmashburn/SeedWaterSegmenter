@@ -328,6 +328,17 @@ def CreateOutlines(arr,walgorithm='PyMorph'):
     else:
         raise ValueError, walgorithm+' is not a valid watershed algorithm!'
 
+def CreateThickOutlines(arr,thickness=1):
+    newArr=np.zeros(arr.shape,dtype=arr.dtype)
+    newArr[:-1]   |= np.diff(arr,axis=0)!=0
+    newArr[1:]    |= np.diff(arr,axis=0)!=0
+    newArr[:,:-1] |= np.diff(arr,axis=1)!=0
+    newArr[:,1:]  |= np.diff(arr,axis=1)!=0
+    
+    if thickness>1:
+        newArr = scipy.ndimage.morphology.binary_dilation(newArr,iterations=thickness-1)
+    return newArr
+
 IorN = lambda i: None if i=='None' else int(i)
 ForN = lambda f: None if f=='None' else float(f)
 
@@ -1566,6 +1577,18 @@ class WatershedData(object):
                 if np.any(neighborPixels==neighborVal):
                     neighborList[i].append(neighborVal)
         return neighborList
+    def CalculateEdgeBrightnessValues(self,thickness=1,saveDir=None):
+        mask = CreateThickOutlines(self.watershed[self.index],thickness)
+        if saveDir:
+            outlDir = os.path.join(saveDir,'ThickOutlines' +
+                                           (str(thickness) if thickness>1 else '') )
+            if not os.path.exists(outlDir):
+                os.mkdir(outlDir)
+            GTL.SaveSingle(255*mask,os.path.join(outlDir,'Mask%i' % self.index),tiffBits=8)
+        
+        edgeBrightnessValues = sorted(self.origData[self.index][np.where(mask)].tolist())
+        return edgeBrightnessValues
+    
     def GetMaxSeedVal(self):
         maxSeedVal=2
         for l in self.sparseList:
@@ -1573,7 +1596,7 @@ class WatershedData(object):
                 if l.nnz!=0:
                     maxSeedVal = max( maxSeedVal, l.tocoo().data.max() )
         return maxSeedVal
-    def CollectAllStats(self):
+    def CollectAllStats(self,saveDirForOutlineMasks=None):
         maxSeedVal = self.GetMaxSeedVal()
         
         self.valuesByFrame=[]
@@ -1591,6 +1614,7 @@ class WatershedData(object):
         self.woundDistance=[]
         self.woundAngle=[]
         self.neighbors=[]
+        self.edgeBrightnessValues=[]
         oldIndex=self.index
         adjLength = self.GetLastActiveFrame()+1
         for index in range(adjLength):
@@ -1628,6 +1652,8 @@ class WatershedData(object):
             self.woundAngle.append(thetaList)
             print 'Get Neighbors'
             self.neighbors.append(self.CalculateNeighbors(boundsList=boundsList))
+            print 'Get Edge Brightness Values and Save Edge Mask'
+            self.edgeBrightnessValues.append(self.CalculateEdgeBrightnessValues(saveDir=saveDirForOutlineMasks))
             
         print 'Fix Offsets'
         # Make it so that there is an entry for every value, regardless of whether that cell was
@@ -1742,6 +1768,9 @@ class WatershedData(object):
                 fid=open(os.path.join(directory,'Neighbors.py'),'w')
                 fid.write('neighbors = '+neighborsStr)
                 fid.close()
+                
+                self.SaveCSV('EdgeBrightnessValues',directory,self.edgeBrightnessValues)
+    
     def CheckForMalformedRegions(self):
         '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
         ### Deprecated... just use the one in SWHelpers directly!
@@ -1829,7 +1858,7 @@ class WatershedData(object):
         if MI==None:
             return    
         woundValsSorted = sorted(MI.woundVals)
-        self.CollectAllStats() # Safer but slower way to do it...
+        self.CollectAllStats(directory) # Safer but slower way to do it...
         neighborPairsByFrame = self.GetNeighborPairsByFrame(woundValsSorted)
         allValsByFrame = GetAllValsByFrame(neighborPairsByFrame)
         
@@ -2985,7 +3014,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 wx.MessageBox(s)
                 print s
                 return
-        self.wd.CollectAllStats()
+        self.wd.CollectAllStats(self.saveDir)
         self.wd.PlotAreasAndPerimeters()
         self.HandleMPLandWxKeyEvents('s')
         self.SetStatus('Ready')
