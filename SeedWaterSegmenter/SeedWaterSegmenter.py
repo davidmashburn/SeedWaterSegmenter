@@ -1479,7 +1479,8 @@ class WatershedData(object):
                     self.seedArray[ np.where(self.seedArray==val) ] = newVal
                     self.sparseList[i] = scipy.sparse.lil_matrix(self.seedArray,dtype=np.uint16)
                     
-                    if self.selectionVals not in [[],None]:
+                    l = self.selectionVals
+                    if l not in [[],None]:
                         while val in l:
                             l[l.index(val)]=newVal
                     
