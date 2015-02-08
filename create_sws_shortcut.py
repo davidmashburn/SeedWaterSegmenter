@@ -46,7 +46,7 @@ if sys.platform == "win32":
             '''This is only used for uninstallation, and this will never run during installation'''
             pass
     
-    if len(sys.argv<2):
+    if len(sys.argv)<2:
         print 'No option specified. Please append either "-install" or "-remove"'
     else:
         if sys.argv[1] == '-install':
