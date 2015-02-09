@@ -346,7 +346,7 @@ def GetReportPixel(sfORwd): # create and return the report_pixel function...
     def report_pixel(x,y):
         if isinstance(sfORwd, SegmenterFrame):
             wd=sfORwd.wd
-        elif isinstance(sfORwd, WatershedData):
+        elif isinstance(sfORwd, WatershedDataPure):
             wd=sfORwd
         else:
             raise TypeError("sfORwd must be a WatershedData or SegmenterFrame Object!")
@@ -571,7 +571,7 @@ def WriteSeedPointsFile(seedPointsFile,seedList,seedVals,walgorithm,woundCenters
 #    return matplotlib.colors.LinearSegmentedColormap('rand4SW',segmentdata)
 
 # This class now deals with image stacks as well as images...
-class WatershedData(object):
+class WatershedDataPure(object):
     def __init__(self,arrayIn,previousSeeds=None):
         # Change this to allow orig, min-max filtered, and sharpened data
         # Need a way to mark the "Un-seeds" that exist in the background only...
@@ -2196,10 +2196,10 @@ class WatershedData(object):
         sheetNames = ["Major","Minor","Aspect Ratio","Angle","Irr","Iqq","Irr D Iqq"]
         ExcelHelper.excelWrite( excelOut,sheetNames,os.path.join(d,'PrincipalAxes.xls'),flip=False)
 
-class WatershedDataAndPlotManager(WatershedData):
-    """All the functions on WatershedData that involve plotting"""
+class WatershedData(WatershedDataPure):
+    """Enhances WatershedDataPure to include involve plotting"""
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
-        WatershedData.Save(d,saveOutlines=saveOutlines)
+        WatershedDataPure.Save(d,saveOutlines=saveOutlines)
         # Save Map Images
         if saveMapImages:
             oldIndex=self.index
@@ -2210,7 +2210,7 @@ class WatershedDataAndPlotManager(WatershedData):
                     self.MapPlot(saveFile=mapBase+str(i)+'.png')
             self.index = oldIndex
     def Open(self,d):
-        WatershedData.Open(d)
+        WatershedDataPure.Open(d)
         
         if len(Seeds.seedList)==self.length:
             self.ColorPlot()
@@ -2221,16 +2221,16 @@ class WatershedDataAndPlotManager(WatershedData):
         self.MapPlot()
         self.ColorPlot()
     def NextFrame(self,doPlots=True):
-        WatershedData.NextFrame()
+        WatershedDataPure.NextFrame()
         if self.index+1<self.length:
             if doPlots: # If we skip over it, no need to save...
                 self._plotUpdate()
     def PreviousFrame(self,doPlots=True):
-        WatershedData.PreviousFrame()
+        WatershedDataPure.PreviousFrame()
         if doPlots: # If we skip over it, no need to save...
             self._plotUpdate()
     def MoveToFrame(self,newIndex):
-        WatershedData.MoveToFrame(newIndex)
+        WatershedDataPure.MoveToFrame(newIndex)
         self._plotUpdate()
     def GoToLastVisitedFrame(self):
         self.MoveToFrame(self.lastFrameVisited)
@@ -2499,7 +2499,7 @@ class WatershedDataAndPlotManager(WatershedData):
         #print self.CalculateWoundDistance()
         print self.CalculateNeighbors()
     def RunCalculations2(self,d)
-        WatershedData.RunCalculations2(d)
+        WatershedDataPure.RunCalculations2(d)
         oldIndex=self.index
         self.index = 0
         self.MapPlot(saveFile=os.path.join(d,'MapWithCellIDs.png'),useText=True)
@@ -2764,7 +2764,7 @@ Arrow Keys: Move selected seeds (after lasso)
         #    g=GTL.LoadMonolithic(self.filename)
         
         self.wd=None # Release the old data before we load the new...
-        self.wd = WatershedDataAndPlotManager(g)
+        self.wd = WatershedData(g)
         self.FrameNumber.SetValue(0)
         self.FrameNumber.SetRange(0,self.wd.length)
         self.FrameNumberText.SetLabel("Frame Number (last - "+str(self.wd.length-1)+")\n(last active - 0)")
