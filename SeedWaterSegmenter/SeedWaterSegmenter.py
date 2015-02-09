@@ -2198,12 +2198,13 @@ class WatershedDataPure(object):
 
 class WatershedData(WatershedDataPure):
     """Enhances WatershedDataPure to include involve plotting"""
-    def __init__(self,arrayIn,previousSeeds=None):
+    def __init__(self,arrayIn,previousSeeds=None,fig1=None,ax1=None,fig2=None,ax2=None):
         WatershedDataPure.__init__(self,arrayIn,previousSeeds=previousSeeds)
-        self.fig1 = plt.figure(1)
-        self.fig2 = plt.figure(2)
-        self.ax1 = self.fig1.add_subplot(111)
-        self.ax2 = self.fig2.add_subplot(111)
+        
+        self.fig1 = fig1 if fig1 else plt.figure(1)
+        self.fig2 = fig2 if fig2 else plt.figure(2)
+        self.ax1 = ax1 if ax1 else self.fig1.add_subplot(111)
+        self.ax2 = ax2 if ax2 else self.fig2.add_subplot(111)
         #self.fig3 = plt.figure(3)             # make this as-needed instead...
         #self.ax3 = self.fig3.add_subplot(111) # make this as-needed instead...
     
@@ -2283,7 +2284,7 @@ class WatershedData(WatershedDataPure):
                         # Never actually remove the objects, just make them invisible...
                         # Sneaky...
                         
-            self.fig2.draw()
+            self.fig2.canvas.draw()
             self.fig2.savefig(saveFile)
             self.ax2.cla()
         elif saveFile!=None: # I may have broken this... sorry...
@@ -2317,7 +2318,7 @@ class WatershedData(WatershedDataPure):
                                               interpolation='nearest',cmap=self.mapPlotCmap,
                                               norm=matplotlib.colors.NoNorm() )
             self.DrawBWDot()
-            #self.fig2.draw() # Now DrawBWDot calls this instead...
+            #self.fig2.canvas.draw() # Now DrawBWDot calls this instead...
     def MapPlotWTracks(self):
         # Disable the old mapPlot and redraw every time (will be slow...)
         # Later, could possibly store the tracks part for animations, too...
@@ -2395,7 +2396,7 @@ class WatershedData(WatershedDataPure):
         
         # This is by FAR the slowest step, about 0.25s
         self.HighlightRegion()
-        # self.fig1.draw() # Highlight Region also calls draw, so this doesn't need to!
+        # self.fig1.canvas.draw() # Highlight Region also calls draw, so this doesn't need to!
     def DrawBWDot(self):
         #plt.figure(2)
         
@@ -2406,13 +2407,13 @@ class WatershedData(WatershedDataPure):
                     # centroid of selected region v
                     cm[i] = center_of_mass((self.watershed[self.index]==v).astype(np.float))
             if self.bwDot==None and self.point_mode==False:
-                self.bwDot=self.fig2.plot(cm[:,1],cm[:,0],'ko')
+                self.bwDot=self.ax2.plot(cm[:,1],cm[:,0],'ko')
                 self.bwDot[0].set_markeredgecolor('w')
                 self.bwDot[0].set_markeredgewidth(1.2)
             else:
                 self.bwDot[0].set_data(cm[:,1],cm[:,0])
         
-        self.fig2.draw()
+        self.fig2.canvas.draw()
     
     def HighlightRegion(self):
         a=np.zeros(self.shape[1:],dtype=np.uint8)
@@ -2444,7 +2445,7 @@ class WatershedData(WatershedDataPure):
         else:
             self.hiplot = self.ax1.imshow(self.rgbaH,interpolation='nearest',animated=True)
         
-        self.ax1.draw()
+        self.fig1.canvas.draw()
         
     def LassoCallback(self,verts):
         verts = [ v[::-1] for v in verts ]
@@ -2521,12 +2522,12 @@ class WatershedData(WatershedDataPure):
             for c in ImageContour.GetBoundaryLine(wi,1e6,v):
                 self.ax10.plot(*(np.array( c )[:,::-1].T),marker='.')
                 sleep(0.4)
-                self.fig10.draw()
+                self.fig10.canvas.draw()
         for v in NNv[ind]:
             for c in ImageContour.GetBoundaryLine(wi,v[0],v[1]):
                 self.ax10.plot(*(np.array( c )[:,::-1].T))
                 sleep(0.4)
-                self.fig10.draw()
+                self.fig10.canvas.draw()
     def RingsPlot(self,bins,frame,woundVals,useNei=False,binSize=None,initR=0): # still using pyplot directly...
         # b,g,r,c,m,y,k
         colors=[[0,0,255],[0,255,0],[255,0,0],[0,255,255],[255,0,255],[255,255,0]]*10 # that ought to do it ;-P
@@ -2742,13 +2743,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.Bind(wx.EVT_BUTTON, self.RunCalculations2Callback, self.RunCalculations2Button)
         self.Bind(wx.EVT_BUTTON, self.CheckForMalformedRegionsCallback, self.CheckForMalformedRegionsButton)
         
-    def OnInit(self,filename=None,setConnections=True):
-        if setConnections:
-            self.SetMPLKeyConnections()
-            self.mouseMode='m'
-            self.MouseModeHelpText.SetLabel(mouseModeHelpTxt[0])
-            self.SetConnection(self.HandleMPLMouseEvents)
-            
+    def OnInit(self,filename=None,setConnections=True,fig1=None,ax1=None,fig2=None,ax2=None):
         self.SetStatus('Loading Image Data')
         self.filename=filename
         try:
@@ -2766,7 +2761,7 @@ Arrow Keys: Move selected seeds (after lasso)
         #    g=GTL.LoadMonolithic(self.filename)
         
         self.wd=None # Release the old data before we load the new...
-        self.wd = WatershedData(g)
+        self.wd = WatershedData(g,fig1=fig1,ax1=ax1,fig2=fig2,ax2=ax2)
         self.FrameNumber.SetValue(0)
         self.FrameNumber.SetRange(0,self.wd.length)
         self.FrameNumberText.SetLabel("Frame Number (last - "+str(self.wd.length-1)+")\n(last active - 0)")
@@ -2775,6 +2770,12 @@ Arrow Keys: Move selected seeds (after lasso)
         self.CellNumber.SetValue(2)
         self.CellNumber.SetRange(1,2**16-1)
         self.CellNumberText.SetLabel("Selected Cell ID")
+        
+        if setConnections:
+            self.SetMPLKeyConnections()
+            self.mouseMode='m'
+            self.MouseModeHelpText.SetLabel(mouseModeHelpTxt[0])
+            self.SetConnection(self.HandleMPLMouseEvents)
         
         #self.wd.DrawOrigImage()
         self.wd.ax1.imshow(self.wd.filterData[self.wd.index],cmap=plt.cm.gray)
@@ -2801,7 +2802,7 @@ Arrow Keys: Move selected seeds (after lasso)
             fig.canvas.mpl_connect('key_release_event',self.OnKeyReleaseMPL)
             ax.format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
     def SetConnection(self,f):
-        self.connection = self.wd.fig1.connect('button_press_event',f)
+        self.connection = plt.connect('button_press_event',f)
     
     def FileNameTextCallback(self,event):
         f=event.GetValue()
@@ -3574,24 +3575,29 @@ class SegmenterApp(wx.App):
     def OnInit(self):
         wx.InitAllImageHandlers()
         
-        self.InitMPL()
-        
         self.frame = SegmenterFrame(None, -1, "")
         
         self.SetTopWindow(self.frame)
         
         self.frame.Show()
         return 1
-    def InitMPL(self):
-        # Initialize the two figures in reverse order and disable keyboard navigation keys
-        for fig,ax in [(self.wd.fig1,self.wd.ax1),
-                       (self.wd.fig2,self.wd.ax2)]:
-            if fig==self.wd.fig2 and DONT_PANIC:
-                fig.title("Don't Panic!!!")
-            fig.draw()
-            for i in fig.canvas.callbacks.callbacks:
-                if i=='key_press_event':
-                    fig.canvas.mpl_disconnect(fig.canvas.callbacks.callbacks[i].keys()[0])
+
+def InitMPL():
+    # Initialize the two figures in reverse order and disable keyboard navigation keys
+    fig2 = plt.figure(2) # initialize this first so it stays at the back...
+    fig1 = plt.figure(1)
+    ax1 = fig1.add_subplot(111)
+    ax2 = fig2.add_subplot(111)
+    for fig,ax in [(fig1,ax1),
+                   (fig2,ax2)]:
+        if fig==fig2 and DONT_PANIC:
+            fig.title("Don't Panic!!!")
+        fig.canvas.draw()
+        for i in fig.canvas.callbacks.callbacks:
+            if i=='key_press_event':
+                fig.canvas.mpl_disconnect(fig.canvas.callbacks.callbacks[i].keys()[0])
+    return fig1,ax1,fig2,ax2
+    
 
 def InitializeMPL():
     plt.ion()
@@ -3616,5 +3622,6 @@ if __name__=='__main__':
         print 'The specified path does not exist.'
         exit()
     
-    app.frame.OnInit(filename=f)
+    fig1,ax1,fig2,ax2 = InitMPL()
+    app.frame.OnInit(filename=f,fig1=fig1,ax1=ax1,fig2=fig2,ax2=ax2)
     app.MainLoop()
