@@ -2200,6 +2200,12 @@ class WatershedData(WatershedDataPure):
     """Enhances WatershedDataPure to include involve plotting"""
     def __init__(self,arrayIn,previousSeeds=None):
         WatershedDataPure.__init__(self,arrayIn,previousSeeds=previousSeeds)
+        self.fig1 = plt.figure(1)
+        self.fig2 = plt.figure(2)
+        self.ax1 = self.fig1.add_subplot(111)
+        self.ax2 = self.fig2.add_subplot(111)
+        #self.fig3 = plt.figure(3)             # make this as-needed instead...
+        #self.ax3 = self.fig3.add_subplot(111) # make this as-needed instead...
     
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
         WatershedDataPure.Save(self,d,saveOutlines=saveOutlines)
@@ -2247,7 +2253,7 @@ class WatershedData(WatershedDataPure):
         #self.RemoveUndo()
     #def DrawOrigImage(self): # deprecated
     def MapPlot(self,saveFile=None,useText=False):
-        plt.figure(2)#;cla()
+        #plt.figure(2)#;cla()
         
         wi = np.array(self.watershed[self.index],dtype=np.int)
         
@@ -2272,14 +2278,14 @@ class WatershedData(WatershedDataPure):
                             self.mapCentroids[i].set_position([y-5,x+5])
                             self.mapCentroids[i].set_visible(True)
                         else:
-                            self.mapCentroids[i] = plt.text(y-5,x+5,str(i),fontsize=10)
+                            self.mapCentroids[i] = self.ax2.text(y-5,x+5,str(i),fontsize=10)
                             #self.mapCentroids[i].set_visible(True)
                         # Never actually remove the objects, just make them invisible...
                         # Sneaky...
                         
-            plt.draw()
-            plt.savefig(saveFile)
-            plt.cla()
+            self.fig2.draw()
+            self.fig2.savefig(saveFile)
+            self.ax2.cla()
         elif saveFile!=None: # I may have broken this... sorry...
             f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
             f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
@@ -2306,12 +2312,12 @@ class WatershedData(WatershedDataPure):
                 self.mapPlot.set_data(self.watershed[self.index])
                 
             else:
-                ###self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
-                self.mapPlot = plt.imshow(self.watershed[self.index],animated=True,
-                                          interpolation='nearest',cmap=self.mapPlotCmap,
-                                          norm=matplotlib.colors.NoNorm() )
+                ###self.mapPlot = self.ax2.imshow(self.rgbM,interpolation='nearest',animated=True)
+                self.mapPlot = self.ax2.imshow(self.watershed[self.index],animated=True,
+                                              interpolation='nearest',cmap=self.mapPlotCmap,
+                                              norm=matplotlib.colors.NoNorm() )
             self.DrawBWDot()
-            #plt.draw() # Now DrawBWDot calls this instead...
+            #self.fig2.draw() # Now DrawBWDot calls this instead...
     def MapPlotWTracks(self):
         # Disable the old mapPlot and redraw every time (will be slow...)
         # Later, could possibly store the tracks part for animations, too...
@@ -2334,15 +2340,15 @@ class WatershedData(WatershedDataPure):
                 y.append([i[1] for i in centroid])
             x=np.array(x)
             y=n.array(y)
-        plt.plot(y[0],x[0],'kx')
-        plt.plot(y,x,'k')
+        self.ax2.plot(y[0],x[0],'kx')
+        self.ax2.plot(y,x,'k')
         # initiate the mouse-over printing...
-        plt.gca().format_coord = GetReportPixel(self)
+        self.ax2.format_coord = GetReportPixel(self)
     def ToggleOverlaysVisible(self):
         self.overlayVisible = not self.overlayVisible
         self.ColorPlot()
     def ColorPlot(self):
-        plt.figure(1)
+        #plt.figure(1)
         im = self.filterData[self.index] # NOT 8- bit!!!
         if self.showInverted:
             im = im.max()-im
@@ -2364,17 +2370,17 @@ class WatershedData(WatershedDataPure):
             self.bgPlot.set_data(im)
             self.colorplot.set_data(self.rgba)
         else:
-            self.bgPlot = plt.imshow(im,cmap=plt.cm.gray,interpolation='nearest',animated=True)
-            self.colorplot = plt.imshow(self.rgba,interpolation='nearest',animated=True)
-            plt.xlim(0,self.watershed[0].shape[1])
-            plt.ylim(self.watershed[0].shape[0],0)
+            self.bgPlot = self.ax1.imshow(im,cmap=plt.cm.gray,interpolation='nearest',animated=True)
+            self.colorplot = self.ax1.imshow(self.rgba,interpolation='nearest',animated=True)
+            self.ax1.set_xlim(0,self.watershed[0].shape[1])
+            self.ax1.set_ylim(self.watershed[0].shape[0],0)
         
         dprint(['wc',self.woundCenters[self.index],self.showWoundCenters])
         # Need to force this to plot so that axes will flip, just set to invisible...
         if self.redDot==None:
-            self.redDot=plt.plot([0],[0],'ro')
-            plt.xlim(0,self.watershed[0].shape[1])
-            plt.ylim(self.watershed[0].shape[0],0)
+            self.redDot=self.ax1.plot([0],[0],'ro')
+            self.ax1.set_xlim(0,self.watershed[0].shape[1])
+            self.ax1.set_ylim(self.watershed[0].shape[0],0)
         
         if self.showWoundCenters and self.woundCenters[self.index]!=None:
             [x,y] = self.woundCenters[self.index]
@@ -2382,17 +2388,16 @@ class WatershedData(WatershedDataPure):
             self.redDot[0].set_visible(True) # Turn On Visible
         else:
             self.redDot[0].set_visible(False) # Turn Off Visible
-        #plt.xlim(0,self.watershed[0].shape[1])
-        #plt.ylim(self.watershed[0].shape[0],0)
+        #self.ax1.set_xlim(0,self.watershed[0].shape[1])
+        #self.ax1.set_ylim(self.watershed[0].shape[0],0)
         # AAARRRGGG!!!
         # NEED TO FORCE COORDINATES TO STAY IMAGE-STYLE!
         
         # This is by FAR the slowest step, about 0.25s
         self.HighlightRegion()
-        # plt.draw() # Highlight Region also calls draw, so this doesn't need to!
+        # self.fig1.draw() # Highlight Region also calls draw, so this doesn't need to!
     def DrawBWDot(self):
-        fn=plt.gcf().number
-        plt.figure(2)
+        #plt.figure(2)
         
         if self.point_mode==False:
             cm=np.zeros([len(self.selectionVals),2],dtype=np.float)
@@ -2401,15 +2406,13 @@ class WatershedData(WatershedDataPure):
                     # centroid of selected region v
                     cm[i] = center_of_mass((self.watershed[self.index]==v).astype(np.float))
             if self.bwDot==None and self.point_mode==False:
-                self.bwDot=plt.plot(cm[:,1],cm[:,0],'ko')
+                self.bwDot=self.fig2.plot(cm[:,1],cm[:,0],'ko')
                 self.bwDot[0].set_markeredgecolor('w')
                 self.bwDot[0].set_markeredgewidth(1.2)
             else:
                 self.bwDot[0].set_data(cm[:,1],cm[:,0])
         
-        plt.draw()
-        # Set the figure back to what it was
-        plt.figure(fn)
+        self.fig2.draw()
     
     def HighlightRegion(self):
         a=np.zeros(self.shape[1:],dtype=np.uint8)
@@ -2439,9 +2442,9 @@ class WatershedData(WatershedDataPure):
         if self.hiplot!=None:
             self.hiplot.set_data(self.rgbaH)
         else:
-            self.hiplot = plt.imshow(self.rgbaH,interpolation='nearest',animated=True)
+            self.hiplot = self.ax1.imshow(self.rgbaH,interpolation='nearest',animated=True)
         
-        plt.draw()
+        self.ax1.draw()
         
     def LassoCallback(self,verts):
         verts = [ v[::-1] for v in verts ]
@@ -2466,35 +2469,30 @@ class WatershedData(WatershedDataPure):
         
         self.ColorPlot()
         
-        plt.figure(1).canvas.draw_idle()
-        plt.figure(1).canvas.widgetlock.release(self.lasso)
+        self.fig1.canvas.draw_idle()
+        self.fig1.canvas.widgetlock.release(self.lasso)
         del self.lasso
     def PlotAreasAndPerimeters(self): # Must run CollectAllStats first!
         area=np.array(self.area)
         per=np.array(self.perimeter)
         
-        fn=plt.gcf().number
         for v in range(area.shape[1]):
-            plt.figure(4)
-            plt.plot(area[:,v],label=str(v))
-            plt.figure(5)
-            plt.plot(per[:,v],label=str(v))
-        plt.figure(4)
-        plt.legend()
-        plt.figure(5)
-        plt.legend()
-        plt.figure(fn)
+            self.fig4=plt.figure(4)
+            self.ax4=self.fig4.add_subplot(111)
+            self.ax4.plot(area[:,v],label=str(v))
+            self.fig5=plt.figure(5)
+            self.ax5=self.fig5.add_subplot(111)
+            self.ax5.plot(per[:,v],label=str(v))
+        self.ax4.legend()
+        self.ax5.legend()
                 
     def TestCalculations(self):
         self.UpdateValuesList()
         print self.valList
         print self.GetBoundingRectangles()
         print self.CalculateCentroids()
-        fn=plt.gcf().number
-        plt.figure(2)
         for [[xm,xM],[ym,yM]] in self.GetBoundingRectangles():
-            plt.plot([ym,ym,yM,yM,ym],[xm,xM,xM,xm,xm],'k-')
-        plt.figure(fn)
+            self.ax2.plot([ym,ym,yM,yM,ym],[xm,xM,xM,xm,xm],'k-')
         
         print self.CalculateArea()
         print self.CalculatePerimeter()
@@ -2515,20 +2513,21 @@ class WatershedData(WatershedDataPure):
         wi = np.array(self.watershed[ind],dtype=np.int)
         for v in woundVals:
             wi[np.where(wi==v)]=1e6
-        plt.figure(10)
-        plt.clf()
-        plt.ylim(plt.gca().get_ylim()[::-1])
+        self.fig10=plt.figure(10)
+        self.fig10.clf()
+        self.ax10=self.fig10.add_subplot(111)
+        self.ax10.set_ylim(self.ax10.get_ylim()[::-1])
         for v in WNv[ind]:
             for c in ImageContour.GetBoundaryLine(wi,1e6,v):
-                plt.plot(*(np.array( c )[:,::-1].T),marker='.')
+                self.ax10.plot(*(np.array( c )[:,::-1].T),marker='.')
                 sleep(0.4)
-                plt.draw()
+                self.fig10.draw()
         for v in NNv[ind]:
             for c in ImageContour.GetBoundaryLine(wi,v[0],v[1]):
-                plt.plot(*(np.array( c )[:,::-1].T))
+                self.ax10.plot(*(np.array( c )[:,::-1].T))
                 sleep(0.4)
-                plt.draw()
-    def RingsPlot(self,bins,frame,woundVals,useNei=False,binSize=None,initR=0):
+                self.fig10.draw()
+    def RingsPlot(self,bins,frame,woundVals,useNei=False,binSize=None,initR=0): # still using pyplot directly...
         # b,g,r,c,m,y,k
         colors=[[0,0,255],[0,255,0],[255,0,0],[0,255,255],[255,0,255],[255,255,0]]*10 # that ought to do it ;-P
         rgbMap4Rings = 255*np.ones(list(self.watershed[0].shape)+[3],dtype=np.uint8)
@@ -2778,7 +2777,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.CellNumberText.SetLabel("Selected Cell ID")
         
         #self.wd.DrawOrigImage()
-        plt.figure(1); plt.imshow(self.wd.filterData[self.wd.index],cmap=plt.cm.gray)
+        self.wd.ax1.imshow(self.wd.filterData[self.wd.index],cmap=plt.cm.gray)
         
         # Automatically ask to open previous seeds (just hit cancel if none...)
         self.SetStatus('Checking on Optional Watershed and Seed Data')
@@ -2796,14 +2795,13 @@ Arrow Keys: Move selected seeds (after lasso)
             self.HandleMPLandWxKeyEvents('g')
         self.SetStatus('Ready')
     def SetMPLKeyConnections(self):
-        for i in range(1,3):
-            plt.figure(i)
-            plt.figure(i).canvas.mpl_connect('key_press_event',self.OnKeyDownMPL)
-            plt.figure(i).canvas.mpl_connect('key_release_event',self.OnKeyReleaseMPL)
-            plt.gca().format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
+        for fig,ax in [(self.wd.fig1,self.wd.ax1),
+                       (self.wd.fig2,self.wd.ax2)]:#range(1,3):
+            fig.canvas.mpl_connect('key_press_event',self.OnKeyDownMPL)
+            fig.canvas.mpl_connect('key_release_event',self.OnKeyReleaseMPL)
+            ax.format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
     def SetConnection(self,f):
-        plt.figure(1)
-        self.connection = plt.connect('button_press_event',f)
+        self.connection = self.wd.fig1.connect('button_press_event',f)
     
     def FileNameTextCallback(self,event):
         f=event.GetValue()
@@ -2877,14 +2875,14 @@ Arrow Keys: Move selected seeds (after lasso)
         '''Plots a list of cellIDs to help in quickly identifying sets of cells
            (usually that are having problems...)
            Uses figure 3'''
-        fn = plt.gcf().number
-        plt.figure(3);plt.clf()
-        plt.gca().format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
-        plt.imshow( sum([ (self.wd.watershed[self.wd.index]==v)*v
-                         for v in selectedCellIDs ])
-                    ,interpolation='nearest',cmap=self.wd.mapPlotCmap
-                    ,norm=matplotlib.colors.NoNorm() )
-        plt.figure(fn)
+        self.wd.fig3=plt.figure(3)
+        self.wd.fig3.clf()
+        self.wd.ax3=self.wd.fig3.add_subplot(111)
+        self.wd.ax3.format_coord = GetReportPixel(self) # Made it so we can also just pass self here...
+        self.wd.ax3.imshow( sum([ (self.wd.watershed[self.wd.index]==v)*v
+                                 for v in selectedCellIDs ])
+                           ,interpolation='nearest',cmap=self.wd.mapPlotCmap
+                           ,norm=matplotlib.colors.NoNorm() )
     def HighlightListOfCellIDsCallback(self,event):
         self.SetStatus('Getting a list of Cell IDs to plot...')
         print 'Asking for a list of Cell IDs'
@@ -3088,14 +3086,11 @@ Arrow Keys: Move selected seeds (after lasso)
                     elif event.button == 3:
                         self.wd.DeleteSeedByRegion([y,x])
                     
-                    plt.figure(1)#; cla()
                     self.wd.ColorPlot()#([x,y])
-                    #figure(1); plot([x],[y],'ro')
             elif self.mouseMode=='e':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
                             self.wd.ColorPlot()
@@ -3106,17 +3101,16 @@ Arrow Keys: Move selected seeds (after lasso)
                             self.wd.ColorPlot()
             elif self.mouseMode=='l':
                 x, y = int(event.xdata), int(event.ydata)
-                if plt.figure(1).canvas.widgetlock.locked(): return
+                if self.wd.fig1.canvas.widgetlock.locked(): return
                 if event.inaxes and event.button == 1:
                     self.wd.lasso = PolyLasso(event.inaxes, self.wd.LassoCallback)
                     # acquire a lock on the widget drawing
-                    plt.figure(1).canvas.widgetlock(self.wd.lasso)
+                    self.wd.fig1.canvas.widgetlock(self.wd.lasso)
                     #self.wd.ColorPlot()
             elif self.mouseMode=='x':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
                             self.wd.ColorPlot()
@@ -3130,7 +3124,6 @@ Arrow Keys: Move selected seeds (after lasso)
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        plt.figure(1)
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
                             self.CellNumber.SetValue(self.wd.selectionVals[0])
@@ -3159,7 +3152,6 @@ Arrow Keys: Move selected seeds (after lasso)
                 x, y = event.xdata, event.ydata # Do not round x and y!
                 if self.wd.watershed!=None and self.wd.woutline!=None:
                     if event.inaxes:
-                        plt.figure(1)
                         if event.button == 1:
                             self.wd.woundCenters[self.wd.index]=[x,y]
                         elif event.button == 3:
@@ -3591,16 +3583,15 @@ class SegmenterApp(wx.App):
         self.frame.Show()
         return 1
     def InitMPL(self):
-        # Initialize the three figures in reverse order and disable keyboard navigation keys
-        for j in range(2,0,-1):
-            f=plt.figure(j)
-            if j==2 and DONT_PANIC:
-                plt.gca()
-                plt.title("Don't Panic!!!")
-            plt.draw()
-            for i in f.canvas.callbacks.callbacks:
+        # Initialize the two figures in reverse order and disable keyboard navigation keys
+        for fig,ax in [(self.wd.fig1,self.wd.ax1),
+                       (self.wd.fig2,self.wd.ax2)]:
+            if fig==self.wd.fig2 and DONT_PANIC:
+                fig.title("Don't Panic!!!")
+            fig.draw()
+            for i in fig.canvas.callbacks.callbacks:
                 if i=='key_press_event':
-                    f.canvas.mpl_disconnect(f.canvas.callbacks.callbacks[i].keys()[0])
+                    fig.canvas.mpl_disconnect(fig.canvas.callbacks.callbacks[i].keys()[0])
 
 def InitializeMPL():
     plt.ion()
