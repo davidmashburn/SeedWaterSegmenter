@@ -2198,8 +2198,11 @@ class WatershedDataPure(object):
 
 class WatershedData(WatershedDataPure):
     """Enhances WatershedDataPure to include involve plotting"""
+    def __init__(self,arrayIn,previousSeeds=None):
+        WatershedDataPure.__init__(self,arrayIn,previousSeeds=previousSeeds)
+    
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
-        WatershedDataPure.Save(d,saveOutlines=saveOutlines)
+        WatershedDataPure.Save(self,d,saveOutlines=saveOutlines)
         # Save Map Images
         if saveMapImages:
             oldIndex=self.index
@@ -2210,7 +2213,7 @@ class WatershedData(WatershedDataPure):
                     self.MapPlot(saveFile=mapBase+str(i)+'.png')
             self.index = oldIndex
     def Open(self,d):
-        WatershedDataPure.Open(d)
+        WatershedDataPure.Open(self,d)
         
         if len(Seeds.seedList)==self.length:
             self.ColorPlot()
@@ -2221,16 +2224,16 @@ class WatershedData(WatershedDataPure):
         self.MapPlot()
         self.ColorPlot()
     def NextFrame(self,doPlots=True):
-        WatershedDataPure.NextFrame()
+        WatershedDataPure.NextFrame(self)
         if self.index+1<self.length:
             if doPlots: # If we skip over it, no need to save...
                 self._plotUpdate()
     def PreviousFrame(self,doPlots=True):
-        WatershedDataPure.PreviousFrame()
+        WatershedDataPure.PreviousFrame(self)
         if doPlots: # If we skip over it, no need to save...
             self._plotUpdate()
     def MoveToFrame(self,newIndex):
-        WatershedDataPure.MoveToFrame(newIndex)
+        WatershedDataPure.MoveToFrame(self,newIndex)
         self._plotUpdate()
     def GoToLastVisitedFrame(self):
         self.MoveToFrame(self.lastFrameVisited)
@@ -2499,7 +2502,7 @@ class WatershedData(WatershedDataPure):
         #print self.CalculateWoundDistance()
         print self.CalculateNeighbors()
     def RunCalculations2(self,d):
-        WatershedDataPure.RunCalculations2(d)
+        WatershedDataPure.RunCalculations2(self,d)
         oldIndex=self.index
         self.index = 0
         self.MapPlot(saveFile=os.path.join(d,'MapWithCellIDs.png'),useText=True)
