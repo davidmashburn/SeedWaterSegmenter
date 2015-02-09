@@ -2498,7 +2498,7 @@ class WatershedData(WatershedDataPure):
         print self.CalculateBestFitEllipse()
         #print self.CalculateWoundDistance()
         print self.CalculateNeighbors()
-    def RunCalculations2(self,d)
+    def RunCalculations2(self,d):
         WatershedDataPure.RunCalculations2(d)
         oldIndex=self.index
         self.index = 0
