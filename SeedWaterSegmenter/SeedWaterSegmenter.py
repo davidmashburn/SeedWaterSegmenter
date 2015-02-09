@@ -344,9 +344,9 @@ ForN = lambda f: None if f=='None' else float(f)
 
 def GetReportPixel(sfORwd): # create and return the report_pixel function...
     def report_pixel(x,y):
-        if sfORwd.__class__ == SegmenterFrame:
+        if isinstance(sfORwd, SegmenterFrame):
             wd=sfORwd.wd
-        elif sfORwd.__class__ == WatershedData:
+        elif isinstance(sfORwd, WatershedData):
             wd=sfORwd
         else:
             raise TypeError("sfORwd must be a WatershedData or SegmenterFrame Object!")
@@ -719,7 +719,7 @@ class WatershedData(object):
                 self.notes[-1]+=line+os.linesep
         self.notes+=[None]*(self.length-len(self.notes))
         print self.notes
-    def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
+    def Save(self,d,saveOutlines=True): # Ignore Undo
         print 'Saving To ',d
         # TODO: FOR SOME WEIRD REASON, SAVE/LOAD only recreates the seeds
         #       for the first and last saved frame... FIXED I THINK?
@@ -774,16 +774,6 @@ class WatershedData(object):
         
         # Save Stats
         self.SaveAllStats(d)
-        
-        # Save Map Images
-        if saveMapImages:
-            oldIndex=self.index
-            plt.ioff()
-            for i in range(self.length):
-                self.index=i
-                if self.framesVisited[i]:
-                    self.MapPlot(saveFile=mapBase+str(i)+'.png')
-            self.index = oldIndex
         
         self.framesVisited=[False]*self.length
         self.framesVisited[self.index]=True
@@ -871,9 +861,6 @@ class WatershedData(object):
             
             # Load Stats
             self.LoadStats(d)
-            
-            self.ColorPlot()
-            self.MapPlot()
         else:
             print 'These seeds do not match the images open!'
             print 'Images length:',self.length,'  Seeds length:',len(Seeds.seedList)
@@ -1032,7 +1019,7 @@ class WatershedData(object):
                 break
         return lastActiveFrame
     
-    def NextFrame(self,doPlots=True):
+    def NextFrame(self):
         if self.index+1<self.length:
             self.lastFrameVisited = self.index
             self.index+=1
@@ -1043,14 +1030,10 @@ class WatershedData(object):
             else:
                 self.UpdateSeeds()
             self.RemoveUndo()
-            if doPlots: # If we skip over it, no need to save...
-                self.framesVisited[self.index]=True
-                self.MapPlot()
-                self.ColorPlot()
         else:
             print 'No more frames!!!!'
     
-    def PreviousFrame(self,doPlots=True):
+    def PreviousFrame(self):
         if self.index>0:
             self.lastFrameVisited = self.index
             self.index-=1
@@ -1059,10 +1042,6 @@ class WatershedData(object):
         else:
             print 'At the beginning.'
         self.RemoveUndo()
-        if doPlots: # If we skip over it, no need to save...
-            self.framesVisited[self.index]=True
-            self.MapPlot()
-            self.ColorPlot()
     def MoveToFrame(self,newIndex):
         if newIndex<0:
             newIndex=0
@@ -1084,20 +1063,7 @@ class WatershedData(object):
             self.RemoveUndo()
         else:# newIndex>lastActiveFrame+1
             print "You can't move that far ahead yet!"
-        
-        self.framesVisited[self.index]=True
-        self.MapPlot()
-        self.ColorPlot()
-    def GoToLastVisitedFrame(self):
-        self.MoveToFrame(self.lastFrameVisited)
-    def Invert(self):
-        '''This only changes how the image is displayed (normal or inverted) - real data is still "white-side-up"
-           This behavior was changed in version 0.5.5.0; '''
-        self.showInverted = not self.showInverted
-        self.ColorPlot()
-        # Old behavior:
-        #self.filterData[self.index] = self.filterData[self.index].max()-self.filterData[self.index]
-        #self.RemoveUndo()
+    
     def Gauss(self,rad):
         '''Apply Gaussian Blur to data'''
         self.gaussSigma=rad
@@ -1215,151 +1181,6 @@ class WatershedData(object):
         wh2 = np.where(self.seedArray==v2)
         self.UpdatePointsWithVal(wh1,v2)
         self.UpdatePointsWithVal(wh2,v1)
-    #def DrawOrigImage(self): # deprecated
-    def MapPlot(self,saveFile=None,useText=False):
-        plt.figure(2)#;cla()
-        
-        wi = np.array(self.watershed[self.index],dtype=np.int)
-        
-        if saveFile!=None and useText: # Normally skip all the text labels... they are painfully slow!
-            for i in self.mapCentroids:
-                if i!=None:
-                    i.set_visible(False)
-            
-            for i in self.GetActiveSeedValues():
-                if i>0:
-                    cm = center_of_mass((wi==i).astype(np.float))
-                    if math.isnan(cm[0]) or math.isnan(cm[1]):
-                        print 'CM is NAN'
-                        print 'val',i
-                        print cm[0]
-                        print cm[1]
-                    else:
-                        if i>=len(self.mapCentroids):
-                            self.mapCentroids+=[None]*(1+i-len(self.mapCentroids))
-                        x,y = int(round(cm[0])),int(round(cm[1]))
-                        if self.mapCentroids[i]!=None:
-                            self.mapCentroids[i].set_position([y-5,x+5])
-                            self.mapCentroids[i].set_visible(True)
-                        else:
-                            self.mapCentroids[i] = plt.text(y-5,x+5,str(i),fontsize=10)
-                            #self.mapCentroids[i].set_visible(True)
-                        # Never actually remove the objects, just make them invisible...
-                        # Sneaky...
-                        
-            plt.draw()
-            plt.savefig(saveFile)
-            plt.cla()
-        elif saveFile!=None: # I may have broken this... sorry...
-            f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
-            f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
-            f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
-            
-            if self.rgbM==None:
-                self.rgbM = np.ascontiguousarray( np.array([f1(wi),f2(wi),f3(wi)],dtype=np.uint8).transpose(1,2,0) )
-            else:
-                # No more dependence on cython function; save will be a little slower, but whatever...
-                #convToRandColors(self.mapPlotRandomArray,self.rgbM,
-                #                 wi,wi.shape[0],wi.shape[1])
-                # This step is still really slow...
-                self.rgbM[:,:,0] = f1(self.watershed[self.index])
-                self.rgbM[:,:,1] = f2(self.watershed[self.index])
-                self.rgbM[:,:,2] = f3(self.watershed[self.index])
-            
-            
-            im = Image.fromarray(self.rgbM)
-            im.save(saveFile)
-            #imsave(saveFile, map)
-        else:
-            if self.mapPlot!=None:
-                ###self.mapPlot.set_data(self.rgbM)
-                self.mapPlot.set_data(self.watershed[self.index])
-                
-            else:
-                ###self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
-                self.mapPlot = plt.imshow(self.watershed[self.index],animated=True,
-                                          interpolation='nearest',cmap=self.mapPlotCmap,
-                                          norm=matplotlib.colors.NoNorm() )
-            self.DrawBWDot()
-            #plt.draw() # Now DrawBWDot calls this instead...
-    def MapPlotWTracks(self):
-        # Disable the old mapPlot and redraw every time (will be slow...)
-        # Later, could possibly store the tracks part for animations, too...
-        self.mapPlot=None
-        self.MapPlot()
-        if hasattr(self,'centroidX'):
-            x=np.array(self.centroidX)
-            y=np.array(self.centroidY)
-        else:
-            self.UpdateValuesList(index)
-            x=[]
-            y=[]
-            for index in range(self.length):
-                if self.sparseList[index]==None:
-                    break
-                elif self.sparseList[index].nnz==0:
-                    break
-                centroid = self.GetCentroids(index,doUpdate=False)
-                x.append([i[0] for i in centroid])
-                y.append([i[1] for i in centroid])
-            x=np.array(x)
-            y=n.array(y)
-        plt.plot(y[0],x[0],'kx')
-        plt.plot(y,x,'k')
-        # initiate the mouse-over printing...
-        plt.gca().format_coord = GetReportPixel(self)
-    def ToggleOverlaysVisible(self):
-        self.overlayVisible = not self.overlayVisible
-        self.ColorPlot()
-    def ColorPlot(self):
-        plt.figure(1)
-        im = self.filterData[self.index] # NOT 8- bit!!!
-        if self.showInverted:
-            im = im.max()-im
-        seed = (self.seedArray!=0).astype(np.uint8)
-        outl = self.woutline.astype(np.uint8)
-        seedORoutl = np.array(np.array(seed+outl)>0,np.uint8)
-        if self.rgba==None:
-            self.rgba=np.array([0*seed,
-                          255*seed,
-                          255*outl,
-                          self.overlayVisible*255*seedORoutl]).transpose(1,2,0)
-        else:
-            self.rgba[:,:,0]=0*seed
-            self.rgba[:,:,1]=255*seed
-            self.rgba[:,:,2]=255*outl
-            self.rgba[:,:,3]=self.overlayVisible*255*seedORoutl
-        # 0.18s
-        if self.colorplot!=None and self.bgPlot!=None:
-            self.bgPlot.set_data(im)
-            self.colorplot.set_data(self.rgba)
-        else:
-            self.bgPlot = plt.imshow(im,cmap=plt.cm.gray,interpolation='nearest',animated=True)
-            self.colorplot = plt.imshow(self.rgba,interpolation='nearest',animated=True)
-            plt.xlim(0,self.watershed[0].shape[1])
-            plt.ylim(self.watershed[0].shape[0],0)
-        
-        dprint(['wc',self.woundCenters[self.index],self.showWoundCenters])
-        # Need to force this to plot so that axes will flip, just set to invisible...
-        if self.redDot==None:
-            self.redDot=plt.plot([0],[0],'ro')
-            plt.xlim(0,self.watershed[0].shape[1])
-            plt.ylim(self.watershed[0].shape[0],0)
-        
-        if self.showWoundCenters and self.woundCenters[self.index]!=None:
-            [x,y] = self.woundCenters[self.index]
-            self.redDot[0].set_data([x],[y])
-            self.redDot[0].set_visible(True) # Turn On Visible
-        else:
-            self.redDot[0].set_visible(False) # Turn Off Visible
-        #plt.xlim(0,self.watershed[0].shape[1])
-        #plt.ylim(self.watershed[0].shape[0],0)
-        # AAARRRGGG!!!
-        # NEED TO FORCE COORDINATES TO STAY IMAGE-STYLE!
-        
-        # This is by FAR the slowest step, about 0.25s
-        self.HighlightRegion()
-        # plt.draw() # Highlight Region also calls draw, so this doesn't need to!
     def UpdateSelection(self,point=None,append=False):
         if append==False:
             self.selectionVals=[]
@@ -1368,85 +1189,6 @@ class WatershedData(object):
         
         self.point_mode=False
         
-    def DrawBWDot(self):
-        fn=plt.gcf().number
-        plt.figure(2)
-        
-        if self.point_mode==False:
-            cm=np.zeros([len(self.selectionVals),2],dtype=np.float)
-            for i,v in enumerate(self.selectionVals):
-                if v>1:
-                    # centroid of selected region v
-                    cm[i] = center_of_mass((self.watershed[self.index]==v).astype(np.float))
-            if self.bwDot==None and self.point_mode==False:
-                self.bwDot=plt.plot(cm[:,1],cm[:,0],'ko')
-                self.bwDot[0].set_markeredgecolor('w')
-                self.bwDot[0].set_markeredgewidth(1.2)
-            else:
-                self.bwDot[0].set_data(cm[:,1],cm[:,0])
-        
-        plt.draw()
-        # Set the figure back to what it was
-        plt.figure(fn)
-    
-    def HighlightRegion(self):
-        a=np.zeros(self.shape[1:],dtype=np.uint8)
-        if self.point_mode:
-            a[:] = self.seedSelections[self.index].toarray().astype(np.uint8)*255
-            
-            if self.rgbaH==None:
-                self.rgbaH=np.array([a,a*0,a,a]).transpose(1,2,0)
-            else:
-                self.rgbaH[:,:,0]=a
-                self.rgbaH[:,:,1]=a*0
-                self.rgbaH[:,:,2]=a
-                self.rgbaH[:,:,3]=a
-        else:
-            for i in self.selectionVals:
-                if i>0:
-                    a += 255*(self.watershed[self.index]==i)
-            if self.rgbaH==None:
-                self.rgbaH=np.array([a,a,a*0,a//2]).transpose(1,2,0)
-            else:
-                self.rgbaH[:,:,0]=a//2-1 # These 2 lines used to be just "=a", but then the behavior of
-                self.rgbaH[:,:,1]=a//2-1 # matplotlib changed and the yellow highlight turned gray
-                self.rgbaH[:,:,2]=a*0
-                self.rgbaH[:,:,3]=a//2
-            self.DrawBWDot()
-        
-        if self.hiplot!=None:
-            self.hiplot.set_data(self.rgbaH)
-        else:
-            self.hiplot = plt.imshow(self.rgbaH,interpolation='nearest',animated=True)
-        
-        plt.draw()
-        
-    def LassoCallback(self,verts):
-        verts = [ v[::-1] for v in verts ]
-        
-        self.SetUndoPoint()
-        
-        # Clear selections...
-        self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
-        
-        cooMat = self.sparseList[self.index].tocoo()
-        seedList = np.array([cooMat.row,cooMat.col]).T
-        wh = np.where(points_inside_poly(seedList, verts))
-        row = np.array([cooMat.row[i] for i in wh])
-        col = np.array([cooMat.col[i] for i in wh])
-        
-        # This should be faster for big selections
-        sel = self.seedSelections[self.index].toarray()
-        sel[(row,col)] = 1
-        self.seedSelections[self.index] = scipy.sparse.lil_matrix(sel)
-        
-        self.point_mode=True
-        
-        self.ColorPlot()
-        
-        plt.figure(1).canvas.draw_idle()
-        plt.figure(1).canvas.widgetlock.release(self.lasso)
-        del self.lasso
     def CompressSeedValues(self):
         oldIndex = self.index
         
@@ -1942,38 +1684,6 @@ class WatershedData(object):
             self.neighbors = Neighbors.neighbors
             fid.close()
     
-    def PlotAreasAndPerimeters(self): # Must run CollectAllStats first!
-        area=np.array(self.area)
-        per=np.array(self.perimeter)
-        
-        fn=plt.gcf().number
-        for v in range(area.shape[1]):
-            plt.figure(4)
-            plt.plot(area[:,v],label=str(v))
-            plt.figure(5)
-            plt.plot(per[:,v],label=str(v))
-        plt.figure(4)
-        plt.legend()
-        plt.figure(5)
-        plt.legend()
-        plt.figure(fn)
-                
-    def TestCalculations(self):
-        self.UpdateValuesList()
-        print self.valList
-        print self.GetBoundingRectangles()
-        print self.CalculateCentroids()
-        fn=plt.gcf().number
-        plt.figure(2)
-        for [[xm,xM],[ym,yM]] in self.GetBoundingRectangles():
-            plt.plot([ym,ym,yM,yM,ym],[xm,xM,xM,xm,xm],'k-')
-        plt.figure(fn)
-        
-        print self.CalculateArea()
-        print self.CalculatePerimeter()
-        print self.CalculateBestFitEllipse()
-        #print self.CalculateWoundDistance()
-        print self.CalculateNeighbors()
     def CreateBinsWDistance(self,frameToCompare,woundVals,binSize=30,initR=0):
         if not hasattr(self,'woundDistance'):
             print 'Error! Need have collected stats for the data before running CreateBinsWDistance!'
@@ -2227,6 +1937,89 @@ class WatershedData(object):
             print "All the variables (woundVals,timeIntervals,gapIntervals,numberFramesPerSeries) must be defined!"
             return
         return MI
+    # Later, change this to use ExendedWoundContours instead of wcList,swcList
+    def PerimeterTests(self,frame,testInd,woundVals,wcList,swcList,useSorted=False):
+        """perimeter check for NO"""
+        [WNv,WNl,NNv,NNl,NOv,NOl] = wcList
+        [WNsortedVals,WNl_byVal,NNsortedVals,NNl_byVal,NOsortedVals,NOl_byVal] = swcList
+                       
+        
+        if not hasattr(self,'perimeter'):
+            print 'Error! Must collect stats for the data before running PerimeterTests!'
+            return
+        
+        # get the wound perimeter the good way ;)
+        newWVal = 1e6 # I don't think anyone will ever create a million cells...
+        wi = np.array(self.watershed[frame],dtype=np.int)
+        for v in woundVals:
+            wi[np.where(wi==v)] = newWVal
+        WP = ImageContour.GetIJPerimeter(wi,newWVal)
+        WPc = sumN(ImageContour.GetPerimeterByNeighborVal(wi,newWVal)[1])
+        print 'Wound Perimeter'
+        print WP
+        print 'Wound Perimeter by Contours'
+        print WPc
+        print 'total P of all NNs'
+        print sumN([self.perimeter[frame][v-2] for v in WNv[frame]])
+        
+        print 'sum of WNlengths, NN lengths and NO lengths'
+        if useSorted: print sumN(np.array(WNl_byVal)[:,frame]) + \
+                            2*sumN(np.array(NNl_byVal)[:,frame]) + \
+                            sumN(np.array(NOl_byVal)[:,frame])
+        else:         print sumN(WNl[frame]) + \
+                            2*sumN(NNl[frame]) + \
+                            sumN(NOl[frame])
+        print 'Num of WN vals:'
+        if useSorted: print len(WNsortedVals)
+        else:         print len(WNv[frame])
+        
+        if useSorted: testVal = WNsortedVals[testInd]
+        else:         testVal = WNv[frame][testInd]
+        
+        print "Total P for",testVal,"w/GP"
+        print self.perimeter[frame][testVal-2]
+        vals, pers = ImageContour.GetPerimeterByNeighborVal(self.watershed[frame],testVal)
+        print "Total P for",testVal,"w/GPBN"
+        print sumN(pers)
+        print "WN part"
+        
+        if useSorted: s1=WNl_byVal[testInd][frame]
+        else:         s1=WNl[frame][testInd]
+        
+        print s1
+        
+        if s1==None:
+            print 'This value (',testVal,') is not a wound neighbor on this frame!'
+        else:
+            s2 = 0
+            if useSorted:
+                for i,vL in enumerate(NNsortedVals):
+                    if testVal in vL:
+                        if NNl_byVal[i][frame]!=None:
+                            s2+=NNl_byVal[i][frame]
+            else:
+                for i,vL in enumerate(NNv[frame]):
+                    if testVal in vL:
+                        if NNl[frame][i]!=None:
+                            s2+=NNl[frame][i]
+            print 'NN part'
+            print s2
+            s3 = 0
+            if useSorted:
+                for i,vL in enumerate(NOsortedVals):
+                    if testVal in vL:
+                        if NOl_byVal[i][frame]!=None:
+                            s3+=NOl_byVal[i][frame]
+            else:
+                for i,vL in enumerate(NOv[frame]):
+                    if testVal in vL:
+                        if NOl[frame][i]!=None:
+                            s3+=NOl[frame][i]
+        print "NO part"
+        print s3
+        print "Sum of last 3:"
+        print s1+s2+s3
+    
     def RunCalculations2(self,d):
         if not hasattr(self,'centroidX'):
             print 'You must do CollectAllStats before RunCalculations2!'
@@ -2402,7 +2195,312 @@ class WatershedData(object):
         
         sheetNames = ["Major","Minor","Aspect Ratio","Angle","Irr","Iqq","Irr D Iqq"]
         ExcelHelper.excelWrite( excelOut,sheetNames,os.path.join(d,'PrincipalAxes.xls'),flip=False)
+
+class WatershedDataAndPlotManager(WatershedData):
+    """All the functions on WatershedData that involve plotting"""
+    def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
+        WatershedData.Save(d,saveOutlines=saveOutlines)
         
+        # Save Map Images
+        if saveMapImages:
+            oldIndex=self.index
+            plt.ioff()
+            for i in range(self.length):
+                self.index=i
+                if self.framesVisited[i]:
+                    self.MapPlot(saveFile=mapBase+str(i)+'.png')
+            self.index = oldIndex
+    def Open(self,d):
+        WatershedData.Open(d)
+        
+        if len(Seeds.seedList)==self.length:
+            self.ColorPlot()
+            self.MapPlot()
+    
+    def _plotUpdate(self):
+        self.framesVisited[self.index]=True
+        self.MapPlot()
+        self.ColorPlot()
+    def NextFrame(self,doPlots=True):
+        WatershedData.NextFrame()
+        if self.index+1<self.length:
+            if doPlots: # If we skip over it, no need to save...
+                self._plotUpdate()
+    def PreviousFrame(self,doPlots=True):
+        WatershedData.PreviousFrame()
+        if doPlots: # If we skip over it, no need to save...
+            self._plotUpdate()
+    def MoveToFrame(self,newIndex):
+        WatershedData.MoveToFrame(newIndex)
+        self._plotUpdate()
+    def GoToLastVisitedFrame(self):
+        self.MoveToFrame(self.lastFrameVisited)
+    def Invert(self):
+        '''This only changes how the image is displayed (normal or inverted) - real data is still "white-side-up"
+           This behavior was changed in version 0.5.5.0; '''
+        self.showInverted = not self.showInverted
+        self.ColorPlot()
+        # Old behavior:
+        #self.filterData[self.index] = self.filterData[self.index].max()-self.filterData[self.index]
+        #self.RemoveUndo()
+    #def DrawOrigImage(self): # deprecated
+    def MapPlot(self,saveFile=None,useText=False):
+        plt.figure(2)#;cla()
+        
+        wi = np.array(self.watershed[self.index],dtype=np.int)
+        
+        if saveFile!=None and useText: # Normally skip all the text labels... they are painfully slow!
+            for i in self.mapCentroids:
+                if i!=None:
+                    i.set_visible(False)
+            
+            for i in self.GetActiveSeedValues():
+                if i>0:
+                    cm = center_of_mass((wi==i).astype(np.float))
+                    if math.isnan(cm[0]) or math.isnan(cm[1]):
+                        print 'CM is NAN'
+                        print 'val',i
+                        print cm[0]
+                        print cm[1]
+                    else:
+                        if i>=len(self.mapCentroids):
+                            self.mapCentroids+=[None]*(1+i-len(self.mapCentroids))
+                        x,y = int(round(cm[0])),int(round(cm[1]))
+                        if self.mapCentroids[i]!=None:
+                            self.mapCentroids[i].set_position([y-5,x+5])
+                            self.mapCentroids[i].set_visible(True)
+                        else:
+                            self.mapCentroids[i] = plt.text(y-5,x+5,str(i),fontsize=10)
+                            #self.mapCentroids[i].set_visible(True)
+                        # Never actually remove the objects, just make them invisible...
+                        # Sneaky...
+                        
+            plt.draw()
+            plt.savefig(saveFile)
+            plt.cla()
+        elif saveFile!=None: # I may have broken this... sorry...
+            f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
+            f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
+            f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
+            
+            if self.rgbM==None:
+                self.rgbM = np.ascontiguousarray( np.array([f1(wi),f2(wi),f3(wi)],dtype=np.uint8).transpose(1,2,0) )
+            else:
+                # No more dependence on cython function; save will be a little slower, but whatever...
+                #convToRandColors(self.mapPlotRandomArray,self.rgbM,
+                #                 wi,wi.shape[0],wi.shape[1])
+                # This step is still really slow...
+                self.rgbM[:,:,0] = f1(self.watershed[self.index])
+                self.rgbM[:,:,1] = f2(self.watershed[self.index])
+                self.rgbM[:,:,2] = f3(self.watershed[self.index])
+            
+            
+            im = Image.fromarray(self.rgbM)
+            im.save(saveFile)
+            #imsave(saveFile, map)
+        else:
+            if self.mapPlot!=None:
+                ###self.mapPlot.set_data(self.rgbM)
+                self.mapPlot.set_data(self.watershed[self.index])
+                
+            else:
+                ###self.mapPlot = plt.imshow(self.rgbM,interpolation='nearest',animated=True)
+                self.mapPlot = plt.imshow(self.watershed[self.index],animated=True,
+                                          interpolation='nearest',cmap=self.mapPlotCmap,
+                                          norm=matplotlib.colors.NoNorm() )
+            self.DrawBWDot()
+            #plt.draw() # Now DrawBWDot calls this instead...
+    def MapPlotWTracks(self):
+        # Disable the old mapPlot and redraw every time (will be slow...)
+        # Later, could possibly store the tracks part for animations, too...
+        self.mapPlot=None
+        self.MapPlot()
+        if hasattr(self,'centroidX'):
+            x=np.array(self.centroidX)
+            y=np.array(self.centroidY)
+        else:
+            self.UpdateValuesList(index)
+            x=[]
+            y=[]
+            for index in range(self.length):
+                if self.sparseList[index]==None:
+                    break
+                elif self.sparseList[index].nnz==0:
+                    break
+                centroid = self.GetCentroids(index,doUpdate=False)
+                x.append([i[0] for i in centroid])
+                y.append([i[1] for i in centroid])
+            x=np.array(x)
+            y=n.array(y)
+        plt.plot(y[0],x[0],'kx')
+        plt.plot(y,x,'k')
+        # initiate the mouse-over printing...
+        plt.gca().format_coord = GetReportPixel(self)
+    def ToggleOverlaysVisible(self):
+        self.overlayVisible = not self.overlayVisible
+        self.ColorPlot()
+    def ColorPlot(self):
+        plt.figure(1)
+        im = self.filterData[self.index] # NOT 8- bit!!!
+        if self.showInverted:
+            im = im.max()-im
+        seed = (self.seedArray!=0).astype(np.uint8)
+        outl = self.woutline.astype(np.uint8)
+        seedORoutl = np.array(np.array(seed+outl)>0,np.uint8)
+        if self.rgba==None:
+            self.rgba=np.array([0*seed,
+                          255*seed,
+                          255*outl,
+                          self.overlayVisible*255*seedORoutl]).transpose(1,2,0)
+        else:
+            self.rgba[:,:,0]=0*seed
+            self.rgba[:,:,1]=255*seed
+            self.rgba[:,:,2]=255*outl
+            self.rgba[:,:,3]=self.overlayVisible*255*seedORoutl
+        # 0.18s
+        if self.colorplot!=None and self.bgPlot!=None:
+            self.bgPlot.set_data(im)
+            self.colorplot.set_data(self.rgba)
+        else:
+            self.bgPlot = plt.imshow(im,cmap=plt.cm.gray,interpolation='nearest',animated=True)
+            self.colorplot = plt.imshow(self.rgba,interpolation='nearest',animated=True)
+            plt.xlim(0,self.watershed[0].shape[1])
+            plt.ylim(self.watershed[0].shape[0],0)
+        
+        dprint(['wc',self.woundCenters[self.index],self.showWoundCenters])
+        # Need to force this to plot so that axes will flip, just set to invisible...
+        if self.redDot==None:
+            self.redDot=plt.plot([0],[0],'ro')
+            plt.xlim(0,self.watershed[0].shape[1])
+            plt.ylim(self.watershed[0].shape[0],0)
+        
+        if self.showWoundCenters and self.woundCenters[self.index]!=None:
+            [x,y] = self.woundCenters[self.index]
+            self.redDot[0].set_data([x],[y])
+            self.redDot[0].set_visible(True) # Turn On Visible
+        else:
+            self.redDot[0].set_visible(False) # Turn Off Visible
+        #plt.xlim(0,self.watershed[0].shape[1])
+        #plt.ylim(self.watershed[0].shape[0],0)
+        # AAARRRGGG!!!
+        # NEED TO FORCE COORDINATES TO STAY IMAGE-STYLE!
+        
+        # This is by FAR the slowest step, about 0.25s
+        self.HighlightRegion()
+        # plt.draw() # Highlight Region also calls draw, so this doesn't need to!
+    def DrawBWDot(self):
+        fn=plt.gcf().number
+        plt.figure(2)
+        
+        if self.point_mode==False:
+            cm=np.zeros([len(self.selectionVals),2],dtype=np.float)
+            for i,v in enumerate(self.selectionVals):
+                if v>1:
+                    # centroid of selected region v
+                    cm[i] = center_of_mass((self.watershed[self.index]==v).astype(np.float))
+            if self.bwDot==None and self.point_mode==False:
+                self.bwDot=plt.plot(cm[:,1],cm[:,0],'ko')
+                self.bwDot[0].set_markeredgecolor('w')
+                self.bwDot[0].set_markeredgewidth(1.2)
+            else:
+                self.bwDot[0].set_data(cm[:,1],cm[:,0])
+        
+        plt.draw()
+        # Set the figure back to what it was
+        plt.figure(fn)
+    
+    def HighlightRegion(self):
+        a=np.zeros(self.shape[1:],dtype=np.uint8)
+        if self.point_mode:
+            a[:] = self.seedSelections[self.index].toarray().astype(np.uint8)*255
+            
+            if self.rgbaH==None:
+                self.rgbaH=np.array([a,a*0,a,a]).transpose(1,2,0)
+            else:
+                self.rgbaH[:,:,0]=a
+                self.rgbaH[:,:,1]=a*0
+                self.rgbaH[:,:,2]=a
+                self.rgbaH[:,:,3]=a
+        else:
+            for i in self.selectionVals:
+                if i>0:
+                    a += 255*(self.watershed[self.index]==i)
+            if self.rgbaH==None:
+                self.rgbaH=np.array([a,a,a*0,a//2]).transpose(1,2,0)
+            else:
+                self.rgbaH[:,:,0]=a//2-1 # These 2 lines used to be just "=a", but then the behavior of
+                self.rgbaH[:,:,1]=a//2-1 # matplotlib changed and the yellow highlight turned gray
+                self.rgbaH[:,:,2]=a*0
+                self.rgbaH[:,:,3]=a//2
+            self.DrawBWDot()
+        
+        if self.hiplot!=None:
+            self.hiplot.set_data(self.rgbaH)
+        else:
+            self.hiplot = plt.imshow(self.rgbaH,interpolation='nearest',animated=True)
+        
+        plt.draw()
+        
+    def LassoCallback(self,verts):
+        verts = [ v[::-1] for v in verts ]
+        
+        self.SetUndoPoint()
+        
+        # Clear selections...
+        self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
+        
+        cooMat = self.sparseList[self.index].tocoo()
+        seedList = np.array([cooMat.row,cooMat.col]).T
+        wh = np.where(points_inside_poly(seedList, verts))
+        row = np.array([cooMat.row[i] for i in wh])
+        col = np.array([cooMat.col[i] for i in wh])
+        
+        # This should be faster for big selections
+        sel = self.seedSelections[self.index].toarray()
+        sel[(row,col)] = 1
+        self.seedSelections[self.index] = scipy.sparse.lil_matrix(sel)
+        
+        self.point_mode=True
+        
+        self.ColorPlot()
+        
+        plt.figure(1).canvas.draw_idle()
+        plt.figure(1).canvas.widgetlock.release(self.lasso)
+        del self.lasso
+    def PlotAreasAndPerimeters(self): # Must run CollectAllStats first!
+        area=np.array(self.area)
+        per=np.array(self.perimeter)
+        
+        fn=plt.gcf().number
+        for v in range(area.shape[1]):
+            plt.figure(4)
+            plt.plot(area[:,v],label=str(v))
+            plt.figure(5)
+            plt.plot(per[:,v],label=str(v))
+        plt.figure(4)
+        plt.legend()
+        plt.figure(5)
+        plt.legend()
+        plt.figure(fn)
+                
+    def TestCalculations(self):
+        self.UpdateValuesList()
+        print self.valList
+        print self.GetBoundingRectangles()
+        print self.CalculateCentroids()
+        fn=plt.gcf().number
+        plt.figure(2)
+        for [[xm,xM],[ym,yM]] in self.GetBoundingRectangles():
+            plt.plot([ym,ym,yM,yM,ym],[xm,xM,xM,xm,xm],'k-')
+        plt.figure(fn)
+        
+        print self.CalculateArea()
+        print self.CalculatePerimeter()
+        print self.CalculateBestFitEllipse()
+        #print self.CalculateWoundDistance()
+        print self.CalculateNeighbors()
+    def RunCalculations2(self,d)
+        WatershedData.RunCalculations2(d)
         oldIndex=self.index
         self.index = 0
         self.MapPlot(saveFile=os.path.join(d,'MapWithCellIDs.png'),useText=True)
@@ -2410,11 +2508,7 @@ class WatershedData(object):
         self.mapPlot=None
         self.index = oldIndex
         self.MapPlot()
-        
-        ####################################
         print 'Finished'
-        return
-                
     def WCPlot(self,ind,woundVals,WNv,NNv):
         wi = np.array(self.watershed[ind],dtype=np.int)
         for v in woundVals:
@@ -2432,88 +2526,6 @@ class WatershedData(object):
                 plt.plot(*(np.array( c )[:,::-1].T))
                 sleep(0.4)
                 plt.draw()
-    # Later, change this to use ExendedWoundContours instead of wcList,swcList
-    def PerimeterTests(self,frame,testInd,woundVals,wcList,swcList,useSorted=False):
-        """perimeter check for NO"""
-        [WNv,WNl,NNv,NNl,NOv,NOl] = wcList
-        [WNsortedVals,WNl_byVal,NNsortedVals,NNl_byVal,NOsortedVals,NOl_byVal] = swcList
-                       
-        
-        if not hasattr(self,'perimeter'):
-            print 'Error! Must collect stats for the data before running PerimeterTests!'
-            return
-        
-        # get the wound perimeter the good way ;)
-        newWVal = 1e6 # I don't think anyone will ever create a million cells...
-        wi = np.array(self.watershed[frame],dtype=np.int)
-        for v in woundVals:
-            wi[np.where(wi==v)] = newWVal
-        WP = ImageContour.GetIJPerimeter(wi,newWVal)
-        WPc = sumN(ImageContour.GetPerimeterByNeighborVal(wi,newWVal)[1])
-        print 'Wound Perimeter'
-        print WP
-        print 'Wound Perimeter by Contours'
-        print WPc
-        print 'total P of all NNs'
-        print sumN([self.perimeter[frame][v-2] for v in WNv[frame]])
-        
-        print 'sum of WNlengths, NN lengths and NO lengths'
-        if useSorted: print sumN(np.array(WNl_byVal)[:,frame]) + \
-                            2*sumN(np.array(NNl_byVal)[:,frame]) + \
-                            sumN(np.array(NOl_byVal)[:,frame])
-        else:         print sumN(WNl[frame]) + \
-                            2*sumN(NNl[frame]) + \
-                            sumN(NOl[frame])
-        print 'Num of WN vals:'
-        if useSorted: print len(WNsortedVals)
-        else:         print len(WNv[frame])
-        
-        if useSorted: testVal = WNsortedVals[testInd]
-        else:         testVal = WNv[frame][testInd]
-        
-        print "Total P for",testVal,"w/GP"
-        print self.perimeter[frame][testVal-2]
-        vals, pers = ImageContour.GetPerimeterByNeighborVal(self.watershed[frame],testVal)
-        print "Total P for",testVal,"w/GPBN"
-        print sumN(pers)
-        print "WN part"
-        
-        if useSorted: s1=WNl_byVal[testInd][frame]
-        else:         s1=WNl[frame][testInd]
-        
-        print s1
-        
-        if s1==None:
-            print 'This value (',testVal,') is not a wound neighbor on this frame!'
-        else:
-            s2 = 0
-            if useSorted:
-                for i,vL in enumerate(NNsortedVals):
-                    if testVal in vL:
-                        if NNl_byVal[i][frame]!=None:
-                            s2+=NNl_byVal[i][frame]
-            else:
-                for i,vL in enumerate(NNv[frame]):
-                    if testVal in vL:
-                        if NNl[frame][i]!=None:
-                            s2+=NNl[frame][i]
-            print 'NN part'
-            print s2
-            s3 = 0
-            if useSorted:
-                for i,vL in enumerate(NOsortedVals):
-                    if testVal in vL:
-                        if NOl_byVal[i][frame]!=None:
-                            s3+=NOl_byVal[i][frame]
-            else:
-                for i,vL in enumerate(NOv[frame]):
-                    if testVal in vL:
-                        if NOl[frame][i]!=None:
-                            s3+=NOl[frame][i]
-        print "NO part"
-        print s3
-        print "Sum of last 3:"
-        print s1+s2+s3
     def RingsPlot(self,bins,frame,woundVals,useNei=False,binSize=None,initR=0):
         # b,g,r,c,m,y,k
         colors=[[0,0,255],[0,255,0],[255,0,0],[0,255,255],[255,0,255],[255,255,0]]*10 # that ought to do it ;-P
@@ -2753,7 +2765,7 @@ Arrow Keys: Move selected seeds (after lasso)
         #    g=GTL.LoadMonolithic(self.filename)
         
         self.wd=None # Release the old data before we load the new...
-        self.wd = WatershedData(g)
+        self.wd = WatershedDataAndPlotManager(g)
         self.FrameNumber.SetValue(0)
         self.FrameNumber.SetRange(0,self.wd.length)
         self.FrameNumberText.SetLabel("Frame Number (last - "+str(self.wd.length-1)+")\n(last active - 0)")
