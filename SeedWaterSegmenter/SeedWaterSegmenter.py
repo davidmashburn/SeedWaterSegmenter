@@ -645,7 +645,6 @@ class WatershedData(object):
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
         #self.UpdateSeeds()
-    
     def SetUndoPoint(self):
         # Set old state to be current state before any action
         # This allows undo to work...
@@ -719,6 +718,7 @@ class WatershedData(object):
                 self.notes[-1]+=line+os.linesep
         self.notes+=[None]*(self.length-len(self.notes))
         print self.notes
+    
     def Save(self,d,saveOutlines=True): # Ignore Undo
         print 'Saving To ',d
         # TODO: FOR SOME WEIRD REASON, SAVE/LOAD only recreates the seeds
@@ -777,7 +777,7 @@ class WatershedData(object):
         
         self.framesVisited=[False]*self.length
         self.framesVisited[self.index]=True
-        
+    
     def Open(self,d):
         segmentsD = os.path.join(d,'Segments')
         seedPointsFile = os.path.join(d,'Seeds.py')
@@ -1032,7 +1032,6 @@ class WatershedData(object):
             self.RemoveUndo()
         else:
             print 'No more frames!!!!'
-    
     def PreviousFrame(self):
         if self.index>0:
             self.lastFrameVisited = self.index
@@ -2051,6 +2050,7 @@ class WatershedData(object):
                     print 'Option 2: Go through each initialized frame and add at least a small bit of wound where it might be.'
                     print '          Then re-run RunCalculations and then try RunCalculations2.'
                     return
+        
         # Perform Processing and output steps here:
         ###############################
         #BTW, just hard-code:
@@ -2200,7 +2200,6 @@ class WatershedDataAndPlotManager(WatershedData):
     """All the functions on WatershedData that involve plotting"""
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
         WatershedData.Save(d,saveOutlines=saveOutlines)
-        
         # Save Map Images
         if saveMapImages:
             oldIndex=self.index
