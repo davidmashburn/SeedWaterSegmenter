@@ -869,6 +869,9 @@ class WatershedDataPure(object):
         self.framesVisited[self.index]=True
         
         self.RemoveUndo()
+
+        if len(Seeds.seedList)==self.length:
+            return True
         
     def UpdateSeeds(self,force=False):
         '''Update seedArray from either local minima or seedList'''
@@ -2220,9 +2223,7 @@ class WatershedData(WatershedDataPure):
                     self.MapPlot(saveFile=mapBase+str(i)+'.png')
             self.index = oldIndex
     def Open(self,d):
-        WatershedDataPure.Open(self,d)
-        
-        if len(Seeds.seedList)==self.length:
+        if WatershedDataPure.Open(self,d):
             self.ColorPlot()
             self.MapPlot()
     
