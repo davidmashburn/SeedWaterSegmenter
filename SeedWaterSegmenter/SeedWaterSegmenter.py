@@ -41,7 +41,12 @@ from numpy.random import rand
 
 import scipy.ndimage
 import scipy.sparse
-import Image
+
+try:
+    from PIL import Image # Use pillow if available
+except:
+    import Image # Fall back on old PIL
+
 import GifTiffLoader as GTL
 
 import wx

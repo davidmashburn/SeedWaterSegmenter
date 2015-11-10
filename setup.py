@@ -24,7 +24,7 @@ setup(
                       'numpy>=1.0',
                       'scipy>=0.8',
                       'matplotlib>=1.0',
-                      'PIL>=1.1.5',
+                      'pillowfight', # Depend on either PIL or pillow if available (PIL must be at least version 1.1.5)
                       'xlrd>=0.7',
                       'xlwt>=0.7',
                       'mahotas>=0.5',
