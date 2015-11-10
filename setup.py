@@ -31,7 +31,7 @@ setup(
 #                      # Projects that used to be internal
                       'EllipseFitter>=0.1',
                       'FilenameSort>=0.1.3',
-                      'GifTiffLoader>=0.1.6',
+                      'GifTiffLoader>=0.2',
                       'ImageContour>=0.1',
                       'np_utils>=0.2.1',
                       ],
