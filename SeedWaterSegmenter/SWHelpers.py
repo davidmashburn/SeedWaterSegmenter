@@ -5,13 +5,12 @@ import imp
 
 import numpy as np
 from scipy import ndimage
-import Image
 import matplotlib.pyplot as plt
 
 import FilenameSort as FS
 import ImageContour
 import GifTiffLoader as GTL
-#import SeedWaterSegmenter as SWS # No longer needed; plus SWS imports this (and circluar references are bad)
+from GifTiffLoader import Image # either pillow or PIL
 import mahotas
 
 #from list_utils:
