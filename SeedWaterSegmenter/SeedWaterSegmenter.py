@@ -447,7 +447,7 @@ def MergeWoundVals(neigh,wvl):
         neigh[firstWV-2]=[]
     # Merge all the wound value's neighbor lists together
     for wv in sorted(wvl[1:])[::-1]:
-        if neigh[wv-2]!=None:
+        if neigh[wv-2] is not None:
             neigh[firstWV-2] += neigh[wv-2]
         neigh[wv-2] = None
     # and remove any duplicate values this created (and wound self-references)
@@ -744,7 +744,6 @@ class WatershedDataPure(object):
         seedPointsFile = os.path.join(d,'Seeds.py')
         notesFile = os.path.join(d,'Notes.txt')
         outlinesBase = os.path.join(outlinesD,'Outline')
-        mapBase = os.path.join(mapsD,'Map')
         
         GTL.SaveFileSequence(self.watershed,basename=segmentsBase,
                              im_format='tif',sparseSave=self.framesVisited)
@@ -752,7 +751,8 @@ class WatershedDataPure(object):
         if saveOutlines:
             getOutlines = lambda arr: CreateOutlines(arr,walgorithm='PyMorph') # This will break the deprecated OpenCV watershed
             GTL.SaveFileSequence(self.watershed,basename=outlinesBase,
-                                 im_format='tif',sparseSave=self.framesVisited,functionToRunOnFrames=getOutlines)
+                                 im_format='tif',sparseSave=self.framesVisited,
+                                 functionToRunOnFrames=getOutlines)
         
         # Still just want an easy format to save and load...
         cooList = [  ( None if i is None else i.tocoo() )  for i in self.sparseList  ]
@@ -789,7 +789,7 @@ class WatershedDataPure(object):
         if not os.path.exists(segmentsD):
             os.mkdir(segmentsD)
         watershedTemp = GTL.LoadFileSequence(segmentsD,'Segment*')
-        if watershedTemp!=None:
+        if watershedTemp is not None:
             for i in range(min(len(self.watershed),len(watershedTemp))):
                 self.watershed[i] = watershedTemp[i]
                 #self.CreateOutlines(i)
@@ -844,7 +844,7 @@ class WatershedDataPure(object):
             
             self.seedSelections = [None]*self.length
             for i in range(self.length):
-                if self.sparseList[i]!=None:
+                if self.sparseList[i] is not None:
                     self.seedSelections[i] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
             
             # This is technically unnecessary because it only gets called
@@ -1111,7 +1111,7 @@ class WatershedDataPure(object):
         if val is None:
             m = 2 # 0 is unassigned and 1 is for background...
             for l in self.sparseList:
-                if l!=None:
+                if l is not None:
                     if l.nnz!=0:
                         m = max( m, l.tocoo().data.max() )
             val = m+1
@@ -1138,7 +1138,7 @@ class WatershedDataPure(object):
     def DeleteSeedByRegion(self,point):
         '''Remove the seed point from the list'''
         self.SetUndoPoint()
-        if self.watershed[self.index]!=None:
+        if self.watershed[self.index] is not None:
             val=self.watershed[self.index,point[0],point[1]]
             wh = np.where(self.seedArray==val)
             self.UpdatePointsWithVal( wh, 0)
@@ -1186,7 +1186,7 @@ class WatershedDataPure(object):
     def UpdateSelection(self,point=None,append=False):
         if append==False:
             self.selectionVals=[]
-        if point!=None:
+        if point is not None:
             self.selectionVals+=[self.watershed[self.index,point[0],point[1]]]
         
         self.point_mode=False
@@ -1215,7 +1215,7 @@ class WatershedDataPure(object):
                     print 'frame',i
                     self.index=i
                     
-                    if self.oldSparseList!=None:
+                    if self.oldSparseList is not None:
                         oldSeedArray = self.oldSparseList.toarray()
                         oldSeedArray[ np.where(oldSeedArray==val) ] = newVal
                         self.oldSparseList = scipy.sparse.lil_matrix(oldSeedArray,dtype=np.uint16)
@@ -1238,7 +1238,7 @@ class WatershedDataPure(object):
     def AutoCenterWound(self,woundVals):
         oldIndex=self.index
         for self.index in range(self.length): # For each frame
-            if self.sparseList[self.index]!=None:
+            if self.sparseList[self.index] is not None:
                 newWVal = 1e6 # I don't think anyone will ever create a million cells...
                 wi = np.array(self.watershed[self.index],dtype=np.int)
                 for v in woundVals:
@@ -1337,7 +1337,7 @@ class WatershedDataPure(object):
     def GetMaxSeedVal(self):
         maxSeedVal=2
         for l in self.sparseList:
-            if l!=None:
+            if l is not None:
                 if l.nnz!=0:
                     maxSeedVal = max( maxSeedVal, l.tocoo().data.max() )
         return maxSeedVal
@@ -1564,7 +1564,7 @@ class WatershedDataPure(object):
             MergeWoundVals(self.neighbors[frame],woundVals)
             neighborPairs = set()
             for i in range(len(self.neighbors[frame])):
-                if self.neighbors[frame][i]!=None:
+                if self.neighbors[frame][i] is not None:
                     if len(self.neighbors[frame][i])>0:
                         neighborPairs.update( [tuple(sorted([i+2,j])) for j in self.neighbors[frame][i] ] )
             neighborPairsByFrame.append(sorted(list(neighborPairs)))
@@ -1707,7 +1707,7 @@ class WatershedDataPure(object):
         nbins=int( np.ceil( (d_comp.max()-initR) / binSize ) )
         bins=[[] for i in range(nbins)]
         for i in range(len(d_comp)):
-            if d_comp[i]!=None and i+2 not in woundVals: # The wound...
+            if d_comp[i] is not None and i+2 not in woundVals: # The wound...
                 ind = int( np.floor( (d_comp[i]-initR) / binSize ) )
                 bins[ind].append(i)
         while bins[-1]==[]:
@@ -1727,7 +1727,7 @@ class WatershedDataPure(object):
             dprint(i)
             for w in i:
                 dprint(nei[w])
-                if nei[w]!=None:
+                if nei[w] is not None:
                     for v in nei[w]:
                         if v>1: # skip background
                             bins[-1].append(v-2)
@@ -1805,7 +1805,7 @@ class WatershedDataPure(object):
         WNsortedVals,NNsortedVals,NOsortedVals = [],[],[]
         for index in range(self.length):
             dprint('index: '+str(index))
-            if self.sparseList[index]!=None:
+            if self.sparseList[index] is not None:
                 if self.sparseList[index].nnz!=0:
                     for i in [WNv,WNl,NNv,NNl,NOv,NOl]:
                         i.append([])
@@ -1997,12 +1997,12 @@ class WatershedDataPure(object):
             if useSorted:
                 for i,vL in enumerate(NNsortedVals):
                     if testVal in vL:
-                        if NNl_byVal[i][frame]!=None:
+                        if NNl_byVal[i][frame] is not None:
                             s2+=NNl_byVal[i][frame]
             else:
                 for i,vL in enumerate(NNv[frame]):
                     if testVal in vL:
-                        if NNl[frame][i]!=None:
+                        if NNl[frame][i] is not None:
                             s2+=NNl[frame][i]
             print 'NN part'
             print s2
@@ -2010,12 +2010,12 @@ class WatershedDataPure(object):
             if useSorted:
                 for i,vL in enumerate(NOsortedVals):
                     if testVal in vL:
-                        if NOl_byVal[i][frame]!=None:
+                        if NOl_byVal[i][frame] is not None:
                             s3+=NOl_byVal[i][frame]
             else:
                 for i,vL in enumerate(NOv[frame]):
                     if testVal in vL:
-                        if NOl[frame][i]!=None:
+                        if NOl[frame][i] is not None:
                             s3+=NOl[frame][i]
         print "NO part"
         print s3
@@ -2213,6 +2213,9 @@ class WatershedData(WatershedDataPure):
     
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
         WatershedDataPure.Save(self,d,saveOutlines=saveOutlines)
+        
+        mapBase = os.path.join(d,'Maps','Map')
+        
         # Save Map Images
         if saveMapImages:
             oldIndex=self.index
@@ -2259,9 +2262,9 @@ class WatershedData(WatershedDataPure):
         
         wi = np.array(self.watershed[self.index],dtype=np.int)
         
-        if saveFile!=None and useText: # Normally skip all the text labels... they are painfully slow!
+        if saveFile is not None and useText: # Normally skip all the text labels... they are painfully slow!
             for i in self.mapCentroids:
-                if i!=None:
+                if i is not None:
                     i.set_visible(False)
             
             for i in self.GetActiveSeedValues():
@@ -2276,7 +2279,7 @@ class WatershedData(WatershedDataPure):
                         if i>=len(self.mapCentroids):
                             self.mapCentroids+=[None]*(1+i-len(self.mapCentroids))
                         x,y = int(round(cm[0])),int(round(cm[1]))
-                        if self.mapCentroids[i]!=None:
+                        if self.mapCentroids[i] is not None:
                             self.mapCentroids[i].set_position([y-5,x+5])
                             self.mapCentroids[i].set_visible(True)
                         else:
@@ -2288,7 +2291,7 @@ class WatershedData(WatershedDataPure):
             self.fig2.canvas.draw()
             self.fig2.savefig(saveFile)
             self.ax2.cla()
-        elif saveFile!=None: # I may have broken this... sorry...
+        elif saveFile is not None: # I may have broken this... sorry...
             f1=np.vectorize(lambda x: self.mapPlotRandomArray[0][x])
             f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
             f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
@@ -2309,7 +2312,7 @@ class WatershedData(WatershedDataPure):
             im.save(saveFile)
             #imsave(saveFile, map)
         else:
-            if self.mapPlot!=None:
+            if self.mapPlot is not None:
                 ###self.mapPlot.set_data(self.rgbM)
                 self.mapPlot.set_data(self.watershed[self.index])
                 
@@ -2368,7 +2371,7 @@ class WatershedData(WatershedDataPure):
             self.rgba[:,:,2]=255*outl
             self.rgba[:,:,3]=self.overlayVisible*255*seedORoutl
         # 0.18s
-        if self.colorplot!=None and self.bgPlot!=None:
+        if self.colorplot is not None and self.bgPlot is not None:
             self.bgPlot.set_data(im)
             self.colorplot.set_data(self.rgba)
         else:
@@ -2384,7 +2387,7 @@ class WatershedData(WatershedDataPure):
             self.ax1.set_xlim(0,self.watershed[0].shape[1])
             self.ax1.set_ylim(self.watershed[0].shape[0],0)
         
-        if self.showWoundCenters and self.woundCenters[self.index]!=None:
+        if self.showWoundCenters and self.woundCenters[self.index] is not None:
             [x,y] = self.woundCenters[self.index]
             self.redDot[0].set_data([x],[y])
             self.redDot[0].set_visible(True) # Turn On Visible
@@ -2441,7 +2444,7 @@ class WatershedData(WatershedDataPure):
                 self.rgbaH[:,:,3]=a//2
             self.DrawBWDot()
         
-        if self.hiplot!=None:
+        if self.hiplot is not None:
             self.hiplot.set_data(self.rgbaH)
         else:
             self.hiplot = self.ax1.imshow(self.rgbaH,interpolation='nearest',animated=True)
@@ -2839,7 +2842,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
         print self.NotesTextBox.GetValue()
         i2 = max(0,ind-1)
-        if self.wd.sparseList[i2]!=None and ind<self.wd.length: # If frame before the one to move to is defined
+        if self.wd.sparseList[i2] is not None and ind<self.wd.length: # If frame before the one to move to is defined
             if self.wd.sparseList[ind] is None:
                 self.SetStatus('Moving to New Frame '+str(ind))
             else:
@@ -2908,7 +2911,7 @@ Arrow Keys: Move selected seeds (after lasso)
     #    self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
     def ReSaveAllFramesCallback(self,event):
         for i in range(self.wd.length):
-            if self.wd.sparseList[i]!=None:
+            if self.wd.sparseList[i] is not None:
                 self.wd.framesVisited[i]=True
         self.HandleMPLandWxKeyEvents('s')
     def ReRunAllWatershedsCallback(self,event):
@@ -3091,7 +3094,7 @@ Arrow Keys: Move selected seeds (after lasso)
                     self.wd.ColorPlot()#([x,y])
             elif self.mouseMode=='e':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
-                if self.wd.watershed!=None and self.wd.woutline!=None:
+                if self.wd.watershed is not None and self.wd.woutline is not None:
                     if event.inaxes:
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
@@ -3111,7 +3114,7 @@ Arrow Keys: Move selected seeds (after lasso)
                     #self.wd.ColorPlot()
             elif self.mouseMode=='x':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
-                if self.wd.watershed!=None and self.wd.woutline!=None:
+                if self.wd.watershed is not None and self.wd.woutline is not None:
                     if event.inaxes:
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
@@ -3124,7 +3127,7 @@ Arrow Keys: Move selected seeds (after lasso)
                             self.wd.MapPlot()
             elif self.mouseMode=='d':
                 x, y = int(event.xdata+0.5), int(event.ydata+0.5)
-                if self.wd.watershed!=None and self.wd.woutline!=None:
+                if self.wd.watershed is not None and self.wd.woutline is not None:
                     if event.inaxes:
                         if event.button == 1:
                             self.wd.UpdateSelection([y,x])
@@ -3152,7 +3155,7 @@ Arrow Keys: Move selected seeds (after lasso)
                             #self.wd.MapPlot()
             elif self.mouseMode=='c':
                 x, y = event.xdata, event.ydata # Do not round x and y!
-                if self.wd.watershed!=None and self.wd.woutline!=None:
+                if self.wd.watershed is not None and self.wd.woutline is not None:
                     if event.inaxes:
                         if event.button == 1:
                             self.wd.woundCenters[self.wd.index]=[x,y]
@@ -3313,7 +3316,7 @@ Arrow Keys: Move selected seeds (after lasso)
                     v = None
                     print 'Invalid Number!!'
                 
-                if v!=None:
+                if v is not None:
                     self.wd.Median(v) # NEEDS UNDO_RESET
                     self.wd.ColorPlot()
         elif ckey=='t': # Toggle color overlays for figure 2
@@ -3478,14 +3481,14 @@ Arrow Keys: Move selected seeds (after lasso)
                     self.wd.ColorPlot()
                     print 'Finished Deleting'
         elif ckey=='m':
-            if self.wd.watershed!=None and self.wd.woutline!=None:
+            if self.wd.watershed is not None and self.wd.woutline is not None:
                 print 'Change to Move Mode (Default)'
                 self.mouseMode='m'
                 self.MouseModeRadioBox.SetSelection(0)
                 self.MouseModeHelpText.SetLabel(mouseModeHelpTxt[0])
                 self.wd.showWoundCenters=False
         elif ckey=='a': # Activate Add/Delete (by region) mode
-            if self.wd.watershed!=None and self.wd.woutline!=None:
+            if self.wd.watershed is not None and self.wd.woutline is not None:
                 print 'Change to Add/Delete Mode'
                 self.mouseMode='a'
                 self.MouseModeRadioBox.SetSelection(1)
@@ -3502,7 +3505,7 @@ Arrow Keys: Move selected seeds (after lasso)
             self.wd.showWoundCenters=False
             self.wd.ColorPlot()
         elif ckey=='e': # Activate Extra Seed mode
-            if self.wd.watershed!=None and self.wd.woutline!=None:
+            if self.wd.watershed is not None and self.wd.woutline is not None:
                 print 'Change to Extras (Highlight) Mode'
                 self.mouseMode='e'
                 self.MouseModeRadioBox.SetSelection(3)
@@ -3511,7 +3514,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 self.wd.showWoundCenters=False
                 self.wd.ColorPlot()
         elif ckey=='x': # Activate Switch mode
-            if self.wd.watershed!=None and self.wd.woutline!=None:
+            if self.wd.watershed is not None and self.wd.woutline is not None:
                 print 'Change to Switch Mode'
                 self.mouseMode='x'
                 self.MouseModeRadioBox.SetSelection(4)
@@ -3520,7 +3523,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 self.wd.showWoundCenters=False
                 self.wd.ColorPlot()
         elif ckey=='d': # Draw Mode
-            if self.wd.watershed!=None and self.wd.woutline!=None:
+            if self.wd.watershed is not None and self.wd.woutline is not None:
                 print 'Change to Draw Mode'
                 self.mouseMode='d'
                 self.MouseModeRadioBox.SetSelection(5)
@@ -3543,14 +3546,14 @@ Arrow Keys: Move selected seeds (after lasso)
                     exec(te.GetValue())
             else:
                 if self.wd.point_mode:
-                    if self.wd.watershed!=None and self.wd.woutline!=None:
+                    if self.wd.watershed is not None and self.wd.woutline is not None:
                         print 'Join Seeds to be same type'
                         self.SetStatus('Joining Seeds')
                         self.wd.MergeSelectedSeeds() # NEEDS UNDO
                         self.wd.ColorPlot()
         elif ckey=='v':
             if not self.wd.point_mode:
-                if self.wd.watershed!=None and self.wd.woutline!=None:
+                if self.wd.watershed is not None and self.wd.woutline is not None:
                     print 'Change the value of a watershed region'
                     dlg = wx.TextEntryDialog(None, 'New Value?',
                         'Pick a new value for the region.', '')
