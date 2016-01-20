@@ -361,12 +361,12 @@ def GetReportPixel(sfORwd): # create and return the report_pixel function...
 
 def sumN(l):
     """Sum that counts None as 0's"""
-    return sum([(0 if i==None else i) for i in l])
+    return sum([(0 if i is None else i) for i in l])
 def meanN(l):
     """Mean that counts None as 0's"""
     return sumN(l)*1./len(l)
 def meanN_skip(l):
-    return sumN(l)*1./sum([(0 if i==None else 1) for i in l ])
+    return sumN(l)*1./sum([(0 if i is None else 1) for i in l ])
 
 def CreateTimeAxis(timeIntervals,gapIntervals,numberFramesPerSeries,numberOfFrames):
     if not ( len(timeIntervals)==(len(gapIntervals)+1)==len(numberFramesPerSeries) ):
@@ -443,7 +443,7 @@ def GetBinnedValueForExcel(value,name,bins,timeAxis,woundVals):
 def MergeWoundVals(neigh,wvl):
     firstWV = wvl[0]
 
-    if neigh[firstWV-2]==None:
+    if neigh[firstWV-2] is None:
         neigh[firstWV-2]=[]
     # Merge all the wound value's neighbor lists together
     for wv in sorted(wvl[1:])[::-1]:
@@ -488,7 +488,7 @@ class WoundContours(object):
         self.NOl = wc.NOl
 
 def SeedListToSparse(seeds,vals,shape):
-    if seeds==None:
+    if seeds is None:
         return None
     else:
         row,col = np.array(seeds).T
@@ -747,22 +747,22 @@ class WatershedDataPure(object):
         mapBase = os.path.join(mapsD,'Map')
         
         GTL.SaveFileSequence(self.watershed,basename=segmentsBase,
-                             format='tif',sparseSave=self.framesVisited)
+                             im_format='tif',sparseSave=self.framesVisited)
         
         if saveOutlines:
             getOutlines = lambda arr: CreateOutlines(arr,walgorithm='PyMorph') # This will break the deprecated OpenCV watershed
             GTL.SaveFileSequence(self.watershed,basename=outlinesBase,
-                                 format='tif',sparseSave=self.framesVisited,functionToRunOnFrames=getOutlines)
+                                 im_format='tif',sparseSave=self.framesVisited,functionToRunOnFrames=getOutlines)
         
         # Still just want an easy format to save and load...
-        cooList = [  ( None if i==None else i.tocoo() )  for i in self.sparseList  ]
-        seedList = [  ( None if i==None else np.array([i.row,i.col]).T.tolist())  for i in cooList  ]
-        seedVals = [  ( None if i==None else i.data.astype(np.int).tolist() ) for i in cooList  ]
+        cooList = [  ( None if i is None else i.tocoo() )  for i in self.sparseList  ]
+        seedList = [  ( None if i is None else np.array([i.row,i.col]).T.tolist())  for i in cooList  ]
+        seedVals = [  ( None if i is None else i.data.astype(np.int).tolist() ) for i in cooList  ]
         
         WriteSeedPointsFile(seedPointsFile,seedList,seedVals,self.walgorithm,self.woundCenters)
         
         for i,s in enumerate(self.sparseList):
-            if s==None:
+            if s is None:
                 print i,'--'
             elif s.nnz==0:
                 print 'Empty!'
@@ -818,7 +818,7 @@ class WatershedDataPure(object):
                     ## vals = Seeds.seedVals[i]
                     ## self.sparseList[i] = scipy.sparse.coo_matrix((vals,(row,col)), shape=self.shape[1:], dtype=np.uint16).tolil() # I guess I could change the dtype later if I need to...
                 
-                if i==0 and self.sparseList[i]==None:
+                if i==0 and self.sparseList[i] is None:
                     self.sparseList[i] = scipy.sparse.lil_matrix(self.shape[1:], dtype=np.uint16)
             try: # Since walgorithm is not part of early versions, allow it to be optional
                 Seeds.walgorithm
@@ -835,7 +835,7 @@ class WatershedDataPure(object):
             
             print 'Loading seeds for '+str(self.length)+' frames:'
             for i,s in enumerate(self.sparseList):
-                if s==None:
+                if s is None:
                     print i,'--'
                 elif s.nnz==0:
                     print 'Empty!'
@@ -926,7 +926,7 @@ class WatershedDataPure(object):
         self.woutline = CreateOutlines(self.watershed[self.index],
                                        walgorithm=self.walgorithm[self.index])
     def UpdateValuesList(self,index=None):
-        if index==None:
+        if index is None:
             index=self.index
         self.valList=[]
         for v in range(2,self.watershed[index].max()+1):
@@ -1017,7 +1017,7 @@ class WatershedDataPure(object):
     def GetLastActiveFrame(self):
         lastActiveFrame=self.length-1
         for i in range(self.length):
-            if self.sparseList[i]==None:
+            if self.sparseList[i] is None:
                 lastActiveFrame = i-1
                 break
         return lastActiveFrame
@@ -1028,7 +1028,7 @@ class WatershedDataPure(object):
             self.index+=1
             
             print 'Move to Frame',self.index
-            if self.sparseList[self.index]==None:
+            if self.sparseList[self.index] is None:
                 self.MakeSeedsFromPrevious()
             else:
                 self.UpdateSeeds()
@@ -1108,7 +1108,7 @@ class WatershedDataPure(object):
         
         newPoints = GetPointsAtRadius(self.seedArray.shape,pointIn[0],pointIn[1],self.pointSize)
         
-        if val==None:
+        if val is None:
             m = 2 # 0 is unassigned and 1 is for background...
             for l in self.sparseList:
                 if l!=None:
@@ -1196,7 +1196,7 @@ class WatershedDataPure(object):
         
         numFrames=self.length
         for i in range(self.length):
-            if self.sparseList[i]==None:
+            if self.sparseList[i] is None:
                 numFrames = i
                 break
         
@@ -1266,7 +1266,7 @@ class WatershedDataPure(object):
             areaList.append( np.sum(self.watershed[self.index]==v) )
         return areaList
     def CalculatePerimeter(self,boundsList=None):
-        if boundsList==None:
+        if boundsList is None:
             self.UpdateValuesList()
             boundsList = self.GetBoundingRectangles()
         perimeterList = []
@@ -1274,7 +1274,7 @@ class WatershedDataPure(object):
             perimeterList.append(ImageContour.GetIJPerimeter(self.watershed[self.index],v,boundsList[i]))
         return perimeterList
     def CalculateBestFitEllipse(self,boundsList=None):
-        if boundsList==None:
+        if boundsList is None:
             self.UpdateValuesList()
             boundsList = self.GetBoundingRectangles()
         ellipseList = []
@@ -1288,7 +1288,7 @@ class WatershedDataPure(object):
     def CalculateWoundDistance(self,cmList=None):
         # possibly open a user window to select wound location???
         # should run from the SegmenterFrame and not WatershedData,though...
-        if cmList==None:
+        if cmList is None:
             cmList = self.GetCentroids(self.index)
         
         # Need to flip these
@@ -1303,7 +1303,7 @@ class WatershedDataPure(object):
             thetaList.append(theta)
         return rList, thetaList
     def CalculateNeighbors(self,boundsList=None):
-        if boundsList==None:
+        if boundsList is None:
             self.UpdateValuesList()
             boundsList = self.GetBoundingRectangles()
         neighborList=[]
@@ -1434,7 +1434,7 @@ class WatershedDataPure(object):
                             .replace('], ','\r\n'))
         fid.close()
     def SaveAllStats(self,directory=None):
-        if directory==None:
+        if directory is None:
             directory = wx.DirSelector()
         
         if hasattr(self,'centroidX'): # If it has centroid, it should have everything else, too...
@@ -1523,7 +1523,7 @@ class WatershedDataPure(object):
     
     def SaveTripleJunctions(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
-        if directory==None:
+        if directory is None:
             directory = wx.DirSelector()
         adjLength = self.GetLastActiveFrame()+1
         
@@ -1540,7 +1540,7 @@ class WatershedDataPure(object):
         return sorted(list(set( self.sparseList[self.index].tocoo().data.tolist() )))
     def SaveTripleJunctionsWithCellIDs(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
-        if directory==None:
+        if directory is None:
             directory = wx.DirSelector()
         adjLength = self.GetLastActiveFrame()+1
         bigData=[]
@@ -1596,11 +1596,11 @@ class WatershedDataPure(object):
     #NOT TESTED
     def SaveSubContours(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
-        if directory==None:
+        if directory is None:
             directory = wx.DirSelector()
         
         MI = self.GetManualInputs(d)
-        if MI==None:
+        if MI is None:
             return    
         woundValsSorted = sorted(MI.woundVals)
         self.CollectAllStats(directory) # Safer but slower way to do it...
@@ -1612,7 +1612,7 @@ class WatershedDataPure(object):
         fid.write('cVLSByFrame = '+repr(cVLSByFrame))
         fid.close()
     def LoadStats(self,directory=None):
-        if directory==None:
+        if directory is None:
             directory = wx.DirSelector()
         
         #calculationsXls = os.path.join(directory,'Calculations.xls')
@@ -1695,7 +1695,7 @@ class WatershedDataPure(object):
         dB = np.array(d)
         for i in range(dB.shape[0]):
             for j in range(dB.shape[1]):
-                if dB[i,j]==None:
+                if dB[i,j] is None:
                    dB[i,j]=np.nan
         # Sort the wound distances based on the distances at a particular time
         dBm = np.mean(dB,0)
@@ -1873,7 +1873,7 @@ class WatershedDataPure(object):
         
         # Verification ;)
         for frame in range(self.length):
-            if self.sparseList[frame]==None:
+            if self.sparseList[frame] is None:
                 break
             elif self.sparseList[frame].nnz==0:
                 break
@@ -1990,7 +1990,7 @@ class WatershedDataPure(object):
         
         print s1
         
-        if s1==None:
+        if s1 is None:
             print 'This value (',testVal,') is not a wound neighbor on this frame!'
         else:
             s2 = 0
@@ -2027,7 +2027,7 @@ class WatershedDataPure(object):
             print 'You must do CollectAllStats before RunCalculations2!'
             return
         MI = self.GetManualInputs(d)
-        if MI==None:
+        if MI is None:
             return    
         
         woundVals=MI.woundVals
@@ -2038,7 +2038,7 @@ class WatershedDataPure(object):
             print 'Error! You need to define the time information in ManualInputs.py!'
             return
         for i in range(self.length):
-            if self.sparseList[i]==None:
+            if self.sparseList[i] is None:
                 break
             else:
                 hasWound=False
@@ -2125,7 +2125,7 @@ class WatershedDataPure(object):
         rrdththMeans = [["time"]+["ring"+str(i+1) for i in range(len(bins))]]
         
         for frame in range(self.length):
-            if self.sparseList[frame]==None:
+            if self.sparseList[frame] is None:
                 break
             elif self.sparseList[frame].nnz==0:
                 break
@@ -2293,7 +2293,7 @@ class WatershedData(WatershedDataPure):
             f2=np.vectorize(lambda x: self.mapPlotRandomArray[1][x])
             f3=np.vectorize(lambda x: self.mapPlotRandomArray[2][x])
             
-            if self.rgbM==None:
+            if self.rgbM is None:
                 self.rgbM = np.ascontiguousarray( np.array([f1(wi),f2(wi),f3(wi)],dtype=np.uint8).transpose(1,2,0) )
             else:
                 # No more dependence on cython function; save will be a little slower, but whatever...
@@ -2333,7 +2333,7 @@ class WatershedData(WatershedDataPure):
             x=[]
             y=[]
             for index in range(self.length):
-                if self.sparseList[index]==None:
+                if self.sparseList[index] is None:
                     break
                 elif self.sparseList[index].nnz==0:
                     break
@@ -2357,7 +2357,7 @@ class WatershedData(WatershedDataPure):
         seed = (self.seedArray!=0).astype(np.uint8)
         outl = self.woutline.astype(np.uint8)
         seedORoutl = np.array(np.array(seed+outl)>0,np.uint8)
-        if self.rgba==None:
+        if self.rgba is None:
             self.rgba=np.array([0*seed,
                           255*seed,
                           255*outl,
@@ -2379,7 +2379,7 @@ class WatershedData(WatershedDataPure):
         
         dprint(['wc',self.woundCenters[self.index],self.showWoundCenters])
         # Need to force this to plot so that axes will flip, just set to invisible...
-        if self.redDot==None:
+        if self.redDot is None:
             self.redDot=self.ax1.plot([0],[0],'ro')
             self.ax1.set_xlim(0,self.watershed[0].shape[1])
             self.ax1.set_ylim(self.watershed[0].shape[0],0)
@@ -2407,7 +2407,7 @@ class WatershedData(WatershedDataPure):
                 if v>1:
                     # centroid of selected region v
                     cm[i] = center_of_mass((self.watershed[self.index]==v).astype(np.float))
-            if self.bwDot==None and self.point_mode==False:
+            if self.bwDot is None and self.point_mode==False:
                 self.bwDot=self.ax2.plot(cm[:,1],cm[:,0],'ko')
                 self.bwDot[0].set_markeredgecolor('w')
                 self.bwDot[0].set_markeredgewidth(1.2)
@@ -2421,7 +2421,7 @@ class WatershedData(WatershedDataPure):
         if self.point_mode:
             a[:] = self.seedSelections[self.index].toarray().astype(np.uint8)*255
             
-            if self.rgbaH==None:
+            if self.rgbaH is None:
                 self.rgbaH=np.array([a,a*0,a,a]).transpose(1,2,0)
             else:
                 self.rgbaH[:,:,0]=a
@@ -2431,8 +2431,8 @@ class WatershedData(WatershedDataPure):
         else:
             for i in self.selectionVals:
                 if i>0:
-                    a += 255*(self.watershed[self.index]==i)
-            if self.rgbaH==None:
+                    a = a + 255*(self.watershed[self.index]==i) # Changed from += due to a regression in numpy
+            if self.rgbaH is None:
                 self.rgbaH=np.array([a,a,a*0,a//2]).transpose(1,2,0)
             else:
                 self.rgbaH[:,:,0]=a//2-1 # These 2 lines used to be just "=a", but then the behavior of
@@ -2790,7 +2790,7 @@ Arrow Keys: Move selected seeds (after lasso)
             self.wd.Open(d)
             
             self.UpdateFrameLabelText()
-            if self.wd.notes[self.wd.index]==None:
+            if self.wd.notes[self.wd.index] is None:
                 self.wd.notes[self.wd.index]=''
             self.NotesTextBox.SetValue(self.wd.notes[self.wd.index])
         else:
@@ -2840,7 +2840,7 @@ Arrow Keys: Move selected seeds (after lasso)
         print self.NotesTextBox.GetValue()
         i2 = max(0,ind-1)
         if self.wd.sparseList[i2]!=None and ind<self.wd.length: # If frame before the one to move to is defined
-            if self.wd.sparseList[ind]==None:
+            if self.wd.sparseList[ind] is None:
                 self.SetStatus('Moving to New Frame '+str(ind))
             else:
                  self.SetStatus('Moving to Frame '+str(ind))
@@ -2859,7 +2859,7 @@ Arrow Keys: Move selected seeds (after lasso)
             #self.wd.framesVisited[self.wd.index]=True
         else:
             self.FrameNumber.SetValue(self.wd.index)
-        if self.wd.notes[self.wd.index]==None:
+        if self.wd.notes[self.wd.index] is None:
             self.wd.notes[self.wd.index]=''
         self.NotesTextBox.SetValue(self.wd.notes[self.wd.index])
         self.SetStatus('Ready')
@@ -2924,7 +2924,7 @@ Arrow Keys: Move selected seeds (after lasso)
         # Get the number of frames...
         numFrames=self.wd.length
         for i in range(self.wd.length):
-            if self.wd.sparseList[i]==None:
+            if self.wd.sparseList[i] is None:
                 numFrames = i
                 break
         
@@ -3016,7 +3016,7 @@ Arrow Keys: Move selected seeds (after lasso)
         #self.wd.TestCalculations()
         self.SetStatus('Running Calculations')
         for index in range(self.wd.length):
-            if self.wd.sparseList[index]==None:
+            if self.wd.sparseList[index] is None:
                 print 'frame',index,'is not initialized'
                 break
             elif self.wd.sparseList[index].nnz==0:
@@ -3026,7 +3026,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 print 'frame',index,'only has background seeds'
                 break
             
-            if self.wd.woundCenters[index]==None:
+            if self.wd.woundCenters[index] is None:
                 s = ( 'You must use Center Mode to define a' + os.linesep +
                       'center for all initialized frames (failed on frame'+str(index)+')!' )
                 wx.MessageBox(s)
@@ -3139,7 +3139,7 @@ Arrow Keys: Move selected seeds (after lasso)
                         #elif event.button == 3 and in new_special_mode:
                         #
                         elif event.button == 3 and len(self.wd.selectionVals)==1:
-                            if self.wd.previousDrawPoint==None:
+                            if self.wd.previousDrawPoint is None:
                                 self.wd.SetUndoPoint()
                                 print 'Start Drawing Seeds at Point',[y,x]
                                 print 'With value',self.wd.selectionVals[0]
@@ -3225,7 +3225,7 @@ Arrow Keys: Move selected seeds (after lasso)
                     #self.wd.DrawOrigImage()
                     
                     doWater=False
-                    if self.wd.sparseList[self.wd.index]==None:
+                    if self.wd.sparseList[self.wd.index] is None:
                         doWater=True
                     elif self.wd.sparseList[self.wd.index].nnz==0:
                         doWater=True
@@ -3245,7 +3245,7 @@ Arrow Keys: Move selected seeds (after lasso)
                         self.wd.MapPlot()
                         print 'Watershed Done'
             else:
-                if self.wd.sparseList[self.wd.index] == None:
+                if self.wd.sparseList[self.wd.index] is None:
                     self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(self.wd.shape[1:],dtype=np.uint16)
                     # I guess I could change the dtype later if I need to...
                     self.wd.seedSelections[self.wd.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
@@ -3340,7 +3340,7 @@ Arrow Keys: Move selected seeds (after lasso)
         elif ckey=='n': # Next frame
             ind = self.wd.index+1
             if ind<self.wd.length:
-                if self.wd.sparseList[ind]==None:
+                if self.wd.sparseList[ind] is None:
                     self.SetStatus('Moving to Frame '+str(ind)+ ' (with Watershed)')
                 else:
                     self.SetStatus('Moving to Frame '+str(ind))
@@ -3349,7 +3349,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 self.wd.NextFrame()
                 self.FrameNumber.SetValue(self.wd.index)
                 self.UpdateFrameLabelText()
-                if self.wd.notes[self.wd.index]==None:
+                if self.wd.notes[self.wd.index] is None:
                     self.wd.notes[self.wd.index]=''
                 self.NotesTextBox.SetValue(self.wd.notes[self.wd.index])
                 print 'Moved to Frame',self.wd.index
@@ -3380,7 +3380,7 @@ Arrow Keys: Move selected seeds (after lasso)
                 self.wd.MoveToFrame(ind)
                 self.FrameNumber.SetValue(self.wd.index)
                 self.UpdateFrameLabelText()
-                if self.wd.notes[self.wd.index]==None:
+                if self.wd.notes[self.wd.index] is None:
                     self.wd.notes[self.wd.index]=''
                 self.NotesTextBox.SetValue(self.wd.notes[self.wd.index])
                 print 'Moved to Frame',self.wd.index
