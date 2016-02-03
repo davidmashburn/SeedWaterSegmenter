@@ -339,7 +339,13 @@ def CreateThickOutlines(arr,thickness=1):
         newArr = scipy.ndimage.morphology.binary_dilation(newArr,iterations=thickness-1)
     return newArr
 
-IorN = lambda i: None if i=='None' else int(i)
+def _try_ints(i):
+    try:
+        return int(i)
+    except:
+        return long(i)
+
+IorN = lambda i: None if i=='None' else _try_ints(i)
 ForN = lambda f: None if f=='None' else float(f)
 
 def GetReportPixel(sfORwd): # create and return the report_pixel function...
