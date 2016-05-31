@@ -582,17 +582,18 @@ class WatershedDataCore(object):
     def __init__(self,arrayIn,previousSeeds=None):
         # Change this to allow orig, min-max filtered, and sharpened data
         # Need a way to mark the "Un-seeds" that exist in the background only...
-        if len(arrayIn.shape)==2:
-            arrayIn=arrayIn.reshape([1,arrayIn.shape[0],arrayIn.shape[1]])
-        self.length=arrayIn.shape[0] # number of frames
+        if arrayIn.ndim == 2:
+            arrayIn = arrayIn[np.newaxis, :]
+        self.length = arrayIn.shape[0] # number of frames
         self.shape = arrayIn.shape
+        
         # I AM CHANGING THE DEFAULT BEHAVIOR!!!!!!!!!
         # I don't really think this will change the watersheds, but it
         #  really might change the brightness of the image...
-        if arrayIn.dtype==np.uint16:
+        if arrayIn.dtype == np.uint16:
             self.origData = arrayIn
             self.origData *= int( (2**16-1)/arrayIn.max() )
-        elif arrayIn.dtype==np.uint8:
+        elif arrayIn.dtype == np.uint8:
             self.origData = np.array(arrayIn,dtype=np.uint16)
             self.origData *= int( (2**16-1)/arrayIn.max() )
         #    self.origData *= 2**8
@@ -615,43 +616,46 @@ class WatershedDataCore(object):
         self.woundCenters = [None]*self.length
         
         self.background = True # Set to True for better results...
-        self.watershed=np.zeros(self.shape,dtype=np.int16)  # 3 full copy
+        self.watershed = np.zeros(self.shape,dtype=np.int16)  # 3 full copy
         self.seedArray = np.zeros(self.shape[1:],dtype=np.int)
-        self.woutline=np.zeros(self.shape[1:],dtype=np.int)
-        self.index=0
-        self.lastFrameVisited=0
+        self.woutline = np.zeros(self.shape[1:],dtype=np.int)
+        self.index = 0
+        self.lastFrameVisited = 0
         # walgorithm should be 'PyMorph', Dummy, ['OpenCV', 'CV2PM']
         self.walgorithm = ['PyMorph']*self.length
-        self.framesVisited=[False]*self.length
-        self.framesVisited[self.index]=True
-        self.rgba=None # Will hold the data for the color plot...
-        self.rgbaH=None # Will hold the data for the highlight plot...
-        self.rgbM=None # Will hold the data for the map plot...
-        self.bgPlot=None
-        self.overlayVisible=True
-        self.showInverted=False
-        self.colorplot=None
-        self.mapPlot=None
-        self.mapCentroids=[]
-        self.hiplot=None
-        self.showWoundCenters=False
-        self.redDot=None
-        self.bwDot=None
-        self.selectionVals=[]
-        self.pointSize=DEFAULT_SEED_SIZE
-        self.point_mode=False
-        self.mapPlotRandomArray=GetMapPlotRandomArray()
+        self.framesVisited = [False]*self.length
+        self.framesVisited[self.index] = True
+        self.rgba = None # Will hold the data for the color plot...
+        self.rgbaH = None # Will hold the data for the highlight plot...
+        self.rgbM = None # Will hold the data for the map plot...
+        self.bgPlot = None
+        self.overlayVisible = True
+        self.showInverted = False
+        self.colorplot = None
+        self.mapPlot = None
+        self.mapCentroids = []
+        self.hiplot = None
+        self.showWoundCenters = False
+        self.redDot = None
+        self.bwDot = None
+        self.selectionVals = []
+        self.pointSize = DEFAULT_SEED_SIZE
+        self.point_mode = False
+        self.mapPlotRandomArray = GetMapPlotRandomArray()
         self.mapPlotRandomFloatArray = np.array(self.mapPlotRandomArray,dtype=np.float)/255.
         self.mapPlotCmap = matplotlib.colors.ListedColormap(self.mapPlotRandomFloatArray.T)
+        self.valList = None
         #self.mapPlotCmap = MakeCmapFromArray(self.mapPlotRandomFloatArray)
         
-        self.previousDrawPoint=None
+        self.previousDrawPoint = None
         
         # For undo...
         self.oldSparseList = None
         self.oldSeedSelections = None
-        self.old_point_mode=self.point_mode
+        self.old_point_mode = False
+        
         #self.UpdateSeeds()
+    
     def SetUndoPoint(self):
         # Set old state to be current state before any action
         # This allows undo to work...
@@ -659,11 +663,13 @@ class WatershedDataCore(object):
         self.oldSeedSelections = deepcopy(self.seedSelections[self.index])
         self.old_point_mode=self.point_mode
         self.previousDrawPoint=None
+    
     def RemoveUndo(self):
         # Remove old state
         self.oldSparseList = None
         self.oldSeedSelections = None
         self.old_point_mode=self.point_mode
+    
     def Undo(self):
         # Swap old and current state
         if None not in [self.oldSparseList,self.oldSeedSelections]:
@@ -676,6 +682,7 @@ class WatershedDataCore(object):
             self.seedSelections[self.index], self.oldSeedSelections = self.oldSeedSelections, self.seedSelections[self.index] # SWAP
             self.point_mode, self.old_point_mode = self.old_point_mode,self.point_mode # SWAP
             self.previousDrawPoint=None
+    
     def SaveTxt(self,filename):
         fid = open(filename,'w')
         for i in txtHeader:
@@ -686,6 +693,7 @@ class WatershedDataCore(object):
                 fid.write(txtsepA+str(i)+txtsepB+'\r\n')
                 t2=t.replace(os.linesep,'\n').replace('\r','').replace('\n','\r\n')
                 fid.write(t2+'\r\n')
+    
     def LoadTxt(self,filename):
         print 'Load Notes'
         fid = open(filename,'r')
@@ -907,6 +915,7 @@ class WatershedDataCore(object):
             self.seedArray[:,:val]  = 1
             self.seedArray[:,-val:] = 1
         self.Watershed()
+    
     def Watershed(self,algorithm='PyMorph'): # Ignore Undo
         if not HAS_CV and algorithm in 'OpenCV':
             print 'OpenCV is not installed!'
@@ -937,6 +946,7 @@ class WatershedDataCore(object):
             print self.walgorithm[self.index],'is not a valid watershed algorithm!'
         self.woutline = CreateOutlines(self.watershed[self.index],
                                        walgorithm=self.walgorithm[self.index])
+    
     def UpdateValuesList(self,index=None):
         if index is None:
             index=self.index
@@ -958,6 +968,7 @@ class WatershedDataCore(object):
             self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
             self.UpdateSeeds()
             self.Watershed()
+    
     def CopySeedsFromPrevious(self):
         if self.index>0:
             self.SetUndoPoint()
@@ -965,6 +976,7 @@ class WatershedDataCore(object):
             self.seedSelections[self.index]=deepcopy(self.seedSelections[self.index-1])
             self.UpdateSeeds()
             self.Watershed()
+    
     def GetLastActiveFrame(self):
         lastActiveFrame=self.length-1
         for i in range(self.length):
@@ -986,6 +998,7 @@ class WatershedDataCore(object):
             self.RemoveUndo()
         else:
             print 'No more frames!!!!'
+    
     def PreviousFrame(self):
         if self.index>0:
             self.lastFrameVisited = self.index
@@ -995,6 +1008,7 @@ class WatershedDataCore(object):
         else:
             print 'At the beginning.'
         self.RemoveUndo()
+    
     def MoveToFrame(self,newIndex):
         if newIndex<0:
             newIndex=0
@@ -1021,20 +1035,24 @@ class WatershedDataCore(object):
         '''Apply Gaussian Blur to data'''
         self.gaussSigma=rad
         self.RemoveUndo()
+    
     def ResetData(self):
         '''Return data to original data'''
         self.gaussSigma=0
         self.filterData[self.index] = np.array(self.origData[self.index])
         self.RemoveUndo()
+    
     def BGSubtract(self,rad):
         '''Apply Gaussian Blur to data'''
         bg = gaussian_filter(self.filterData[self.index],rad)
         self.filterData[self.index] = self.filterData[self.index] + bg.max() - bg
         self.filterData[self.index] -= self.filterData[self.index].min()
         self.RemoveUndo()
+    
     def Median(self,filterSize):
         self.filterData[self.index] = median_filter(self.filterData[self.index],filterSize)
         self.RemoveUndo()
+    
     def Sharpen(self,r1,r2):
         '''Apply Gaussian Blur to data'''
         g1 = gaussian_filter(self.filterData[self.index],r1)
@@ -1042,6 +1060,7 @@ class WatershedDataCore(object):
         self.filterData[self.index] =  g1 + g2.max() - g2
         self.filterData[self.index] -= self.filterData[self.index].min()
         self.RemoveUndo()
+    
     def OutOfBounds(self,point):
         s=self.origData[self.index].shape
         return ( point[0]<0 or point[1]<0 or point[0]>=s[0] or point[1]>=s[1] )
@@ -1051,6 +1070,7 @@ class WatershedDataCore(object):
         self.sparseList[self.index] = scipy.sparse.lil_matrix(self.seedArray,dtype=np.uint16)
         self.seedSelections[self.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
         self.UpdateSeeds()
+    
     def NewSeed(self,pointIn,val=None):
         '''Add a new seed point'''
         if self.OutOfBounds(pointIn):
@@ -1072,6 +1092,7 @@ class WatershedDataCore(object):
         self.UpdatePointsWithVal(wh,val)
         
         return True
+    
     def ExtraSeed(self,pointIn,val):
         return self.NewSeed(pointIn,val=val)
     
@@ -1096,6 +1117,7 @@ class WatershedDataCore(object):
             return True
         else:
             return False
+    
     def DeleteSeed(self,point):
         '''Remove the seed point from the list'''
         self.SetUndoPoint()
@@ -1104,6 +1126,7 @@ class WatershedDataCore(object):
             return True
         else:
             return False
+    
     def DeleteSelectedSeeds(self,invertSelections=False):
         self.SetUndoPoint()
         wh = np.where( self.seedSelections[self.index].toarray() ^ invertSelections )
@@ -1124,6 +1147,7 @@ class WatershedDataCore(object):
         self.RemoveUndo()
         wh = np.where(self.seedArray==vOld)
         self.UpdatePointsWithVal(wh,vNew)
+    
     def SwitchRegionValues(self,v1,v2):
         # I think it is probaly the right thing to add undo here, but it sure
         # Does make things quirky b/c only changes in seeds are recorded in Undo...
@@ -1134,6 +1158,7 @@ class WatershedDataCore(object):
         wh2 = np.where(self.seedArray==v2)
         self.UpdatePointsWithVal(wh1,v2)
         self.UpdatePointsWithVal(wh2,v1)
+    
     def UpdateSelection(self,point=None,append=False):
         if append==False:
             self.selectionVals=[]
@@ -1186,6 +1211,7 @@ class WatershedDataCore(object):
                     self.framesVisited[i]=True
             newVal+=1
         self.index = oldIndex
+    
     def AutoCenterWound(self,woundVals):
         oldIndex=self.index
         for self.index in range(self.length): # For each frame
@@ -1232,6 +1258,16 @@ class WatershedDataCore(object):
             print "All the variables (woundVals,timeIntervals,gapIntervals,numberFramesPerSeries) must be defined!"
             return
         return MI
+
+def SaveCSV(name,directory,data):
+    fid=open(os.path.join(directory,name+'.csv'),'w')
+    fid.write(repr(data).replace('\r','').replace('\n','')
+                        .replace('[[','') \
+                        .replace(']]','') \
+                        .replace('[','') \
+                        .replace('], ','\r\n'))
+    fid.close()
+
 
 # WatershedDataCoreWithStats adds stat calculation functions to WatershedDataCore
 class WatershedDataCoreWithStats(WatershedDataCore):
@@ -1333,6 +1369,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             x,y=np.where(self.watershed[self.index]==v)
             boundsList.append( [[min(x),max(x)],[min(y),max(y)]] )
         return boundsList
+    
     def CalculateArea(self,doUpdate=True):
         if doUpdate:
             self.UpdateValuesList()
@@ -1341,6 +1378,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         for v in self.valList:
             areaList.append( np.sum(self.watershed[self.index]==v) )
         return areaList
+    
     def CalculatePerimeter(self,boundsList=None):
         if boundsList is None:
             self.UpdateValuesList()
@@ -1349,6 +1387,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         for i,v in enumerate(self.valList):
             perimeterList.append(ImageContour.GetIJPerimeter(self.watershed[self.index],v,boundsList[i]))
         return perimeterList
+    
     def CalculateBestFitEllipse(self,boundsList=None):
         if boundsList is None:
             self.UpdateValuesList()
@@ -1358,9 +1397,11 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             [[xm,xM],[ym,yM]] = boundsList[i]
             ellipseList.append(EllipseFitter.EllipseFitter(self.watershed[self.index][xm:xM+1,ym:yM+1]==v))
         return ellipseList
+    
     def CalculateCentroids(self,doUpdate=True):
         cmList = self.GetCentroids(self.index,doUpdate=doUpdate)
         return cmList
+    
     def CalculateWoundDistance(self,cmList=None):
         # possibly open a user window to select wound location???
         # should run from the SegmenterFrame and not WatershedData,though...
@@ -1378,6 +1419,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             rList.append(r)
             thetaList.append(theta)
         return rList, thetaList
+    
     def CalculateNeighbors(self,boundsList=None):
         if boundsList is None:
             self.UpdateValuesList()
@@ -1398,6 +1440,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 if np.any(neighborPixels==neighborVal):
                     neighborList[i].append(neighborVal)
         return neighborList
+    
     def CalculateEdgeBrightnessValues(self,thickness=1,saveDir=None):
         mask = CreateThickOutlines(self.watershed[self.index],thickness)
         if saveDir:
@@ -1417,25 +1460,12 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 if l.nnz!=0:
                     maxSeedVal = max( maxSeedVal, l.tocoo().data.max() )
         return maxSeedVal
+    
     def CollectAllStats(self,saveDirForOutlineMasks=None):
         maxSeedVal = self.GetMaxSeedVal()
         
-        self.valuesByFrame=[]
-        self.centroidX=[]
-        self.centroidY=[]
-        self.xmin=[]
-        self.xmax=[]
-        self.ymin=[]
-        self.ymax=[]
-        self.area=[]
-        self.perimeter=[]
-        self.major=[]
-        self.minor=[]
-        self.angle=[]
-        self.woundDistance=[]
-        self.woundAngle=[]
-        self.neighbors=[]
-        self.edgeBrightnessValues=[]
+        self.reset_stats()
+        
         oldIndex=self.index
         adjLength = self.GetLastActiveFrame()+1
         for index in range(adjLength):
@@ -1443,15 +1473,18 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 print 'frame',index,'has only background seeds'
                 break
             self.index=index
-            
             print 'Calculating for Frame',index
+            
             print 'Get Values'
             self.UpdateValuesList()
             self.valuesByFrame.append(self.valList)
+            
             print 'Get Centroids'
-            centroid = self.CalculateCentroids(doUpdate=False)
-            self.centroidX.append([i[0] for i in centroid])
-            self.centroidY.append([i[1] for i in centroid])
+            centroids = self.CalculateCentroids(doUpdate=False)
+            centroidX, centroidY = zip(*centroids)
+            self.centroidX.append(centroidX)
+            self.centroidY.append(centroidY)
+            
             print 'Get Bounds'
             boundsList=self.GetBoundingRectangles(doUpdate=False)
             br=np.array(boundsList)
@@ -1459,10 +1492,13 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             self.xmax.append(br[:,0,1].tolist())
             self.ymin.append(br[:,1,0].tolist())
             self.ymax.append(br[:,1,1].tolist())
+            
             print 'Get Area'
             self.area.append(self.CalculateArea(doUpdate=False))
+            
             print 'Get Perimeter'
             self.perimeter.append(self.CalculatePerimeter(boundsList=boundsList))
+            
             print 'Get BF Ellipse'
             bfe = np.array(self.CalculateBestFitEllipse(boundsList=boundsList))
             self.major.append(bfe[:,1].tolist())
@@ -1471,8 +1507,10 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             rList,thetaList=self.CalculateWoundDistance(cmList=centroid)
             self.woundDistance.append(rList)
             self.woundAngle.append(thetaList)
+            
             print 'Get Neighbors'
             self.neighbors.append(self.CalculateNeighbors(boundsList=boundsList))
+            
             print 'Get Edge Brightness Values and Save Edge Mask'
             self.edgeBrightnessValues.append(self.CalculateEdgeBrightnessValues(saveDir=saveDirForOutlineMasks))
             
@@ -1484,31 +1522,10 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                                         # Use the CompressSeedVals Button to remedy the situation...
             for i in range(len(self.valuesByFrame)):
                 if not v in self.valuesByFrame[i]:
-                    #self.valuesByFrame[i].insert(v-2,v) # um... this made this measure totally worthless and confusing
-                    self.centroidX[i].insert(v-2,None)
-                    self.centroidY[i].insert(v-2,None)
-                    self.xmin[i].insert(v-2,None)
-                    self.xmax[i].insert(v-2,None)
-                    self.ymin[i].insert(v-2,None)
-                    self.ymax[i].insert(v-2,None)
-                    self.area[i].insert(v-2,None)
-                    self.perimeter[i].insert(v-2,None)
-                    self.major[i].insert(v-2,None)
-                    self.minor[i].insert(v-2,None)
-                    self.angle[i].insert(v-2,None)
-                    self.woundDistance[i].insert(v-2,None)
-                    self.woundAngle[i].insert(v-2,None)
-                    self.neighbors[i].insert(v-2,None)
+                    for m in self.all_stats[1:] # skip the first stat, self.valuesByFrame... this made this measure totally worthless and confusing
+                        getattr(self, m)[i].insert(v - 2, None)
         print 'Done Collecting!'
         self.index=oldIndex
-    def SaveCSV(self,name,directory,data):
-        fid=open(os.path.join(directory,name+'.csv'),'w')
-        fid.write(repr(data).replace('\r','').replace('\n','')
-                            .replace('[[','') \
-                            .replace(']]','') \
-                            .replace('[','') \
-                            .replace('], ','\r\n'))
-        fid.close()
     def SaveAllStats(self,directory=None):
         if directory is None:
             directory = wx.DirSelector()
@@ -1612,8 +1629,10 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 fid.write(', ')
         fid.write(']')
         fid.close()
+    
     def GetActiveSeedValues(self):
         return sorted(list(set( self.sparseList[self.index].tocoo().data.tolist() )))
+    
     def SaveTripleJunctionsWithCellIDs(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory is None:
@@ -1645,6 +1664,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                         neighborPairs.update( [tuple(sorted([i+2,j])) for j in self.neighbors[frame][i] ] )
             neighborPairsByFrame.append(sorted(list(neighborPairs)))
         return neighborPairsByFrame
+    
     #NOT TESTED
     def GetContourValuesLengthsAndSubContoursByFrame(self,allValsByFrame,woundValsSorted):
         ######### NOT DONE!!!!!!! ####################
@@ -1669,6 +1689,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                     del(cVLS[i])
             cVLSByFrame.append(cVLS)
         return cVLSByFrame
+    
     #NOT TESTED
     def SaveSubContours(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
@@ -1687,6 +1708,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         fid=open(os.path.join(directory,'CellBoundarySubContours.py'),'w')
         fid.write('cVLSByFrame = '+repr(cVLSByFrame))
         fid.close()
+    
     def LoadStats(self,directory=None):
         if directory is None:
             directory = wx.DirSelector()
@@ -1694,17 +1716,12 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         #calculationsXls = os.path.join(directory,'Calculations.xls')
         neighborsPy = os.path.join(directory,'Neighbors.py')
         
-        names = ['CellValuesByFrame','CentroidX','CentroidY',
-                 'Xmin','Xmax','Ymin','Ymax',
-                 'Area','Perimeter',
-                 'MajorAxis','MinorAxis', 'Angle',
-                 'DistanceToWound','AngleToWound'] # Always copied from SaveAllStats
+        SKIP = 2
+        vars = self.all_stats[:-SKIP]
+        names = self.all_stat_names[:-SKIP]
+        
         # Initialise the variables...
-        self.valuesByFrame, self.centroidX, self.centroidY = [],[],[]
-        self.xmin, self.xmax, self.ymin, self.ymax = [],[],[],[]
-        self.area, self.perimeter = [],[]
-        self.major, self.minor, self.angle = [],[],[]
-        self.woundDistance, self.woundAngle = [],[]
+        self.reset_stats()
         
         vars = [self.valuesByFrame, self.centroidX, self.centroidY,
                 self.xmin, self.xmax, self.ymin, self.ymax,
@@ -1789,6 +1806,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         while bins[-1]==[]:
             del(bins[-1])
         return bins
+    
     def CreateBinsWNeighbors(self,frameToCompare,woundVals):
         if not hasattr(self,'neighbors'):
             print 'Error! Need have collected stats for the data before running CreateBinsWNeighbors!'
@@ -1813,6 +1831,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         while bins[-1]==[]:
             del(bins[-1])
         return bins
+    
     def GetWoundNeighborContourLengths(self,index,woundVals,printPerimeterCheck=False):
         """Find the boundary lengths of the wound and it's neighboring cells"""
         # Warning! No index checking...
@@ -2244,6 +2263,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         
         sheetNames = ["Major","Minor","Aspect Ratio","Angle","Irr","Iqq","Irr D Iqq"]
         ExcelHelper.excelWrite( excelOut,sheetNames,os.path.join(d,'PrincipalAxes.xls'),flip=False)
+    
 
 
 class WatershedData(WatershedDataCoreWithStats):
@@ -2272,6 +2292,7 @@ class WatershedData(WatershedDataCoreWithStats):
                 if self.framesVisited[i]:
                     self.MapPlot(saveFile=mapBase+str(i)+'.png')
             self.index = oldIndex
+    
     def Open(self,d):
         if WatershedDataCoreWithStats.Open(self,d):
             self.ColorPlot()
@@ -2281,20 +2302,25 @@ class WatershedData(WatershedDataCoreWithStats):
         self.framesVisited[self.index]=True
         self.MapPlot()
         self.ColorPlot()
+    
     def NextFrame(self,doPlots=True):
         WatershedDataCoreWithStats.NextFrame(self)
         if self.index+1<self.length:
             if doPlots: # If we skip over it, no need to save...
                 self._plotUpdate()
+    
     def PreviousFrame(self,doPlots=True):
         WatershedDataCoreWithStats.PreviousFrame(self)
         if doPlots: # If we skip over it, no need to save...
             self._plotUpdate()
+    
     def MoveToFrame(self,newIndex):
         WatershedDataCoreWithStats.MoveToFrame(self,newIndex)
         self._plotUpdate()
+    
     def GoToLastVisitedFrame(self):
         self.MoveToFrame(self.lastFrameVisited)
+    
     def Invert(self):
         '''This only changes how the image is displayed (normal or inverted) - real data is still "white-side-up"
            This behavior was changed in version 0.5.5.0; '''
@@ -2303,7 +2329,9 @@ class WatershedData(WatershedDataCoreWithStats):
         # Old behavior:
         #self.filterData[self.index] = self.filterData[self.index].max()-self.filterData[self.index]
         #self.RemoveUndo()
+    
     #def DrawOrigImage(self): # deprecated
+    
     def MapPlot(self,saveFile=None,useText=False):
         #plt.figure(2)#;cla()
         
@@ -2370,6 +2398,7 @@ class WatershedData(WatershedDataCoreWithStats):
                                               norm=matplotlib.colors.NoNorm() )
             self.DrawBWDot()
             #self.fig2.canvas.draw() # Now DrawBWDot calls this instead...
+    
     def MapPlotWTracks(self):
         # Disable the old mapPlot and redraw every time (will be slow...)
         # Later, could possibly store the tracks part for animations, too...
@@ -2396,9 +2425,11 @@ class WatershedData(WatershedDataCoreWithStats):
         self.ax2.plot(y,x,'k')
         # initiate the mouse-over printing...
         self.ax2.format_coord = GetReportPixel(self)
+    
     def ToggleOverlaysVisible(self):
         self.overlayVisible = not self.overlayVisible
         self.ColorPlot()
+    
     def ColorPlot(self):
         #plt.figure(1)
         im = self.filterData[self.index] # NOT 8- bit!!!
@@ -2448,6 +2479,7 @@ class WatershedData(WatershedDataCoreWithStats):
         # This is by FAR the slowest step, about 0.25s
         self.HighlightRegion()
         # self.fig1.canvas.draw() # Highlight Region also calls draw, so this doesn't need to!
+    
     def DrawBWDot(self):
         #plt.figure(2)
         
@@ -2524,6 +2556,7 @@ class WatershedData(WatershedDataCoreWithStats):
         self.fig1.canvas.draw_idle()
         self.fig1.canvas.widgetlock.release(self.lasso)
         del self.lasso
+    
     def PlotAreasAndPerimeters(self): # Must run CollectAllStats first!
         area=np.array(self.area)
         per=np.array(self.perimeter)
@@ -2551,6 +2584,7 @@ class WatershedData(WatershedDataCoreWithStats):
         print self.CalculateBestFitEllipse()
         #print self.CalculateWoundDistance()
         print self.CalculateNeighbors()
+    
     def RunCalculations2(self,d):
         WatershedDataCoreWithStats.RunCalculations2(self,d)
         oldIndex=self.index
@@ -2561,6 +2595,7 @@ class WatershedData(WatershedDataCoreWithStats):
         self.index = oldIndex
         self.MapPlot()
         print 'Finished'
+    
     def WCPlot(self,ind,woundVals,WNv,NNv):
         wi = np.array(self.watershed[ind],dtype=np.int)
         for v in woundVals:
@@ -2579,6 +2614,7 @@ class WatershedData(WatershedDataCoreWithStats):
                 self.ax10.plot(*(np.array( c )[:,::-1].T))
                 sleep(0.4)
                 self.fig10.canvas.draw()
+    
     def RingsPlot(self,bins,frame,woundVals,useNei=False,binSize=None,initR=0): # still using pyplot directly...
         # b,g,r,c,m,y,k
         colors=[[0,0,255],[0,255,0],[255,0,0],[0,255,255],[255,0,255],[255,255,0]]*10 # that ought to do it ;-P
