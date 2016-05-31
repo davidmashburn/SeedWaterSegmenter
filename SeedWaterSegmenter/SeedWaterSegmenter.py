@@ -352,7 +352,7 @@ def GetReportPixel(sfORwd): # create and return the report_pixel function...
     def report_pixel(x,y):
         if isinstance(sfORwd, SegmenterFrame):
             wd=sfORwd.wd
-        elif isinstance(sfORwd, WatershedDataPure):
+        elif isinstance(sfORwd, WatershedDataCoreWithStats):
             wd=sfORwd
         else:
             raise TypeError("sfORwd must be a WatershedData or SegmenterFrame Object!")
@@ -577,7 +577,8 @@ def WriteSeedPointsFile(seedPointsFile,seedList,seedVals,walgorithm,woundCenters
 #    return matplotlib.colors.LinearSegmentedColormap('rand4SW',segmentdata)
 
 # This class now deals with image stacks as well as images...
-class WatershedDataPure(object):
+
+class WatershedDataCore(object):
     def __init__(self,arrayIn,previousSeeds=None):
         # Change this to allow orig, min-max filtered, and sharpened data
         # Need a way to mark the "Un-seeds" that exist in the background only...
@@ -725,6 +726,12 @@ class WatershedDataPure(object):
         self.notes+=[None]*(self.length-len(self.notes))
         print self.notes
     
+    def SaveStats(self):
+        pass
+    
+    def LoadStats(self):
+        pass
+    
     def Save(self,d,saveOutlines=True): # Ignore Undo
         print 'Saving To ',d
         # TODO: FOR SOME WEIRD REASON, SAVE/LOAD only recreates the seeds
@@ -798,7 +805,6 @@ class WatershedDataPure(object):
         if watershedTemp is not None:
             for i in range(min(len(self.watershed),len(watershedTemp))):
                 self.watershed[i] = watershedTemp[i]
-                #self.CreateOutlines(i)
         
         print self.shape
         print self.watershed[0].max()
@@ -938,67 +944,6 @@ class WatershedDataPure(object):
         for v in range(2,self.watershed[index].max()+1):
             if np.any(self.watershed[index]==v):
                 self.valList.append(v)
-    
-    def GetCentroids(self,index,doUpdate=True): # Returns a floating point value...
-        if doUpdate:
-            self.UpdateValuesList(index)
-        cmList = []
-        for v in self.valList:
-            cmList.append( center_of_mass((self.watershed[index]==v).astype(np.float)) )
-        return cmList
-    
-    def GetTripleJunctionImage(self,index):
-        'GetTripleJunctionImage generates a boolean array True at all points\n'
-        'where 4 pixels meet with at least 3 distinct values.'
-        sh = [i-1 for i in self.watershed[index].shape]
-        tripleJ = np.zeros(sh,dtype=np.bool)
-        for i in range(sh[0]):
-            for j in range(sh[1]):
-                if len(set([  self.watershed[index][i][j],
-                              self.watershed[index][i+1][j],
-                              self.watershed[index][i][j+1],
-                              self.watershed[index][i+1][j+1]  ])) > 2:
-                    tripleJ[i][j] = 1
-        return tripleJ
-    def GetTripleJunctionPointsAndVals(self,index):
-        tj = np.array(np.where(self.GetTripleJunctionImage(index))).T
-        idsByTJ=[]
-        idsByTJArr = np.zeros([len(tj),4],np.int)
-        for t in range(len(tj)):
-            idsByTJ.append( list(set([self.watershed[index][tj[t][0]+x][tj[t][1]+y]
-                                       for x,y in [[0, 0],[1, 0],[0, 1],[1, 1]]])))
-            idsByTJArr[t][:len(idsByTJ[-1])] = idsByTJ[-1]
-        self.UpdateValuesList(index=index)
-        idList = self.valList
-        tjsByID=[]
-        for v in idList:
-            tjsByID.append(np.where(idsByTJArr==v)[0].tolist())
-        
-        #      List of XY Coords of Triple Junctions
-        #          List of all existing cellID's in this frame
-        #                  For each triple junction, the 3 or 4 cellID's touch it
-        #                           For each cell (by ID) which triple junctions touch it
-        return tj, idList, idsByTJ, tjsByID # These last 2 index into each other...
-    
-    # If I ever decided to speed this up, the best way would be to pre-calculate all the pair distances
-    # and then find the shortest combined path from summing these up
-    # And I'm also sure someone has an algorithm that does it even better...
-    def GetPolygonsAndPerimeters(self):
-        lastActiveFrame = self.GetLastActiveFrame()
-        tjPolys = []
-        polyPerimeters = []
-        edgeCells = []
-        for index in range(lastActiveFrame+1):
-            tj, idList, idsByTJ, tjsByID = self.GetTripleJunctionPointsAndVals(index) # Runs an Update
-            tjPolys.append([None]*len(self.valList))
-            polyPerimeters.append([None]*len(self.valList))
-            for i,v in enumerate(self.valList): # same as idList
-                tjs = [ tj[j] for j in tjsByID[i] ]
-                tjPolys[-1][i] = GetMinPoly(tjs)
-                polyPerimeters[-1][i] = CalcPolyPerimeter(tjPolys[-1][i])
-         # so these, as with area, perimeter, etc, come out indexed by value *index*, not by value
-         # use tjPolys[i], NOT tjPolys[v]
-        return tjPolys,polyPerimeters
     
     def MakeSeedsFromPrevious(self):
         if self.index>0:
@@ -1255,6 +1200,131 @@ class WatershedDataPure(object):
                 #else:
                 #    self.woundCenters[self.index] = (0,0) # just define something so the thing doesn't fail all the time?
         self.index=oldIndex
+    
+    def GetManualInputs(self,d):
+        if not os.path.exists(d):
+            print 'ManualInputs.py not found!'
+            return
+        ManualInputs = os.path.join(d,"ManualInputs.py")
+        if not os.path.exists(ManualInputs):
+            te = wx.TextEntryDialog(None,'Enter values for the following;\nThey will then be saved in ManualInputs.py:','ManualInputs.py',
+                                    'woundVals=[]\n'
+                                    'timeIntervals=[]\n'
+                                    'numberFramesPerSeries=[]\n'
+                                    'gapIntervals=[]\n',style=wx.TE_MULTILINE)
+            te.SetInitialSize(size=(-1,250)) # set initial size of the window to be 300
+            te.ShowModal()
+            fid = open(ManualInputs,'w')
+            fid.write(te.GetValue())
+            fid.close()
+        #fid = open(ManualInputs,'r')
+        #exec(fid.read().replace('\r',''))
+        #fid.close()
+        fid=open(ManualInputs,'U')
+        MI = imp.load_module('ManualInputs',fid,'ManualInputs.py',('.py','U',1))
+        fid.close()
+        try:
+            MI.woundVals
+            MI.timeIntervals
+            MI.gapIntervals
+            MI.numberFramesPerSeries
+        except:
+            print "All the variables (woundVals,timeIntervals,gapIntervals,numberFramesPerSeries) must be defined!"
+            return
+        return MI
+
+# WatershedDataCoreWithStats adds stat calculation functions to WatershedDataCore
+class WatershedDataCoreWithStats(WatershedDataCore):
+    def __init__(self, *args, **kwds):
+        WatershedDataCore.__init__(self, *args, **kwds)
+        stats_table = (('valuesByFrame', 'CellValuesByFrame'),
+                       ('centroidX', 'CentroidX'),
+                       ('centroidY', 'CentroidY'),
+                       ('xmin', 'Xmin'),
+                       ('xmax', 'Xmax'),
+                       ('ymin', 'Ymin'),
+                       ('ymax', 'Ymax'),
+                       ('area', 'Area'),
+                       ('perimeter', 'Perimeter'),
+                       ('major', 'MajorAxis'),
+                       ('minor', 'MinorAxis'),
+                       ('angle', 'Angle'),
+                       ('woundDistance', 'DistanceToWound'),
+                       ('woundAngle', 'AngleToWound'),
+                       # These last two values are not included in the Excel file:
+                       ('edgeBrightnessValues', 'EdgeBrightnessValues'),
+                       ('neighbors', 'Neighbors.py'),
+                      )
+        self.all_stats, self.all_stat_names = zip(*stats_table)
+        self.reset_stats()
+    
+    def reset_stats(self):
+        '''Initialize all the stats to empty lists'''
+        for attr in self.all_stats:
+            setattr(self, attr, [])
+    
+    def GetCentroids(self,index,doUpdate=True): # Returns a floating point value...
+        if doUpdate:
+            self.UpdateValuesList(index)
+        cmList = []
+        for v in self.valList:
+            cmList.append( center_of_mass((self.watershed[index]==v).astype(np.float)) )
+        return cmList
+    
+    def GetTripleJunctionImage(self,index):
+        'GetTripleJunctionImage generates a boolean array True at all points\n'
+        'where 4 pixels meet with at least 3 distinct values.'
+        sh = [i-1 for i in self.watershed[index].shape]
+        tripleJ = np.zeros(sh,dtype=np.bool)
+        for i in range(sh[0]):
+            for j in range(sh[1]):
+                if len(set([  self.watershed[index][i][j],
+                              self.watershed[index][i+1][j],
+                              self.watershed[index][i][j+1],
+                              self.watershed[index][i+1][j+1]  ])) > 2:
+                    tripleJ[i][j] = 1
+        return tripleJ
+    
+    def GetTripleJunctionPointsAndVals(self,index):
+        tj = np.array(np.where(self.GetTripleJunctionImage(index))).T
+        idsByTJ=[]
+        idsByTJArr = np.zeros([len(tj),4],np.int)
+        for t in range(len(tj)):
+            idsByTJ.append( list(set([self.watershed[index][tj[t][0]+x][tj[t][1]+y]
+                                       for x,y in [[0, 0],[1, 0],[0, 1],[1, 1]]])))
+            idsByTJArr[t][:len(idsByTJ[-1])] = idsByTJ[-1]
+        self.UpdateValuesList(index=index)
+        idList = self.valList
+        tjsByID=[]
+        for v in idList:
+            tjsByID.append(np.where(idsByTJArr==v)[0].tolist())
+        
+        #      List of XY Coords of Triple Junctions
+        #          List of all existing cellID's in this frame
+        #                  For each triple junction, the 3 or 4 cellID's touch it
+        #                           For each cell (by ID) which triple junctions touch it
+        return tj, idList, idsByTJ, tjsByID # These last 2 index into each other...
+    
+    # If I ever decided to speed this up, the best way would be to pre-calculate all the pair distances
+    # and then find the shortest combined path from summing these up
+    # And I'm also sure someone has an algorithm that does it even better...
+    def GetPolygonsAndPerimeters(self):
+        lastActiveFrame = self.GetLastActiveFrame()
+        tjPolys = []
+        polyPerimeters = []
+        edgeCells = []
+        for index in range(lastActiveFrame+1):
+            tj, idList, idsByTJ, tjsByID = self.GetTripleJunctionPointsAndVals(index) # Runs an Update
+            tjPolys.append([None]*len(self.valList))
+            polyPerimeters.append([None]*len(self.valList))
+            for i,v in enumerate(self.valList): # same as idList
+                tjs = [ tj[j] for j in tjsByID[i] ]
+                tjPolys[-1][i] = GetMinPoly(tjs)
+                polyPerimeters[-1][i] = CalcPolyPerimeter(tjPolys[-1][i])
+         # so these, as with area, perimeter, etc, come out indexed by value *index*, not by value
+         # use tjPolys[i], NOT tjPolys[v]
+        return tjPolys,polyPerimeters
+    
     def GetBoundingRectangles(self,doUpdate=True):
         if doUpdate:
             self.UpdateValuesList()
@@ -1914,37 +1984,7 @@ class WatershedDataPure(object):
             print WNPc
         
         return WP,WPc,WPc2,spokes,WNP,WNPc
-    def GetManualInputs(self,d):
-        if not os.path.exists(d):
-            print 'ManualInputs.py not found!'
-            return
-        ManualInputs = os.path.join(d,"ManualInputs.py")
-        if not os.path.exists(ManualInputs):
-            te = wx.TextEntryDialog(None,'Enter values for the following;\nThey will then be saved in ManualInputs.py:','ManualInputs.py',
-                                    'woundVals=[]\n'
-                                    'timeIntervals=[]\n'
-                                    'numberFramesPerSeries=[]\n'
-                                    'gapIntervals=[]\n',style=wx.TE_MULTILINE)
-            te.SetInitialSize(size=(-1,250)) # set initial size of the window to be 300
-            te.ShowModal()
-            fid = open(ManualInputs,'w')
-            fid.write(te.GetValue())
-            fid.close()
-        #fid = open(ManualInputs,'r')
-        #exec(fid.read().replace('\r',''))
-        #fid.close()
-        fid=open(ManualInputs,'U')
-        MI = imp.load_module('ManualInputs',fid,'ManualInputs.py',('.py','U',1))
-        fid.close()
-        try:
-            MI.woundVals
-            MI.timeIntervals
-            MI.gapIntervals
-            MI.numberFramesPerSeries
-        except:
-            print "All the variables (woundVals,timeIntervals,gapIntervals,numberFramesPerSeries) must be defined!"
-            return
-        return MI
+    
     # Later, change this to use ExendedWoundContours instead of wcList,swcList
     def PerimeterTests(self,frame,testInd,woundVals,wcList,swcList,useSorted=False):
         """perimeter check for NO"""
@@ -2205,10 +2245,11 @@ class WatershedDataPure(object):
         sheetNames = ["Major","Minor","Aspect Ratio","Angle","Irr","Iqq","Irr D Iqq"]
         ExcelHelper.excelWrite( excelOut,sheetNames,os.path.join(d,'PrincipalAxes.xls'),flip=False)
 
-class WatershedData(WatershedDataPure):
-    """Enhances WatershedDataPure to include involve plotting"""
+
+class WatershedData(WatershedDataCoreWithStats):
+    """Enhances WatershedDataCoreWithStats to include plotting"""
     def __init__(self,arrayIn,previousSeeds=None,fig1=None,ax1=None,fig2=None,ax2=None):
-        WatershedDataPure.__init__(self,arrayIn,previousSeeds=previousSeeds)
+        WatershedDataCoreWithStats.__init__(self,arrayIn,previousSeeds=previousSeeds)
         
         self.fig1 = fig1 if fig1 else plt.figure(1)
         self.fig2 = fig2 if fig2 else plt.figure(2)
@@ -2218,7 +2259,7 @@ class WatershedData(WatershedDataPure):
         #self.ax3 = self.fig3.add_subplot(111) # make this as-needed instead...
     
     def Save(self,d,saveOutlines=True,saveMapImages=True): # Ignore Undo
-        WatershedDataPure.Save(self,d,saveOutlines=saveOutlines)
+        WatershedDataCoreWithStats.Save(self,d,saveOutlines=saveOutlines)
         
         mapBase = os.path.join(d,'Maps','Map')
         
@@ -2232,7 +2273,7 @@ class WatershedData(WatershedDataPure):
                     self.MapPlot(saveFile=mapBase+str(i)+'.png')
             self.index = oldIndex
     def Open(self,d):
-        if WatershedDataPure.Open(self,d):
+        if WatershedDataCoreWithStats.Open(self,d):
             self.ColorPlot()
             self.MapPlot()
     
@@ -2241,16 +2282,16 @@ class WatershedData(WatershedDataPure):
         self.MapPlot()
         self.ColorPlot()
     def NextFrame(self,doPlots=True):
-        WatershedDataPure.NextFrame(self)
+        WatershedDataCoreWithStats.NextFrame(self)
         if self.index+1<self.length:
             if doPlots: # If we skip over it, no need to save...
                 self._plotUpdate()
     def PreviousFrame(self,doPlots=True):
-        WatershedDataPure.PreviousFrame(self)
+        WatershedDataCoreWithStats.PreviousFrame(self)
         if doPlots: # If we skip over it, no need to save...
             self._plotUpdate()
     def MoveToFrame(self,newIndex):
-        WatershedDataPure.MoveToFrame(self,newIndex)
+        WatershedDataCoreWithStats.MoveToFrame(self,newIndex)
         self._plotUpdate()
     def GoToLastVisitedFrame(self):
         self.MoveToFrame(self.lastFrameVisited)
@@ -2511,7 +2552,7 @@ class WatershedData(WatershedDataPure):
         #print self.CalculateWoundDistance()
         print self.CalculateNeighbors()
     def RunCalculations2(self,d):
-        WatershedDataPure.RunCalculations2(self,d)
+        WatershedDataCoreWithStats.RunCalculations2(self,d)
         oldIndex=self.index
         self.index = 0
         self.MapPlot(saveFile=os.path.join(d,'MapWithCellIDs.png'),useText=True)
