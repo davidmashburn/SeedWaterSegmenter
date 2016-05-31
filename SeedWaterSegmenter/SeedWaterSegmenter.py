@@ -1269,35 +1269,102 @@ def SaveCSV(name,directory,data):
     fid.close()
 
 
+def _data_splitter_for_excel(data, adjLength):
+    print 'Over 256 frames!'
+    print 'Ask user how to save xls file...'
+    s = '\n'.join(
+      'There are too many frames ({}) for one excel sheet (max 256)!'.format(adjLength),
+      'Enter the number of frames to skip between saving.',
+      '(A value of 1 means save all the data, 2 is save every other frame, etc...)',
+      'Otherwise, the data will be broken into 256 frame files.',
+    )
+    teDialog = wx.TextEntryDialog(None, s, caption='Skip Frames?', defaultValue='1')
+    dia = teDialog.ShowModal()
+    
+    if dia == wx.ID_CANCEL:
+        print 'Cancel, save all frames'
+        skip_val = 1
+    elif dia == wx.ID_OK:
+        skip_val = teDialog.GetValue()
+        if skip_val.isdigit():
+            skip_val = int(skip_val)
+            if skip_val > 1:
+                print 'Only save every',skip_val,'frames.'
+            else:
+                skip_val = 1
+                print 'Only save every',skip_val,'frames.'
+        else:
+            print 'Bad entry!  Just save all frames!'
+            skip_val = 1
+    
+    if skip_val > 1:
+        data = [d[::skipVal] for d in data]
+    
+    numBreakups=1
+    if len(data[0])>256: # This will break the excel write, so make break into pieces...
+        numBreakups = (len(data[0]) - 1) / 256 + 1
+        indexList = [256*i for i in range(numBreakups)] + [len(data[0])]
+        dataSets = [[d[indexList[f]:indexList[f+1]]
+                     for d in data] # each parameter
+                    for f in range(numBreakups)] # each file
+    else:
+        dataSets = [data]
+    
+    return dataSets, skip_val, numBreakups
+
 # WatershedDataCoreWithStats adds stat calculation functions to WatershedDataCore
 class WatershedDataCoreWithStats(WatershedDataCore):
     def __init__(self, *args, **kwds):
         WatershedDataCore.__init__(self, *args, **kwds)
-        stats_table = (('valuesByFrame', 'CellValuesByFrame'),
-                       ('centroidX', 'CentroidX'),
-                       ('centroidY', 'CentroidY'),
-                       ('xmin', 'Xmin'),
-                       ('xmax', 'Xmax'),
-                       ('ymin', 'Ymin'),
-                       ('ymax', 'Ymax'),
-                       ('area', 'Area'),
-                       ('perimeter', 'Perimeter'),
-                       ('major', 'MajorAxis'),
-                       ('minor', 'MinorAxis'),
-                       ('angle', 'Angle'),
-                       ('woundDistance', 'DistanceToWound'),
-                       ('woundAngle', 'AngleToWound'),
-                       # These last two values are not included in the Excel file:
-                       ('edgeBrightnessValues', 'EdgeBrightnessValues'),
-                       ('neighbors', 'Neighbors.py'),
-                      )
-        self.all_stats, self.all_stat_names = zip(*stats_table)
-        self.reset_stats()
+        
+        self.valuesByFrame = []
+        self.centroidX = []
+        self.centroidY = []
+        self.xmin = []
+        self.xmax = []
+        self.ymin = []
+        self.ymax = []
+        self.area = []
+        self.perimeter = []
+        self.major = []
+        self.minor = []
+        self.angle = []
+        self.woundDistance = []
+        self.woundAngle = []
+        
+        self.edgeBrightnessValues = []
+        self.neighbors = []
+        
+        self.edge_brightness_name = 'EdgeBrightnessValues'
+        self.neighbor_py_name = 'Neighbors.py'
+        
+        excel_stats_table = ((self.valuesByFrame, 'CellValuesByFrame'),
+                             (self.centroidX, 'CentroidX'),
+                             (self.centroidY, 'CentroidY'),
+                             (self.xmin, 'Xmin'),
+                             (self.xmax, 'Xmax'),
+                             (self.ymin, 'Ymin'),
+                             (self.ymax, 'Ymax'),
+                             (self.area, 'Area'),
+                             (self.perimeter, 'Perimeter'),
+                             (self.major, 'MajorAxis'),
+                             (self.minor, 'MinorAxis'),
+                             (self.angle, 'Angle'),
+                             (self.woundDistance, 'DistanceToWound'),
+                             (self.woundAngle, 'AngleToWound'),
+                            )
+        
+        self.excel_stats, self.excel_stat_names = zip(*excel_stats_table)
+        
+        self.csv_stats = self.excel_stats + [self.edgeBrightnessValues]
+        self.csv_stat_names = self.excel_stat_names + (self.edge_brightness_name,)
+        
+        self.all_stats = self.csv_stats + [self.neighbors]
     
     def reset_stats(self):
         '''Initialize all the stats to empty lists'''
-        for attr in self.all_stats:
-            setattr(self, attr, [])
+        for stat in self.all_stats:
+            stat[:] = []
     
     def GetCentroids(self,index,doUpdate=True): # Returns a floating point value...
         if doUpdate:
@@ -1523,91 +1590,43 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             for i in range(len(self.valuesByFrame)):
                 if not v in self.valuesByFrame[i]:
                     for m in self.all_stats[1:] # skip the first stat, self.valuesByFrame... this made this measure totally worthless and confusing
-                        getattr(self, m)[i].insert(v - 2, None)
+                        m[i].insert(v - 2, None)
         print 'Done Collecting!'
         self.index=oldIndex
+    
     def SaveAllStats(self,directory=None):
         if directory is None:
             directory = wx.DirSelector()
         
-        if hasattr(self,'centroidX'): # If it has centroid, it should have everything else, too...
-            if self.centroidX not in [None,[]]:  # This could change usefulness, so beware...
-                data = [self.valuesByFrame, self.centroidX, self.centroidY,
-                        self.xmin, self.xmax, self.ymin, self.ymax,
-                        self.area, self.perimeter,
-                        self.major, self.minor, self.angle,
-                        self.woundDistance, self.woundAngle]
-                        
-                names = ['CellValuesByFrame','CentroidX','CentroidY',
-                         'Xmin','Xmax','Ymin','Ymax',
-                         'Area','Perimeter',
-                         'MajorAxis','MinorAxis', 'Angle',
-                         'DistanceToWound','AngleToWound']
-                
-                adjLength = self.GetLastActiveFrame()+1
-                if adjLength > 256:
-                    print 'Over 256 frames!'
-                    print 'Ask user how to save xls file...'
-                    teDialog=wx.TextEntryDialog(None,
-        'There are too many frames ('+str(adjLength)+') for one excel sheet (max 256)!\n'
-        'Enter the number of frames to skip between saving.\n'
-        '(A value of 1 means save all the data, 2 is save every other frame, etc...)\n'
-        'Otherwise, the data will be broken into 256 frame files.',
-                                              caption='Skip Frames?',defaultValue='1')
-                    dia=teDialog.ShowModal()
-                    if dia==wx.ID_CANCEL:
-                        print 'Cancel, save all frames'
-                        val = 1
-                    elif dia==wx.ID_OK:
-                        val = teDialog.GetValue()
-                        if val.isdigit():
-                            val=int(val)
-                            if val>1:
-                                print 'Only save every',val,'frames.'
-                            else:
-                                val=1
-                                print 'Only save every',val,'frames.'
-                        else:
-                            print 'Bad entry!  Just save all frames!'
-                            val=1
-                    if val>1:
-                        data = deepcopy(data) # let's not overwrite our existing attributes, shall we?
-                        for i in range(len(data)):
-                            data[i] = data[i][::val]
-                    numBreakups=1
-                    if len(data[0])>256: # This will break the excel write, so make break into pieces...
-                        numBreakups = (len(data[0])-1)/256 + 1
-                        # this breaks the data into somewhat even chunks...
-                        #   nf=(len(data[0])-1)//numBreakups+1 # number of frames of a typical breakup
-                        # indexList = [nf*i for i in range(numBreakups)]+[len(data[0])]
-                        
-                        # but I think it might be just as well to do this instead:
-                        indexList = [256*i for i in range(numBreakups)]+[len(data[0])]
-                        
-                        dataSets=[[]]*numBreakups # make a slot for each excel file...
-                        for f in range(numBreakups): # each file
-                            for d in data: # each parameter
-                                dataSets[f].append(d[indexList[f]:indexList[f+1]])
-                    else:
-                        dataSets = [data]
-                    for i,d in enumerate(dataSets): # write a file for each set, max 256 frames...
-                        cutByStr = ('' if val==1 else 'CutBy'+str(val))
-                        partStr = ('' if numBreakups==1 else 'Part'+str(i+1))
-                        ExcelHelper.excelWrite(d,names,os.path.join(directory,'Calculations'+cutByStr+partStr+'.xls'),flip=True)
-                else:
-                    ExcelHelper.excelWrite(data,names,os.path.join(directory,'Calculations.xls'),flip=True)
-                for i,name in enumerate(names):
-                    self.SaveCSV(name,directory,data[i])
-                
-                # This won't excel-ify very well since it's a 3D data set with variable numbers of links...
-                # So just save it as a .py file instead...
-                neighborsStr = repr(self.neighbors)
-                
-                fid=open(os.path.join(directory,'Neighbors.py'),'w')
-                fid.write('neighbors = '+neighborsStr)
-                fid.close()
-                
-                self.SaveCSV('EdgeBrightnessValues',directory,self.edgeBrightnessValues)
+        if not all(self.all_stats):
+            s = os.linesep.join('Skip saving stats because some stats are missing!',
+                                'To save the stats, do RunCalculations first')
+            print s
+            wx.MessageBox(s)
+            return
+        
+        data, names = self.excel_stats, self.excel_stat_names
+        adjLength = self.GetLastActiveFrame()+1
+        dataSets, skip_val, numBreakups = (_data_splitter_for_excel(data, adjLength)
+                                           if adjLength > 256 else
+                                           [data])
+        
+        for i, d in enumerate(dataSets): # write a file for each set, max 256 frames...
+            cutByStr = '' if skip_val==1 else 'CutBy'+str(skip_val)
+            partStr = '' if numBreakups==1 else 'Part'+str(i+1)
+            f = os.path.join(directory,'Calculations'+cutByStr+partStr+'.xls')
+            ExcelHelper.excelWrite(d, names, f, flip=True)
+        
+        for d, name in zip(data, names):
+            SaveCSV(name, directory, d)
+        
+        # This won't excel-ify very well since it's got too many columns
+        SaveCSV(self.edge_brightness_name, directory, self.edgeBrightnessValues)
+        
+        # This won't excel-ify very well since it's a 3D data set with variable numbers of links...
+        # So just save it as a .py file instead...
+        with open(os.path.join(directory, self.neighbor_py_name),'w') as fid:
+            fid.write('neighbors = ' + repr(self.neighbors))
     
     def CheckForMalformedRegions(self):
         '''This goes through all frames and values and uses shapely to test if regions are disjoint in any way'''
@@ -1713,74 +1732,45 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         if directory is None:
             directory = wx.DirSelector()
         
-        #calculationsXls = os.path.join(directory,'Calculations.xls')
-        neighborsPy = os.path.join(directory,'Neighbors.py')
-        
-        SKIP = 2
-        vars = self.all_stats[:-SKIP]
-        names = self.all_stat_names[:-SKIP]
-        
         # Initialise the variables...
         self.reset_stats()
         
-        vars = [self.valuesByFrame, self.centroidX, self.centroidY,
-                self.xmin, self.xmax, self.ymin, self.ymax,
-                self.area, self.perimeter,
-                self.major, self.minor, self.angle,
-                self.woundDistance, self.woundAngle]
-        
-        for i,name in enumerate(names):
-            nameCsv = os.path.join(directory,name+'.csv')
+        for stat, name in zip(self.csv_stats, self.csv_stat_names):
+            nameCsv = os.path.join(directory, name+'.csv')
             if os.path.exists(nameCsv):
-                fid=open(os.path.join(directory,name+'.csv'),'r')
-                data = fid.read()
-                fid.close()
+                with open(nameCsv, 'r') as fid:
+                    s = fid.read()
                 
                 # Remove all the '\r' first
-                data = data.replace('\r\n','\n')
+                s = s.replace('\r\n','\n')
                 
-                if '\r' in data: # Fail for unknown/unusual lineseps
+                if '\r' in s: # Fail for unknown/unusual lineseps
                     print 'File must have either \\r\\n (Windows) or \\n (Unix) file endings!'
                     continue
-                else:
-                    data = data.split('\n')
-                if name in ['CellValuesByFrame','Xmin','Xmax','Ymin','Ymax']:
-                    data = [map(IorN,d.replace(' ','').split(',')) for d in data]
-                else:
-                    dprint(name)
-                    data = [map(ForN,d.replace(' ','').split(',')) for d in data]
-                vars[i][:] = data
+                
+                lines = dat.split('\n')
+                
+                dprint(name)
+                
+                int_fields = ['CellValuesByFrame','Xmin','Xmax','Ymin','Ymax']
+                conv = IorN if name in int_fields else ForN
+                data = [map(conv, line.replace(' ','').split(',')) for line in lines]
+                stat[i][:] = data
             else:
-                print 'No file named',nameCsv
-                print 'Will not load',name
-            
-        # Changed this to use the csv files instead...
-        #data,names = ExcelHelper.excelRead(calculationsXls,flip=True)
-        # Crawl the data and replace all the emtpy strings '' with None
-        #for i in range(len(data)):
-        #    for j in range(len(data[i])):
-        #        for k in range(len(data[i][j])):
-        #            if data[i][j][k]=='':
-        #                data[i][j][k]=None
-        #[self.valuesByFrame, self.centroidX, self.centroidY,
-        # self.xmin, self.xmax, self.ymin, self.ymax,
-        # self.area, self.perimeter,
-        # self.major, self.minor, self.angle,
-        # self.woundDistance, self.woundAngle] = data
+                print 'No file named', nameCsv
+                print 'Will not load', name
+        
+        neighborsPy = os.path.join(directory, self.neighbor_py_name)
         
         if os.path.exists(neighborsPy):
-            # Load Neighbors from Neighbors.py
-            #fid=open(neighborsPy,'r')
-            #exec(fid.read().replace('\r',''))
-            #self.neighbors = neighbors
-            #fid.close()
-            fid=open(neighborsPy,'U')
-            Neighbors = imp.load_module('Neighbors',fid,'Neighbors.py',('.py','U',1))
-            self.neighbors = Neighbors.neighbors
-            fid.close()
+            with open(neighborsPy, 'U') as fid:
+                Neighbors = imp.load_module('Neighbors', fid,
+                                            self.neighbor_py_name,
+                                            ('.py','U',1))
+                self.neighbors = Neighbors.neighbors
     
     def CreateBinsWDistance(self,frameToCompare,woundVals,binSize=30,initR=0):
-        if not hasattr(self,'woundDistance'):
+        if not self.woundDistance:
             print 'Error! Need have collected stats for the data before running CreateBinsWDistance!'
             return
         d=np.array(self.woundDistance)
@@ -1808,7 +1798,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         return bins
     
     def CreateBinsWNeighbors(self,frameToCompare,woundVals):
-        if not hasattr(self,'neighbors'):
+        if not self.neighbors:
             print 'Error! Need have collected stats for the data before running CreateBinsWNeighbors!'
             return
         nei = self.neighbors[frameToCompare]
@@ -2011,7 +2001,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         [WNsortedVals,WNl_byVal,NNsortedVals,NNl_byVal,NOsortedVals,NOl_byVal] = swcList
                        
         
-        if not hasattr(self,'perimeter'):
+        if not self.perimeter:
             print 'Error! Must collect stats for the data before running PerimeterTests!'
             return
         
@@ -2088,7 +2078,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         print s1+s2+s3
     
     def RunCalculations2(self,d):
-        if not hasattr(self,'centroidX'):
+        if not all(self.all_stats):
             print 'You must do CollectAllStats before RunCalculations2!'
             return
         MI = self.GetManualInputs(d)
@@ -2404,7 +2394,7 @@ class WatershedData(WatershedDataCoreWithStats):
         # Later, could possibly store the tracks part for animations, too...
         self.mapPlot=None
         self.MapPlot()
-        if hasattr(self,'centroidX'):
+        if self.centroidX and self.centroidY:
             x=np.array(self.centroidX)
             y=np.array(self.centroidY)
         else:
