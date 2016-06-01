@@ -160,31 +160,21 @@ y: Special "Do Nothing" watershed...  For use on bad frames
 # specific set of parameters, too...
 username = os.path.split(os.path.expanduser('~'))[-1]
 
-if username in ['mashbudn']:
-    DONT_PANIC=False
-    DEFAULT_SEED_SIZE=2
-    USE_DEBUG_PRINT=True
-    STEAL_B_KEY = False
-elif username in ['Holley']:
-    DONT_PANIC=True
-    DEFAULT_SEED_SIZE=2
-    USE_DEBUG_PRINT=False
-    STEAL_B_KEY = False
-elif username in ['Aroshan']:
-    DONT_PANIC=False
-    DEFAULT_SEED_SIZE=3
-    USE_DEBUG_PRINT=False
-    STEAL_B_KEY = True
-elif username in ['Xena']:
-    DONT_PANIC=False
-    DEFAULT_SEED_SIZE=1
-    USE_DEBUG_PRINT=False
-    STEAL_B_KEY = False   
-else:
-    DONT_PANIC=False
-    DEFAULT_SEED_SIZE=3
-    USE_DEBUG_PRINT=False
-    STEAL_B_KEY = False
+_USER_OPTIONS_TABLE = {
+   #username  : [DONT_PANIC, DEFAULT_SEED_SIZE, USE_DEBUG_PRINT, STEAL_B_KEY, CAT_SPACED_ARGS,],
+    None      : [False     , 3                , False          , False      , True           ,],
+    'mashbudn': [False     , 2                , True           , False      , False          ,],
+    'Holley'  : [True      , 2                , False          , False      , True           ,],
+    'Aroshan' : [False     , 3                , False          , True       , True           ,],
+    'Xena'    : [False     , 1                , False          , False      , True           ,],
+}
+
+(DONT_PANIC, DEFAULT_SEED_SIZE, USE_DEBUG_PRINT, STEAL_B_KEY,
+ CAT_SPACED_ARGS) = (
+    _USER_OPTIONS_TABLE[username]
+    if username in _USER_OPTIONS_TABLE else
+    _USER_OPTIONS_TABLE[None]
+)
 
 def dprint(a):
     """Debug print"""
@@ -1272,12 +1262,12 @@ def SaveCSV(name,directory,data):
 def _data_splitter_for_excel(data, adjLength):
     print 'Over 256 frames!'
     print 'Ask user how to save xls file...'
-    s = '\n'.join(
+    s = '\n'.join([
       'There are too many frames ({}) for one excel sheet (max 256)!'.format(adjLength),
       'Enter the number of frames to skip between saving.',
       '(A value of 1 means save all the data, 2 is save every other frame, etc...)',
       'Otherwise, the data will be broken into 256 frame files.',
-    )
+    ])
     teDialog = wx.TextEntryDialog(None, s, caption='Skip Frames?', defaultValue='1')
     dia = teDialog.ShowModal()
     
@@ -1315,6 +1305,13 @@ def _data_splitter_for_excel(data, adjLength):
 # WatershedDataCoreWithStats adds stat calculation functions to WatershedDataCore
 class WatershedDataCoreWithStats(WatershedDataCore):
     def __init__(self, *args, **kwds):
+        '''Initialize the Watershed object, including statistical measures
+           
+           Make sure not to overwrite any of these below (set to = [])
+           or the stats groups will no longer function --
+           
+           Instead, use stat[:] = ...'''
+        
         WatershedDataCore.__init__(self, *args, **kwds)
         
         self.valuesByFrame = []
@@ -1356,10 +1353,11 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         
         self.excel_stats, self.excel_stat_names = zip(*excel_stats_table)
         
-        self.csv_stats = self.excel_stats + [self.edgeBrightnessValues]
+        self.csv_stats = self.excel_stats + (self.edgeBrightnessValues,)
         self.csv_stat_names = self.excel_stat_names + (self.edge_brightness_name,)
         
-        self.all_stats = self.csv_stats + [self.neighbors]
+        self.all_stats = self.csv_stats + (self.neighbors,)
+        self.all_stat_names = self.csv_stat_names + (self.neighbor_py_name,)
     
     def reset_stats(self):
         '''Initialize all the stats to empty lists'''
@@ -1571,7 +1569,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             self.major.append(bfe[:,1].tolist())
             self.minor.append(bfe[:,2].tolist())
             self.angle.append(bfe[:,0].tolist())
-            rList,thetaList=self.CalculateWoundDistance(cmList=centroid)
+            rList,thetaList=self.CalculateWoundDistance(cmList=centroids)
             self.woundDistance.append(rList)
             self.woundAngle.append(thetaList)
             
@@ -1589,7 +1587,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                                         # Use the CompressSeedVals Button to remedy the situation...
             for i in range(len(self.valuesByFrame)):
                 if not v in self.valuesByFrame[i]:
-                    for m in self.all_stats[1:] # skip the first stat, self.valuesByFrame... this made this measure totally worthless and confusing
+                    for m in self.all_stats[1:]: # skip the first stat, self.valuesByFrame... this made this measure totally worthless and confusing
                         m[i].insert(v - 2, None)
         print 'Done Collecting!'
         self.index=oldIndex
@@ -1599,8 +1597,13 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             directory = wx.DirSelector()
         
         if not all(self.all_stats):
-            s = os.linesep.join('Skip saving stats because some stats are missing!',
-                                'To save the stats, do RunCalculations first')
+            for n, m in zip(self.all_stat_names, self.all_stats):
+                print n
+                print m
+                print ''
+            
+            s = os.linesep.join(['Skip saving stats because some stats are missing!',
+                                 'To save the stats, do RunCalculations first'])
             print s
             wx.MessageBox(s)
             return
@@ -1609,11 +1612,11 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         adjLength = self.GetLastActiveFrame()+1
         dataSets, skip_val, numBreakups = (_data_splitter_for_excel(data, adjLength)
                                            if adjLength > 256 else
-                                           [data])
+                                           ([data], 1, 1))
         
         for i, d in enumerate(dataSets): # write a file for each set, max 256 frames...
-            cutByStr = '' if skip_val==1 else 'CutBy'+str(skip_val)
-            partStr = '' if numBreakups==1 else 'Part'+str(i+1)
+            cutByStr = '' if skip_val == 1 else 'CutBy'+str(skip_val)
+            partStr = '' if numBreakups == 1 else 'Part'+str(i+1)
             f = os.path.join(directory,'Calculations'+cutByStr+partStr+'.xls')
             ExcelHelper.excelWrite(d, names, f, flip=True)
         
@@ -1748,14 +1751,13 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                     print 'File must have either \\r\\n (Windows) or \\n (Unix) file endings!'
                     continue
                 
-                lines = dat.split('\n')
+                lines = s.split('\n')
                 
                 dprint(name)
                 
-                int_fields = ['CellValuesByFrame','Xmin','Xmax','Ymin','Ymax']
+                int_fields = ['CellValuesByFrame','Xmin','Xmax','Ymin','Ymax', 'EdgeBrightnessValues']
                 conv = IorN if name in int_fields else ForN
-                data = [map(conv, line.replace(' ','').split(',')) for line in lines]
-                stat[i][:] = data
+                stat[:] = [map(conv, line.replace(' ','').split(',')) for line in lines]
             else:
                 print 'No file named', nameCsv
                 print 'Will not load', name
@@ -1767,7 +1769,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 Neighbors = imp.load_module('Neighbors', fid,
                                             self.neighbor_py_name,
                                             ('.py','U',1))
-                self.neighbors = Neighbors.neighbors
+                self.neighbors[:] = Neighbors.neighbors
     
     def CreateBinsWDistance(self,frameToCompare,woundVals,binSize=30,initR=0):
         if not self.woundDistance:
@@ -2820,7 +2822,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.Bind(wx.EVT_BUTTON, self.RunCalculations2Callback, self.RunCalculations2Button)
         self.Bind(wx.EVT_BUTTON, self.CheckForMalformedRegionsCallback, self.CheckForMalformedRegionsButton)
         
-    def OnInit(self,filename=None,setConnections=True,fig1=None,ax1=None,fig2=None,ax2=None):
+    def OnInit(self,filename=None,saveDir='',setConnections=True,fig1=None,ax1=None,fig2=None,ax2=None):
         self.SetStatus('Loading Image Data')
         self.filename=filename
         try:
@@ -2837,7 +2839,7 @@ Arrow Keys: Move selected seeds (after lasso)
         #else:
         #    g=GTL.LoadMonolithic(self.filename)
         
-        self.wd=None # Release the old data before we load the new...
+        self.wd = None # Release the old data before we load the new...
         self.wd = WatershedData(g,fig1=fig1,ax1=ax1,fig2=fig2,ax2=ax2)
         self.FrameNumber.SetValue(0)
         self.FrameNumber.SetRange(0,self.wd.length)
@@ -2859,10 +2861,18 @@ Arrow Keys: Move selected seeds (after lasso)
         
         # Automatically ask to open previous seeds (just hit cancel if none...)
         self.SetStatus('Checking on Optional Watershed and Seed Data')
-        d = wx.DirSelector('Optionally Pick Directory Where Seed Info is Stored (Cancel if 1st use of program)',defaultPath=self.saveDir)
-        if d !=u'':
+        msg = 'Optionally Pick Directory Where Seed Info is Stored (Cancel if 1st use of program)'
+        if not saveDir:
+            saveDir = wx.DirSelector(msg, defaultPath=self.saveDir)
+        
+        if not os.path.exists(saveDir):
+            print 'Save Directory does not exist!'
+            print 'Loading without save data'
+            saveDir = ''
+        
+        if saveDir:
             self.SetStatus('Loading Watershed and Seed Data')
-            self.saveDir=d
+            self.saveDir = saveDir
             self.wd.Open(d)
             
             self.UpdateFrameLabelText()
@@ -3322,9 +3332,10 @@ Arrow Keys: Move selected seeds (after lasso)
                         print 'Watershed Done'
             else:
                 if self.wd.sparseList[self.wd.index] is None:
-                    self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(self.wd.shape[1:],dtype=np.uint16)
+                    sh = self.wd.shape[1:]
+                    self.wd.sparseList[self.wd.index] = scipy.sparse.lil_matrix(sh, dtype=np.uint16)
                     # I guess I could change the dtype later if I need to...
-                    self.wd.seedSelections[self.wd.index] = scipy.sparse.lil_matrix(self.shape[1:],dtype=np.bool)
+                    self.wd.seedSelections[self.wd.index] = scipy.sparse.lil_matrix(sh, dtype=np.bool)
         elif ckey=='r': # Reset all data
             self.SetStatus('Resetting All Filters')
             print 'Reset All Filters on Figures 1 and 2'
@@ -3674,7 +3685,7 @@ def InitMPL():
             if i=='key_press_event':
                 fig.canvas.mpl_disconnect(fig.canvas.callbacks.callbacks[i].keys()[0])
     return fig1,ax1,fig2,ax2
-    
+
 
 def InitializeMPL():
     plt.ion()
@@ -3690,15 +3701,17 @@ if __name__=='__main__':
         wx.FutureCall(1, dlg.Destroy)
         dlg.ShowModal()
     
-    if len(sys.argv)>1:
-        f = ' '.join(sys.argv[1:])
-    else:
-        f = wx.FileSelector()
+    f = (wx.FileSelector() if len(sys.argv)<=1 else
+         ' '.join(sys.argv[1:]) if CAT_SPACED_ARGS else
+         sys.argv[1])
     
     if not os.path.exists(f):
         print 'The specified path does not exist.'
+        print f
         exit()
     
+    d = '' if CAT_SPACED_ARGS or len(sys.argv)<=2 else sys.argv[2]
+    
     fig1,ax1,fig2,ax2 = InitMPL()
-    app.frame.OnInit(filename=f,fig1=fig1,ax1=ax1,fig2=fig2,ax2=ax2)
+    app.frame.OnInit(filename=f,saveDir=d,fig1=fig1,ax1=ax1,fig2=fig2,ax2=ax2)
     app.MainLoop()
