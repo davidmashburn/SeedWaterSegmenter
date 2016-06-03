@@ -724,7 +724,7 @@ class WatershedDataCore(object):
         self.notes+=[None]*(self.length-len(self.notes))
         print self.notes
     
-    def SaveStats(self):
+    def SaveAllStats(self):
         pass
     
     def LoadStats(self):
@@ -1249,15 +1249,16 @@ class WatershedDataCore(object):
             return
         return MI
 
-def SaveCSV(name,directory,data):
-    fid=open(os.path.join(directory,name+'.csv'),'w')
-    fid.write(repr(data).replace('\r','').replace('\n','')
-                        .replace('[[','') \
-                        .replace(']]','') \
-                        .replace('[','') \
-                        .replace('], ','\r\n'))
-    fid.close()
-
+def SaveCSV(name,directory,data): # This is terrrrible... fix it later!!
+    s = (repr(data).replace('\r','').replace('\n','')
+                   .replace('(','[')
+                   .replace(')',']')
+                   .replace('[[','')
+                   .replace(']]','')
+                   .replace('[','')
+                   .replace('], ','\r\n'))
+    with open(os.path.join(directory,name+'.csv'),'w') as fid:
+        fid.write(s)
 
 def _data_splitter_for_excel(data, adjLength):
     print 'Over 256 frames!'
@@ -1746,6 +1747,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 
                 # Remove all the '\r' first
                 s = s.replace('\r\n','\n')
+                s = s.replace('(','').replace(')','').replace('[','').replace(']','') # bugfix for some csv files...
                 
                 if '\r' in s: # Fail for unknown/unusual lineseps
                     print 'File must have either \\r\\n (Windows) or \\n (Unix) file endings!'
@@ -2873,7 +2875,7 @@ Arrow Keys: Move selected seeds (after lasso)
         if saveDir:
             self.SetStatus('Loading Watershed and Seed Data')
             self.saveDir = saveDir
-            self.wd.Open(d)
+            self.wd.Open(saveDir)
             
             self.UpdateFrameLabelText()
             if self.wd.notes[self.wd.index] is None:
