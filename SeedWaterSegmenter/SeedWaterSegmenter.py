@@ -3286,7 +3286,7 @@ Arrow Keys: Move selected seeds (after lasso)
     def HandleMPLandWxKeyEvents(self,ckey): 
         if ckey=='o': # Open new file
             self.SetStatus('Checking for File to Open')
-            f = wx.FileSelector(default_filename=self.filename)
+            f = wx.FileSelector('Select a tiff or gif file', default_filename=self.filename)
             if os.path.exists(f):
                 self.SetStatus('Opening File')
                 self.OnInit(f,setConnections=False)
@@ -3703,7 +3703,7 @@ if __name__=='__main__':
         wx.FutureCall(1, dlg.Destroy)
         dlg.ShowModal()
     
-    f = (wx.FileSelector() if len(sys.argv)<=1 else
+    f = (wx.FileSelector('Select a tiff or gif file') if len(sys.argv)<=1 else
          ' '.join(sys.argv[1:]) if CAT_SPACED_ARGS else
          sys.argv[1])
     
