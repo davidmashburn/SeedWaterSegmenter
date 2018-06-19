@@ -1595,7 +1595,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
     
     def SaveAllStats(self,directory=None):
         if directory is None:
-            directory = wx.DirSelector()
+            directory = wx.DirSelector('Choose which directory to save the stats')
         
         if not all(self.all_stats):
             for n, m in zip(self.all_stat_names, self.all_stats):
@@ -1640,7 +1640,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
     def SaveTripleJunctions(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory is None:
-            directory = wx.DirSelector()
+            directory = wx.DirSelector('Choose which directory to save the stats')
         adjLength = self.GetLastActiveFrame()+1
         
         fid = open(os.path.join(directory,'TripleJunctions.py'),'w')
@@ -1659,7 +1659,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
     def SaveTripleJunctionsWithCellIDs(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory is None:
-            directory = wx.DirSelector()
+            directory = wx.DirSelector('Choose which directory to save the stats')
         adjLength = self.GetLastActiveFrame()+1
         bigData=[]
         ColNames = ['X','Y','Cell ID 1','Cell ID 2','Cell ID 3','(Cell ID 4)']
@@ -1717,7 +1717,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
     def SaveSubContours(self,directory=None):
         '''This is horribly slow, so keep it out of RunCalc and RunCalc2!'''
         if directory is None:
-            directory = wx.DirSelector()
+            directory = wx.DirSelector('Choose which directory to save the stats')
         
         MI = self.GetManualInputs(d)
         if MI is None:
@@ -1734,7 +1734,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
     
     def LoadStats(self,directory=None):
         if directory is None:
-            directory = wx.DirSelector()
+            directory = wx.DirSelector('Choose which directory to save the stats')
         
         # Initialise the variables...
         self.reset_stats()
