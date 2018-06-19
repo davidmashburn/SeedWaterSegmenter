@@ -1,6 +1,8 @@
 #! python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import os
 import sys
 import shutil
@@ -47,7 +49,7 @@ if sys.platform == "win32":
             pass
     
     if len(sys.argv)<2:
-        print 'No option specified. Please append either "-install" or "-remove"'
+        print('No option specified. Please append either "-install" or "-remove"')
     else:
         if sys.argv[1] == '-install':
             lnkName = name+'.lnk'

@@ -5,6 +5,8 @@
 # A modified version of Eric Bruning lasso example
 # (just made the callback compatible with standard lasso tool)
 # and fiddled with some other stuff...
+from __future__ import print_function
+
 import numpy
 
 import matplotlib
@@ -100,7 +102,7 @@ class PolyLasso(Widget):
             # You know, if the user makes a point or line segment, let them get no points...
             self.cids.append(self.canvas.mpl_connect('idle_event', self.do_callback))
         #else:
-        #    print 'Need at least three vertices to make a polygon'
+        #    print('Need at least three vertices to make a polygon')
         #    self.cleanup()
                     
     def draw_update(self):
@@ -175,12 +177,12 @@ class manager(object):
     
     def callback(self, verts):
         
-        #print verts
+        #print(verts)
         mask = points_inside_poly(zip(self.x, self.y), verts) == 1
-        #print self.x[mask]
-        #print self.y[mask]
+        #print(self.x[mask])
+        #print(self.y[mask])
         self.charge[mask] = -1
-        #print self.charge
+        #print(self.charge)
         #self.lasso_line = lasso_line
         
         # not actually necessary ... scatter stores a ref to charge array

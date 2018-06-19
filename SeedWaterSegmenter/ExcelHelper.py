@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import xlwt
 import xlrd
 
@@ -7,7 +9,7 @@ def excelRead(filename,flip=False):
     sheetnames = [i.name for i in sheets]
     data=[] # 3d data set... sheets, rows, columns...
     for sheet in sheets:
-        #print sheet.name
+        #print(sheet.name)
         data.append([]) #make a data store
         if flip:
             for i in range(sheet.ncols):
@@ -34,4 +36,4 @@ if __name__=='__main__':
                 [5,6,7,8],
                 [9,10,11,12]])
     excelWrite([a],['NumericalListsTo12'],'/home/mashbudn/Desktop/testxlwt.xls')
-    print excelRead('/home/mashbudn/Desktop/testxlwt.xls')
+    print(excelRead('/home/mashbudn/Desktop/testxlwt.xls'))

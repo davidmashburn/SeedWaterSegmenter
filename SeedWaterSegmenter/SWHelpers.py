@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 ''''A useful collection of helper functions for SWS'''
+from __future__ import print_function
+
 import os
 import imp
 
@@ -51,7 +53,7 @@ def GetSeedArray(watershed,SeedsPyFile,frameNumber):  # THIS FUNCTION IS CURRENT
     try:
         exec(fid.read().replace('\r','')) # Loads seedList and seedVals from the file...
     except SyntaxError:
-        print 'Invalid Syntax in Seeds.py'        
+        print('Invalid Syntax in Seeds.py')
     fid.close()
     
     # Create a seedArray, Fill using seeds and vals
@@ -139,7 +141,7 @@ def GetTimeAxisAdj(SegmentsDirectory):
         s += m*60 + timeAdj
         if sList!=[]:
             if s - sList[-1]>80: # Pretend any large gaps in time are only 1min
-                print count
+                print(count)
                 timeAdj += sList[-1] - s + 80
                 s = sList[-1] + 80
         sList.append(s)
@@ -246,7 +248,7 @@ def CheckForMalformedRegions(watershed,usePrint=True):
     outputString = ''
     
     for frame in range(len(watershed)):
-        print 'Checking Frame',frame
+        print('Checking Frame',frame)
         if watershed[frame]!=None:
             allVals = np.unique(watershed[frame])
             if len(allVals)<2:
@@ -266,19 +268,19 @@ def CheckForMalformedRegions(watershed,usePrint=True):
         outputString = 'No malformed regions found!'
     
     if usePrint:
-        print outputString
+        print(outputString)
     else:
         return outputString
         
 
 def MakeCellNetworkJsonFiles(waterArr,d):
-    print 'Making static (simple networks) json file:'
+    print('Making static (simple networks) json file:')
     ImageContour.SubContourTools.GetCellNetworkListStatic(waterArr,d,forceRemake=True)
-    print 'Made static json file!'
+    print('Made static json file!')
     
-    print 'Making matched networks json file:'
+    print('Making matched networks json file:')
     _,_,allMatched = ImageContour.SubContourTools.GetMatchedCellNetworkListsPrevNext(waterArr,d,forceRemake=True)
-    print 'Made matched networks json file!'
+    print('Made matched networks json file!')
     
     return allMatched
 
@@ -357,7 +359,7 @@ def GetWoundValues(d):
         exec( open(d+'/ManualInputs.py','r').read().replace('\r','').split('\n')[0] )
         return woundVals
     else:
-        print 'ManualInputs.py does not exist!'
+        print('ManualInputs.py does not exist!')
 def GetNeighborValues(d,wv,ind):
     if 'Neighbors.py' in os.listdir(d):
         exec( open(d+'/Neighbors.py','r').read() )
@@ -369,7 +371,7 @@ def GetNeighborValues(d,wv,ind):
         allVals = list(set(allVals).difference(wv))
         return allVals
     else:
-        print 'Neighbors.py does not exist!'
+        print('Neighbors.py does not exist!')
 
 #####################################################################
 # Function for converting an outline array to a watershed array:
@@ -414,7 +416,7 @@ def OutlineMasksPlot(arr,waterArr,cellID,t=0):
 
 def DilateMinusErode(binaryArr,structure=None,iterations=1):
     if iterations<1:
-        print 'You must specify at least one iteration!!!'
+        print('You must specify at least one iteration!!!')
         return
     else:
         return ( ndimage.binary_dilation(binaryArr,structure=structure,iterations=iterations) -
@@ -447,7 +449,7 @@ def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBott
     '''Sum the brightness of the original image under the edges of the final segmented region,
        with a specificed thickness (even integers only) (2D+time or 3D+time)'''
     if thickness%2==1 or thickness<2:
-        print 'thickness parameter must be an even integer > 0!'
+        print('thickness parameter must be an even integer > 0!')
         return
     iterations = thickness//2
     if not skip3DTopAndBottom:
@@ -456,7 +458,7 @@ def GetEdgeIntegratedBrightness(arr,waterArr,cellID,thickness=2,skip3DTopAndBott
         structure = np.array([ [[0,1,0],[1,1,1],[0,1,0]] ],np.bool)
         return GetTotalIntegratedBrightness(arr,waterArr,cellID,structure=structure,iterations=iterations)
     else:
-        print 'You can only use skip3DTopAndBottom=True on a 4D array!'
+        print('You can only use skip3DTopAndBottom=True on a 4D array!')
         return
 
 def GetVolumesAndIntegratedBrightnesses(testArrays,waterArr,cellID,thickness,skip3DBottomAndTop=True):
