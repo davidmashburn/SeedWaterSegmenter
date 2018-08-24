@@ -2867,7 +2867,7 @@ Arrow Keys: Move selected seeds (after lasso)
         self.SetStatus('Checking on Optional Watershed and Seed Data')
         msg = 'Optionally Pick Directory Where Seed Info is Stored (Cancel if 1st use of program)'
         if not saveDir:
-            saveDir = wx.DirSelector(msg, defaultPath=self.saveDir)
+            saveDir = wx.DirSelector(msg, self.saveDir). # removed named arg call for defaultPath (keyword change in wx package caused crashes)
         
         if not os.path.exists(saveDir):
             print('Save Directory does not exist!')
@@ -2899,7 +2899,7 @@ Arrow Keys: Move selected seeds (after lasso)
         f=event.GetValue()
         if os.path.exists(f):
             self.OnInit(f,setConnections=False)
-            d = wx.DirSelector('Optionally Pick Directory Where Seed Info is Stored',defaultPath=self.saveDir)
+            d = wx.DirSelector('Optionally Pick Directory Where Seed Info is Stored', self.saveDir) # removed named arg call for defaultPath (keyword change in wx package caused crashes) 
             if d !=u'':
                 self.saveDir=d
                 self.wd.Open(d)
@@ -3413,7 +3413,7 @@ Arrow Keys: Move selected seeds (after lasso)
         elif ckey=='s': # Save
             self.SetStatus('Checking for Save')
             d = wx.DirSelector('Optionally Pick Directory Where Seed Info is Stored',
-                           defaultPath=self.saveDir)
+                           self.saveDir) # removed named arg call for defaultPath (keyword change in wx package caused crashes)
             if d!=u'':
                 self.SetStatus('Saving')
                 self.wd.notes[self.wd.index]=self.NotesTextBox.GetValue()
