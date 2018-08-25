@@ -135,7 +135,7 @@ def GetTimeAxisAdj(SegmentsDirectory):
     count=0
     for i in FS.getSortedListOfFiles(SegmentsDirectory,'*.tif'):
         count+=1
-        d,h,m,s=list(map(int,os.path.split(i)[1].split('_')[2:6]))
+        d,h,m,s=map(int,os.path.split(i)[1].split('_')[2:6])
         h += d*24
         m += h*60
         s += m*60 + timeAdj

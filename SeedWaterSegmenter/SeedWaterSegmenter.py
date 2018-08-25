@@ -1355,7 +1355,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                              (self.woundAngle, 'AngleToWound'),
                             )
         
-        self.excel_stats, self.excel_stat_names = list(zip(*excel_stats_table))
+        self.excel_stats, self.excel_stat_names = zip(*excel_stats_table)
         
         self.csv_stats = self.excel_stats + (self.edgeBrightnessValues,)
         self.csv_stat_names = self.excel_stat_names + (self.edge_brightness_name,)
@@ -1550,7 +1550,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             
             print('Get Centroids')
             centroids = self.CalculateCentroids(doUpdate=False)
-            centroidX, centroidY = list(zip(*centroids))
+            centroidX, centroidY = zip(*centroids)
             self.centroidX.append(centroidX)
             self.centroidY.append(centroidY)
             
