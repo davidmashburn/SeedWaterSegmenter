@@ -3,6 +3,7 @@
 *.pyo
 *.c
 *~
+*.bak
 dist
 build
 zips
