@@ -342,7 +342,9 @@ IorN = lambda i: None if i=='None' else _try_ints(i)
 ForN = lambda f: None if f=='None' else float(f)
 
 def GetReportPixel(sfORwd): # create and return the report_pixel function...
-    def report_pixel(x,y):
+    def report_pixel(x_in, y_in):
+        x, y = int(x_in), int(y_in)
+        
         if isinstance(sfORwd, SegmenterFrame):
             wd=sfORwd.wd
         elif isinstance(sfORwd, WatershedDataCoreWithStats):
@@ -352,10 +354,10 @@ def GetReportPixel(sfORwd): # create and return the report_pixel function...
         
         s=wd.watershed[wd.index].shape
         if 0<x<s[1] and 0<y<s[0]:
-            return "value=" + str(wd.watershed[wd.index][y,x]) + \
-                   "  x=" + str(x) + " y=" + str(y)
+            value = wd.watershed[wd.index][y,x]
+            return "value={} x={} y={}".format(value, x, y)
         else:
-            return "x=" + str(x) + " y=" + str(y)
+            return "x={} y={}".format(x, y)
     return report_pixel
 
 def sumN(l):
@@ -3696,7 +3698,8 @@ def InitMPL():
 def InitializeMPL():
     plt.ion()
 
-if __name__=='__main__':
+
+def start_sws():
     InitializeMPL()
     app = SegmenterApp(0)
     
