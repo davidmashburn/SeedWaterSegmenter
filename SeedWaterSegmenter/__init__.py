@@ -5,4 +5,4 @@ from . import SWHelpers
 from ImageContour import SubContourTools
 from ._version import *
 
-__all__ = ['SeedWaterSegmenter','SWHelpers']
+__all__ = ["SeedWaterSegmenter", "SWHelpers"]
