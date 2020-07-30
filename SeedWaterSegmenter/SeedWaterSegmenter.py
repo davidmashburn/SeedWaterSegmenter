@@ -1744,7 +1744,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             waterSmaller = self.watershed[self.index][xm - 1 : xM + 2, ym - 1 : yM + 2]
             binary = waterSmaller == v
             neighborPixels = (
-                scipy.ndimage.binary_dilation(binary) - binary
+                scipy.ndimage.binary_dilation(binary) ^ binary
             ) * waterSmaller
             # Loop over neighborPixels just like in UpdateValuesList, but also look at background
             for neighborVal in range(1, neighborPixels.max() + 1):
