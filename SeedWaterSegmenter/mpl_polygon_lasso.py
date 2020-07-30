@@ -109,7 +109,7 @@ class PolyLasso(Widget):
 
     def draw_update(self):
         """ Adjust the polygon line, and blit it to the screen """
-        self.line.set_data(zip(*self.verts))
+        self.line.set_data(list(zip(*self.verts)))
         if self.useblit:
             self.canvas.restore_region(self.background)
             self.axes.draw_artist(self.line)
@@ -204,7 +204,7 @@ class manager(object):
     def callback(self, verts):
 
         # print(verts)
-        mask = points_inside_poly(zip(self.x, self.y), verts) == 1
+        mask = points_inside_poly(list(zip(self.x, self.y)), verts) == 1
         # print(self.x[mask])
         # print(self.y[mask])
         self.charge[mask] = -1

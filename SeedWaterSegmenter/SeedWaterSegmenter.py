@@ -14,6 +14,7 @@ GifTiffLoader also relies on FilenameSort.
 Sponsored by the NSF and HFSP through the Shane Hutson Laboratory, part of
 Vanderbilt Institute of Integrative Biosystems Research (VIIBRE)."""
 
+from __future__ import absolute_import
 from __future__ import print_function
 
 __author__ = "David N. Mashburn <david.n.mashburn@gmail.com>"
@@ -54,16 +55,16 @@ import matplotlib
 
 matplotlib.use("WxAgg")
 # from matplotlib.nxutils import points_inside_poly # deprecated, work-around function in mpl_polygon_lasso
-from mpl_polygon_lasso import PolyLasso, points_inside_poly
+from .mpl_polygon_lasso import PolyLasso, points_inside_poly
 import matplotlib.pyplot as plt
 
 import mahotas
 
 import ImageContour
 import EllipseFitter
-import ExcelHelper
+from . import ExcelHelper
 
-import SWHelpers
+from . import SWHelpers
 
 
 class Timer(object):
@@ -346,7 +347,7 @@ def CreateOutlines(arr, walgorithm="PyMorph"):
         )
         return newArr
     else:
-        raise (ValueError, walgorithm + " is not a valid watershed algorithm!")
+        raise ValueError(walgorithm + " is not a valid watershed algorithm!")
 
 
 def CreateThickOutlines(arr, thickness=1):
@@ -367,7 +368,7 @@ def _try_ints(i):
     try:
         return int(i)
     except:
-        return long(i)
+        return long(i)  # for python 2 only
 
 
 IorN = lambda i: None if i == "None" else _try_ints(i)
@@ -375,28 +376,22 @@ ForN = lambda f: None if f == "None" else float(f)
 
 
 def GetReportPixel(sfORwd):  # create and return the report_pixel function...
-    def report_pixel(x, y):
+    def report_pixel(x_in, y_in):
+        x, y = int(x_in), int(y_in)
+
         if isinstance(sfORwd, SegmenterFrame):
             wd = sfORwd.wd
         elif isinstance(sfORwd, WatershedDataCoreWithStats):
             wd = sfORwd
         else:
-            raise (
-                TypeError("sfORwd must be a WatershedData or SegmenterFrame Object!")
-            )
+            raise TypeError("sfORwd must be a WatershedData or SegmenterFrame Object!")
 
         s = wd.watershed[wd.index].shape
         if 0 < x < s[1] and 0 < y < s[0]:
-            return (
-                "value="
-                + str(wd.watershed[wd.index][y, x])
-                + "  x="
-                + str(x)
-                + " y="
-                + str(y)
-            )
+            value = wd.watershed[wd.index][y, x]
+            return "value={} x={} y={}".format(value, x, y)
         else:
-            return "x=" + str(x) + " y=" + str(y)
+            return "x={} y={}".format(x, y)
 
     return report_pixel
 
@@ -473,7 +468,7 @@ def GetBinnedValueForExcel(value, name, bins, timeAxis, woundVals):
     ]
     for b in range(len(bins)):
         if bins[b] != []:
-            m.append(map(meanN, value[:, bins[b]]))
+            m.append(list(map(meanN, value[:, bins[b]])))
             # [["Test1"],["Test2"],["Test3"]]+
             valueBinned.append(value[:, bins[b]].tolist())
             for j in range(len(valueBinned[-1])):  # loop through time...
@@ -594,7 +589,7 @@ def LoadSeedPointsFile(seedPointsFile):
     # use python's load_module function to get the data instead...
     fid = open(seedPointsFile, "U")
     try:
-        Seeds = imp.load_module("Seeds", fid, "Seeds.py", (".py", "U", 1))
+        Seeds = imp.load_module("Seeds", fid, seedPointsFile, (".py", "U", 1))
     except:
         wx.MessageBox("Bad Seeds.py file!")
     fid.close()
@@ -792,7 +787,7 @@ class WatershedDataCore(object):
             fid.write(i + "\r\n")
 
         for i, t in enumerate(self.notes):
-            if t not in ["", u"", None]:
+            if t is not None and len(t) > 0:
                 fid.write(txtsepA + str(i) + txtsepB + "\r\n")
                 t2 = t.replace(os.linesep, "\n").replace("\r", "").replace("\n", "\r\n")
                 fid.write(t2 + "\r\n")
@@ -1563,13 +1558,13 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             (self.woundAngle, "AngleToWound"),
         )
 
-        self.excel_stats, self.excel_stat_names = zip(*excel_stats_table)
+        self.excel_stats, self.excel_stat_names = map(list, zip(*excel_stats_table))
 
-        self.csv_stats = self.excel_stats + (self.edgeBrightnessValues,)
-        self.csv_stat_names = self.excel_stat_names + (self.edge_brightness_name,)
+        self.csv_stats = self.excel_stats + [self.edgeBrightnessValues]
+        self.csv_stat_names = self.excel_stat_names + [self.edge_brightness_name]
 
-        self.all_stats = self.csv_stats + (self.neighbors,)
-        self.all_stat_names = self.csv_stat_names + (self.neighbor_py_name,)
+        self.all_stats = self.csv_stats + [self.neighbors]
+        self.all_stat_names = self.csv_stat_names + [self.neighbor_py_name]
 
     def reset_stats(self):
         """Initialize all the stats to empty lists"""
@@ -1798,8 +1793,8 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             print("Get Centroids")
             centroids = self.CalculateCentroids(doUpdate=False)
             centroidX, centroidY = zip(*centroids)
-            self.centroidX.append(centroidX)
-            self.centroidY.append(centroidY)
+            self.centroidX.append(list(centroidX))
+            self.centroidY.append(list(centroidY))
 
             print("Get Bounds")
             boundsList = self.GetBoundingRectangles(doUpdate=False)
@@ -1870,6 +1865,14 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             return
 
         data, names = self.excel_stats, self.excel_stat_names
+
+        # Fix to replace numpy types with Python types:
+        for i in range(len(data)):
+            data[i] = [
+                [(d.item() if hasattr(d, "item") else d) for d in dat]
+                for dat in data[i]
+            ]
+
         adjLength = self.GetLastActiveFrame() + 1
         dataSets, skip_val, numBreakups = (
             _data_splitter_for_excel(data, adjLength)
@@ -1937,7 +1940,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                         ]
                     )
                 )
-                cellIDs = map(str, cellIDs)
+                cellIDs = list(map(str, cellIDs))
                 if len(cellIDs) == 3:
                     cellIDs = cellIDs + [""]
                 l.append([str(tj[0][t]), str(tj[1][t])] + cellIDs)
@@ -2072,7 +2075,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                 ]
                 conv = IorN if name in int_fields else ForN
                 stat[:] = [
-                    map(conv, line.replace(" ", "").split(",")) for line in lines
+                    list(map(conv, line.replace(" ", "").split(","))) for line in lines
                 ]
             else:
                 print("No file named", nameCsv)
@@ -2083,7 +2086,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         if os.path.exists(neighborsPy):
             with open(neighborsPy, "U") as fid:
                 Neighbors = imp.load_module(
-                    "Neighbors", fid, self.neighbor_py_name, (".py", "U", 1)
+                    "Neighbors", fid, neighborsPy, (".py", "U", 1)
                 )
                 self.neighbors[:] = Neighbors.neighbors
 
@@ -2103,7 +2106,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         # Sort the wound distances based on the distances at a particular time
         dBm = np.mean(dB, 0)
         d_comp = d[frameToCompare]  # pick a frame to use in sorting
-        l = range(len(dBm))
+        l = list(range(len(dBm)))
         l.sort(key=lambda x: d_comp[x])
         # create bins of equal size...
         # bins will each contain an index list
@@ -2138,7 +2141,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                         if v > 1:  # skip background
                             bins[-1].append(v - 2)
             bins[-1] = list(
-                set(bins[-1]).difference(*([wm2] + map(set, bins[:-1])))
+                set(bins[-1]).difference(*([wm2] + list(map(set, bins[:-1]))))
             )  # remove duplicates...
             if bins[-1] == []:
                 break
@@ -3486,7 +3489,7 @@ Arrow Keys: Move selected seeds (after lasso)
             d = wx.DirSelector(
                 "Optionally Pick Directory Where Seed Info is Stored", self.saveDir
             )
-            if d != u"":
+            if len(d) > 0:
                 self.saveDir = d
                 self.wd.Open(d)
 
@@ -3592,7 +3595,7 @@ Arrow Keys: Move selected seeds (after lasso)
             print("Plot Cell IDs")
             val = dlg.GetValue()
             try:
-                selectedCellIDs = map(int, val.split(","))
+                selectedCellIDs = list(map(int, val.split(",")))
             except:
                 print("Invalid Entry!!")
                 self.SetStatus("Ready")
@@ -3717,7 +3720,7 @@ Arrow Keys: Move selected seeds (after lasso)
             print("Run AutoCenterWound")
             val = dlg.GetValue()
             try:
-                woundVals = map(int, val.split(","))
+                woundVals = list(map(int, val.split(",")))
             except:
                 print("Invalid Entry!!")
                 self.SetStatus("Ready")
@@ -4095,7 +4098,7 @@ Arrow Keys: Move selected seeds (after lasso)
             d = wx.DirSelector(
                 "Optionally Pick Directory Where Seed Info is Stored", self.saveDir
             )
-            if d != u"":
+            if len(d) > 0:
                 self.SetStatus("Saving")
                 self.wd.notes[self.wd.index] = self.NotesTextBox.GetValue()
                 self.saveDir = d
@@ -4397,7 +4400,9 @@ def InitMPL():
         fig.canvas.draw()
         for i in fig.canvas.callbacks.callbacks:
             if i == "key_press_event":
-                fig.canvas.mpl_disconnect(fig.canvas.callbacks.callbacks[i].keys()[0])
+                fig.canvas.mpl_disconnect(
+                    list(fig.canvas.callbacks.callbacks[i].keys())[0]
+                )
     return fig1, ax1, fig2, ax2
 
 
@@ -4405,7 +4410,7 @@ def InitializeMPL():
     plt.ion()
 
 
-if __name__ == "__main__":
+def start_sws():
     InitializeMPL()
     app = SegmenterApp(0)
 

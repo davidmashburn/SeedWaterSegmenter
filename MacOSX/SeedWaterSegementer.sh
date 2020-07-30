@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 source ~/.bash_profile
-pythonw -m SeedWaterSegmenter.SeedWaterSegmenter "$@"
+pythonw -c "from SeedWaterSegmenter import start_sws; start_sws()" "$@"

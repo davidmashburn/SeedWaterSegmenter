@@ -29,10 +29,10 @@ setup(
         "xlwt>=0.7",
         "mahotas>=0.5",
         #                      # Projects that used to be internal
-        "EllipseFitter>=0.1",
-        "FilenameSort>=0.1.3",
-        "GifTiffLoader>=0.2.3",
-        "ImageContour>=0.1",
-        "np_utils>=0.2.1",
+        "EllipseFitter>=0.1.3",
+        "FilenameSort>=0.2.1",
+        "GifTiffLoader>=0.2.4",
+        "ImageContour>=0.2.5",
+        "np_utils>=0.5.4",
     ],
 )

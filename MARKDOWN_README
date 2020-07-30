@@ -36,9 +36,9 @@ You may also want to read the manual, but be aware that it needs updating: "Seed
 
 Installing and Running
 ----------------------
-SeedWater is now pure-python. In fact, with just python and setuptools installed, you could install it with just::
+SeedWater is now pure-python. In fact, with just python and pip installed, you could install it with just::
     
-    easy_install SeedWaterSegmenter
+    pip SeedWaterSegmenter
 
 The big caveat to this is that SeedWater also depends on a number of binary/compiled dependencies which must be installed separately, the trickiest usually being mahotas.
 It also depends on the standard scientific python packages (like numpy, scipy, matplotlib, PIL, etc), so those must also be installed.
@@ -72,7 +72,7 @@ Here, run these two commands (and you may need to disable your antivirus before 
 #### Run SeedWater:
 Now, from this same Anaconda command prompt, you can run SeedWater with the following command:
 
-    python -m SeedWaterSegmenter.SeedWaterSegmenter
+    python -c "from SeedWaterSegmenter import start_sws; start_sws()"
 
 #### Make a desktop launcher (with an icon):
 To make running SeedWater easier, you can install a desktop shortcut with the included script.
@@ -131,7 +131,7 @@ In the Terminal, run the following:
 #### Run SeedWater:
 Now you can run SeedWater with the following command, noting that you HAVE to use "pythonw" and not just "python":
 
-    pythonw -m SeedWaterSegmenter.SeedWaterSegmenter
+    python -c "from SeedWaterSegmenter import start_sws; start_sws()"
 
 #### Download the App:
 Now also, thanks to Sveinbjorn Thordarson's Platypus tool, a packaged app is available for download:
@@ -157,7 +157,7 @@ Run these two commands in the terminal:
 #### Run SeedWater:
 In the terminal, run:
 
-    python2.7 -m SeedWaterSegmenter.SeedWaterSegmenter
+    python2.7 -c "from SeedWaterSegmenter import start_sws; start_sws()"
 
 (just "python" may also work, depending on your system)
 
@@ -168,8 +168,9 @@ https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/desktop/SeedWate
 
 This is how I created the symlinks that make this work:
 
-    ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/SeedWaterSegmenter.py /usr/local/bin/seedwatersegmenter
-    ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/icons/SeedWaterSegmenter.svg /usr/local/share/pixmaps/SeedWaterSegmenter.svg
+    sudo ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/scripts/start_seedwatersegmenter.py /usr/local/bin/seedwatersegmenter
+    sudo chmod +x /usr/local/bin/seedwatersegmenter
+    sudo ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/icons/SeedWaterSegmenter.svg /usr/local/share/pixmaps/SeedWaterSegmenter.svg
 
 That's it!
 
