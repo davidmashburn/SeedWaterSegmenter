@@ -589,7 +589,7 @@ def LoadSeedPointsFile(seedPointsFile):
     # use python's load_module function to get the data instead...
     fid = open(seedPointsFile, "U")
     try:
-        Seeds = imp.load_module("Seeds", fid, "Seeds.py", (".py", "U", 1))
+        Seeds = imp.load_module("Seeds", fid, seedPointsFile, (".py", "U", 1))
     except:
         wx.MessageBox("Bad Seeds.py file!")
     fid.close()
@@ -1558,13 +1558,13 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             (self.woundAngle, "AngleToWound"),
         )
 
-        self.excel_stats, self.excel_stat_names = zip(*excel_stats_table)
+        self.excel_stats, self.excel_stat_names = map(list, zip(*excel_stats_table))
 
-        self.csv_stats = self.excel_stats + (self.edgeBrightnessValues,)
-        self.csv_stat_names = self.excel_stat_names + (self.edge_brightness_name,)
+        self.csv_stats = self.excel_stats + [self.edgeBrightnessValues]
+        self.csv_stat_names = self.excel_stat_names + [self.edge_brightness_name]
 
-        self.all_stats = self.csv_stats + (self.neighbors,)
-        self.all_stat_names = self.csv_stat_names + (self.neighbor_py_name,)
+        self.all_stats = self.csv_stats + [self.neighbors]
+        self.all_stat_names = self.csv_stat_names + [self.neighbor_py_name]
 
     def reset_stats(self):
         """Initialize all the stats to empty lists"""
@@ -1793,8 +1793,8 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             print("Get Centroids")
             centroids = self.CalculateCentroids(doUpdate=False)
             centroidX, centroidY = zip(*centroids)
-            self.centroidX.append(centroidX)
-            self.centroidY.append(centroidY)
+            self.centroidX.append(list(centroidX))
+            self.centroidY.append(list(centroidY))
 
             print("Get Bounds")
             boundsList = self.GetBoundingRectangles(doUpdate=False)
@@ -1828,6 +1828,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             )
 
         print("Fix Offsets")
+
         # Make it so that there is an entry for every value, regardless of whether that cell was
         # in that frame or not
         # This makes all the quantities line up...
@@ -1865,6 +1866,14 @@ class WatershedDataCoreWithStats(WatershedDataCore):
             return
 
         data, names = self.excel_stats, self.excel_stat_names
+
+        # Fix to replace numpy types with Python types:
+        for i in range(len(data)):
+            data[i] = [
+                [(d.item() if hasattr(d, "item") else d) for d in dat]
+                for dat in data[i]
+            ]
+
         adjLength = self.GetLastActiveFrame() + 1
         dataSets, skip_val, numBreakups = (
             _data_splitter_for_excel(data, adjLength)
@@ -2078,7 +2087,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
         if os.path.exists(neighborsPy):
             with open(neighborsPy, "U") as fid:
                 Neighbors = imp.load_module(
-                    "Neighbors", fid, self.neighbor_py_name, (".py", "U", 1)
+                    "Neighbors", fid, neighborsPy, (".py", "U", 1)
                 )
                 self.neighbors[:] = Neighbors.neighbors
 
