@@ -2047,7 +2047,7 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                     s = fid.read()
 
                 # Remove all the '\r' first
-                s = s.replace("\r\n", "\n")
+                s = s.replace("\r\n", "\n").replace("\n\n", "\n")
                 s = (
                     s.replace("(", "")
                     .replace(")", "")
@@ -4398,11 +4398,14 @@ def InitMPL():
         if fig == fig2 and DONT_PANIC:
             fig.title("Don't Panic!!!")
         fig.canvas.draw()
-        for i in fig.canvas.callbacks.callbacks:
-            if i == "key_press_event":
-                fig.canvas.mpl_disconnect(
-                    list(fig.canvas.callbacks.callbacks[i].keys())[0]
-                )
+        callbacks_to_remove = [i
+            for i in fig.canvas.callbacks.callbacks
+            if i == "key_press_event"
+        ]
+        for i in callbacks_to_remove:
+            fig.canvas.mpl_disconnect(
+                list(fig.canvas.callbacks.callbacks[i].keys())[0]
+            )
     return fig1, ax1, fig2, ax2
 
 
