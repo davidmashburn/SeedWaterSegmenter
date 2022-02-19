@@ -2053,7 +2053,9 @@ class WatershedDataCoreWithStats(WatershedDataCore):
                     .replace(")", "")
                     .replace("[", "")
                     .replace("]", "")
+                    .replace("L,", ",")
                 )  # bugfix for some csv files...
+                s = s[:-1] if s[-1] == "L" else s
 
                 if "\r" in s:  # Fail for unknown/unusual lineseps
                     print(
