@@ -17,6 +17,7 @@ setup(
     license="LICENSE.txt",
     description="graphical program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines)",
     long_description=open("README.md").read(),
+    long_description_content_type='text/markdown',
     install_requires=[
         "wxPython>=4.0",
         "numpy>=1.0",
