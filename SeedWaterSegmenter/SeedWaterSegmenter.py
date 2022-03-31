@@ -1207,7 +1207,7 @@ class WatershedDataCore(object):
 
     def Median(self, filterSize):
         self.filterData[self.index] = median_filter(
-            self.filterData[self.index], filterSize
+            self.filterData[self.index], int(filterSize)
         )
         self.RemoveUndo()
 
