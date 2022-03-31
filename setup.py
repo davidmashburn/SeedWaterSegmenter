@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 # Read the version number
 with open("SeedWaterSegmenter/_version.py") as f:
