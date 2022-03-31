@@ -11,7 +11,7 @@ import numpy
 
 import matplotlib
 
-matplotlib.use("WxAgg")
+# matplotlib.use("WxAgg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Widget
@@ -102,7 +102,8 @@ class PolyLasso(Widget):
             # we get an idle event, which will signal that the closed polygon has also
             # been drawn.
             # You know, if the user makes a point or line segment, let them get no points...
-            self.cids.append(self.canvas.mpl_connect("idle_event", self.do_callback))
+            # self.cids.append(self.canvas.mpl_connect("idle_event", self.do_callback))
+            self.do_callback(None) # idle_event is no longer working, just skip the fancy close
         # else:
         #    print('Need at least three vertices to make a polygon')
         #    self.cleanup()
