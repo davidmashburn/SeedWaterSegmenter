@@ -16,7 +16,7 @@ setup(
     url="http://pypi.python.org/pypi/SeedWaterSegmenter/",
     license="LICENSE.txt",
     description="graphical program to interactively segment image stacks of cells in tissue with edge-labels (aka. white outlines)",
-    long_description=open("README.rst").read(),
+    long_description=open("README.md").read(),
     install_requires=[
         "wxPython>=4.0",
         "numpy>=1.0",

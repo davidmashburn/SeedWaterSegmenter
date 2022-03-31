@@ -11,3 +11,5 @@ SeedWaterSegmenter.egg-info
 MANIFEST
 ProjectFiles
 dnmPrivate
+.DS_Store
+.python-version

@@ -1,5 +1,5 @@
 include *.txt
-include *.rst
+include *.md
 recursive-include SeedWaterSegmenter *.png
 recursive-include SeedWaterSegmenter *.ico
 recursive-include SeedWaterSegmenter *.svg
