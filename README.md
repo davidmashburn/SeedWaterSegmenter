@@ -59,7 +59,7 @@ SWS now supports Python 3. If you have issues, please make open issue on Github 
 
 ## Making a desktop launcher with icon
 
-While I recommend running SWS from the terminal to see the console logs, you can also create a desktop launcher to make it more convenient to launch.
+While I recommend running SWS from the terminal to see the console logs, you can also create a desktop launcher to make it more convenient to launch if you prefer.
 
 ### Windows:
     
@@ -70,20 +70,16 @@ python C:\Users\<your username>\Anaconda\Scripts\create_sws_shortcut.py -install
 python C:\Anaconda\Scripts\create_sws_shortcut.py -install
 ```
 
-### Mac OS X
-    (CURRENTLY BROKEN)
+### macOS
 
-    Now also, thanks to Sveinbjorn Thordarson's Platypus tool, a packaged app is available for download at:
-    https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/MacOSX/SeedWaterSegmenterApp.zip
-    Just extract the zip file and place the App on the Desktop or in the Applications folder
-    
-    Be aware that this is only a link to the python scripts and will not work by itself without the above installation.
-    
-    There is also a ".command" file that can serve the same purpose if the App does not work:
-    https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/MacOSX/SeedWaterSegementer.command
+Thanks to Sveinbjorn Thordarson's Platypus tool, a packaged app is available for download at:
+https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/MacOSX/SeedWaterSegmenterApp.zip
+Just extract the zip file and place the App on the Desktop or in the Applications folder
 
+Be aware that this is only a link to the python scripts and will not work by itself without the above installation.
 
-That's it!
+There is also a ".command" file that can serve the same purpose if the App does not work:
+https://github.com/davidmashburn/SeedWaterSegmenter/blob/master/MacOSX/SeedWaterSegementer.command
 
 ### Linux
 
@@ -97,8 +93,6 @@ This is how I created the symlinks that make this work:
 ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/SeedWaterSegmenter.py /usr/local/bin/seedwatersegmenter
 ln -s /usr/local/lib/python2.7/dist-packages/SeedWaterSegmenter*/seedwatersegmenter/icons/SeedWaterSegmenter.svg /usr/local/share/pixmaps/SeedWaterSegmenter.svg
 ```
-
-That's it!
 
 ----
 = Screenshot =
