@@ -6,7 +6,7 @@ mahotas==1.4.11
 matplotlib==3.5.1
 np_utils==0.6.0
 numpy==1.22.0
-pillow==9.0.0
+pillow==9.3.0
 #scipy==1.7.2
 wxPython==4.1.1
 xlrd==2.0.1
